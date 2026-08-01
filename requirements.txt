@@ -1,0 +1,12 @@
+# passing-funded-account-1 — trimmed to what this repo's code actually imports.
+# Not the general repo's full environment (no torch/xgboost/firebase/etc).
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=14.0.0        # every price cache is .parquet — learned this the hard way on the Render deploy
+numba>=0.58.0           # backtester/engine.py, mc.py — the fast paths
+scipy>=1.11.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+yfinance>=0.2.0
+anthropic>=0.40.0       # dashboard chat panel, if kept
