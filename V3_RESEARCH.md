@@ -64,3 +64,17 @@ The one profile that fits the requirement AND has a published playbook we alread
 Pass fast → run funded hot-ish → maybe blow it in 6 months → rebuy → repeat, with Petroulas earnings shots layered on top. The math agrees with you on one condition: **the funded account's expected payouts before death must exceed the cost of the next campaign.** At median ~$10k/yr payouts (COLIN_V2) vs ~$250–825 campaign cost, that condition is comfortably met even if the account dies annually. Your instinct is arithmetically correct — it just needs the fast-pass engine built first.
 
 *Sims: `scripts/colin_v2_campaign_sim.py` + requirements-map MC (this doc). Sources: FPFX Tech 300k-account dataset via atmosfunded.com; damnpropfirms.com pass-rate compilation.*
+
+---
+## ADDENDUM 2026-08-01 — RERUN CONFIRMED (10,000 campaigns/cell, fresh seeds)
+
+| Profile | IID P(30d)/P(90d) | Weather-calibrated P(30d)/P(90d) |
+|---|---|---|
+| **JJ-style 55% WR, 1:1.5, 5/wk** | 99.8% / ~100% | **~75% / ~94%** |
+| Scalper 60% WR, 1:1, 3/wk | 92.2% / ~100% | ~65% / ~85% |
+| Carry-like @3/wk (hypothetical) | 93.7% / ~100% | ~64% / ~85% |
+
+Weather model = drought/streak regime-switching, calibrated until the carry cell reproduces the real
+block-replay (27%/67%) before judging the fast profiles. Sim: `scripts/requirements_map_mc.py`.
+**Selected V3 target: JJ-style 55% WR / 1:1.5 / ≥5 trades-week.** Live-sim account opened same day:
+`data/propfirm/jj_sim_account.json`, tracked via `scripts/jj_sim_tracker.py`, dashboard `dashboard/jj_dashboard.html`.

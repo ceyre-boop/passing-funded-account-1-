@@ -1,0 +1,21 @@
+{
+  "name": "JJ-SIM-001",
+  "strategy": "JJ-style session reversion (V3 target: 55% WR, 1:1.5, >=5 trades/wk)",
+  "mode": "SIM \u2014 treated as a real funded eval",
+  "firm_rules": "Lucid-style: $100k, +8% target, 8% trailing EOD DD (locks at start), min 2 days",
+  "opened": "2026-08-01",
+  "deadline_days": 90,
+  "checkpoint_days": 30,
+  "risk_per_trade_pct": 0.01,
+  "balance": 100000.0,
+  "peak_eod": 100000.0,
+  "floor": 92000.0,
+  "trading_days": 0,
+  "trades": [],
+  "status": "ACTIVE",
+  "projection": {
+    "P_pass_30d": 0.75,
+    "P_pass_90d": 0.94,
+    "source": "requirements_map_mc.py weather model, conditional on live stats matching the 55%/1:1.5 spec"
+  }
+}
