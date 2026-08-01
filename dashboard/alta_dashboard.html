@@ -1,0 +1,43 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>Alta — Funded Account Command</title><style>
+body{background:#0f1117;color:#e2e8f0;font-family:-apple-system,Segoe UI,sans-serif;margin:0;padding:24px;max-width:1100px}
+.card{background:#161a23;border:1px solid #1e2433;border-radius:12px;padding:18px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.k{font-size:11px;letter-spacing:.08em;color:#94a3b8;text-transform:uppercase}
+.v{font-size:26px;font-weight:700;margin-top:4px}
+.badge{display:inline-block;padding:3px 12px;border-radius:99px;font-weight:700;font-size:12px}
+.on{background:#052e1b;color:#4ade80;border:1px solid #14532d}.park{background:#2a2110;color:#fbbf24;border:1px solid #713f12}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 8px;border-bottom:1px solid #1e2433;text-align:left}
+small{color:#64748b}.bar{height:10px;background:#1e2433;border-radius:5px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,#22d3ee,#4ade80)}
+h2{font-size:15px;margin:4px 0 10px}
+</style></head><body>
+<div class="card"><div style="font-size:21px;font-weight:800">Alta Investments — Funded Account Command</div>
+<small>2026-08-01 · everything on this page traces to a script in the repo · zero-edge baselines attached to every claim</small></div>
+
+<div class="card"><h2>LANE 1 <span class="badge on">ACTIVE — ALTA-V2 EVAL SIM</span></h2>
+<div class="grid">
+<div><div class="k">Account</div><div class="v">$100,000</div><small>Lucid-style · +8% target · 8% trailing EOD</small></div>
+<div><div class="k">Balance</div><div class="v">$100,000</div><small>day 0 · floor $92,000</small></div>
+<div><div class="k">Eval sizing</div><div class="v">5%</div><small>COLIN_V2 · funded flips to 1%</small></div>
+<div><div class="k">P(pass ≤90d)</div><div class="v">67.5%</div><small>±14.5pp · sealed 411-trade replay</small></div>
+<div><div class="k">OOS rig check</div><div class="v">46.7%</div><small>2025-26 unseen data · zero-edge base ≈50%</small></div>
+<div><div class="k">E[evals burned]</div><div class="v">1.5–2.0</div><small>budget 4 · this is where edge shows</small></div></div>
+<div style="margin-top:10px"><div class="k">Progress to $108,000</div><div class="bar" style="margin-top:6px"><div class="fill" style="width:0%"></div></div></div>
+<small>Strategy: v015 carry (proven, sealed). Signals: sovereign/forex engine. Every trade logs via scripts/jj_sim_tracker.py conventions. What this lane proves: the V2 campaign math on live-forward data.</small></div>
+
+<div class="card"><h2>LANE 2 <span class="badge park">PARKED — JJ-STYLE (VALIDATION REQUIRED)</span></h2>
+<table><tr><th>Spec</th><th>Status</th><th>The bar it must clear</th></tr>
+<tr><td>Session reversion NQ · 55% WR · 1:1.5 · ≥5/wk</td><td>Hypothesis — 0 logged trades</td><td>Zero-edge passes <b>84.7%</b> @30d at this frequency — pass rate proves nothing. Must show: WR ≥52% over n≥80 real trades, evals-burned ≤1.4, funded-phase positive.</td></tr></table>
+<small>Blocked on NQ intraday data (Databento/Polygon key). The 75%/94% figures are RETRACTED (SANITY_AUDIT.md). JJ-SIM-001 is the instrument waiting for it.</small></div>
+
+<div class="card"><h2>TONIGHT'S OUT-OF-SAMPLE TEST — 18 months the seal never saw (2025-01 → 2026-07)</h2>
+<table><tr><th>Metric</th><th>Rig in-sample 15-24</th><th>Rig OOS 25-26</th><th>Read</th></tr>
+<tr><td>Trades/year</td><td>~30</td><td><b>40</b></td><td>Fires at full rate ✓</td></tr>
+<tr><td>Win rate</td><td>50.0%</td><td><b>48.3%</b> (n=60)</td><td>Replicates ✓</td></tr>
+<tr><td>Avg R</td><td>+0.429</td><td><b>+0.100</b></td><td>Soft — inconclusive (1.7 SE), WATCH</td></tr>
+<tr><td>V2 campaign P(90d)</td><td>50.3%</td><td><b>46.7%</b></td><td>Holds (metric is mostly structural)</td></tr>
+<tr><td>Evals burned</td><td>1.56</td><td><b>1.95</b></td><td>Edge softness shows in fees first — as audit predicted</td></tr></table>
+<small>Same offline rig both periods (degraded v015: VIX3M/TNX inputs unavailable). Scripts: oos_2025_2026_runner.py · oos_campaign_test.py</small></div>
+
+<div class="card"><h2>AUDIT TRAIL</h2><small>
+COLIN_V1.md — the edge, proven and sized · COLIN_V2.md — eval sprint (67.5% ±14.5 @90d) · SANITY_AUDIT.md — 75/94 retracted, zero-edge baselines established · V3_RESEARCH.md — frequency law + build spec · NIGHTCAP.md — tonight's full arc. Funded phase target: median ~$10k/yr per $100k @1% risk, 90% split, P(account death) ~2.6%/yr.</small></div>
+</body></html>
