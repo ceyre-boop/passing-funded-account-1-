@@ -76,5 +76,6 @@ Pass fast → run funded hot-ish → maybe blow it in 6 months → rebuy → rep
 
 Weather model = drought/streak regime-switching, calibrated until the carry cell reproduces the real
 block-replay (27%/67%) before judging the fast profiles. Sim: `scripts/requirements_map_mc.py`.
-**Selected V3 target: JJ-style 55% WR / 1:1.5 / ≥5 trades-week.** Live-sim account opened same day:
+**Selected V3 target: JJ-style 55% WR / 1:1.5 / ≥5 trades-week.**
+**⚠ 2026-08-01 SANITY AUDIT: the 75%/94% figures in this addendum are RETRACTED as evidence — see SANITY_AUDIT.md. Zero-edge control passes 84.7% of 30d campaigns at 5/wk; the pass metric is mostly structure at high frequency. Edge must be proven on real NQ data before any probability is quoted.** Live-sim account opened same day:
 `data/propfirm/jj_sim_account.json`, tracked via `scripts/jj_sim_tracker.py`, dashboard `dashboard/jj_dashboard.html`.
