@@ -73,8 +73,26 @@ Nothing in the system touches a broker; advice out, human executes.
   real win rate. ALPHAZERO's bias score gets graded against this too.
 
 ## Safety spine (APEX, applies to every layer)
-1. No broker APIs in this repo. Advice out; the human executes. Paper/live
-   separation is physical, not a flag.
+1. **AMENDED 2026-08-03 (Colin's call, logged before any executing code existed).**
+   Was: "No broker APIs in this repo. Advice out; the human executes. Paper/live
+   separation is physical, not a flag." Now: a PAPER broker API is permitted,
+   under four conditions that replace the physical separation with an
+   enforced one —
+   a. **Paper endpoint only.** The client refuses any base URL that is not
+      `paper-api.alpaca.markets`. Pointing it at live requires editing the guard
+      itself, which is a reviewable diff, not a config typo.
+   b. **Shadow by default.** Every run prints the order it would send and sends
+      nothing. Sending requires `--broker armed` explicitly, every time. There is
+      no persisted "armed" state to forget about.
+   c. **Confirm before the first send.** Arming prompts once, interactively, with
+      the account and order summary shown. `--yes` skips it only for a run Colin
+      started deliberately.
+   d. **The ledger still rules.** Every send and every rejection is logged to the
+      session JSONL like any other cycle. An unlogged order is the same silent
+      data loss non-negotiable #3 forbids.
+   Rationale: the eval is a Stockfish problem — mechanical, bounded, and the
+   part of the doctrine a machine executes better than a human at 9:31. Live
+   capital stays out of scope; that is the AlphaZero problem and it is unsolved.
 2. Fail loud, never silent.
 3. Backend provably correct before any dashboard.
 4. Discrete versioned growth — each piece its own commit, no big rewrites.
