@@ -19,6 +19,17 @@ Fail loud: malformed state raises, never guesses.
 from dataclasses import dataclass, field
 from typing import Optional, List
 
+def _et_minutes(hhmm: str, field: str) -> int:
+    """'HH:MM' -> minutes since midnight ET. Malformed input raises."""
+    try:
+        h, m = hhmm.strip().split(":")
+        h, m = int(h), int(m)
+    except Exception as e:
+        raise ValueError(f"{field} must be 'HH:MM', got {hhmm!r}") from e
+    if not (0 <= h < 24 and 0 <= m < 60):
+        raise ValueError(f"{field} out of range: {hhmm!r}")
+    return h * 60 + m
+
 @dataclass
 class TradeState:
     direction: int              # +1 long, -1 short
@@ -34,6 +45,10 @@ class TradeState:
     tp2_done: bool = False
     urgent: Optional[str] = None    # None | 'tighten' | 'exit'  (from ALPHAZERO)
     goal_fraction: float = 0.5      # fraction banked at TP2
+    # Time-flatten (doctrine: flat before 11:00). BOTH must be supplied for the
+    # rule to arm; either left None means no clock was given, so no time exit.
+    flatten_at_et: Optional[str] = None     # 'HH:MM' ET, e.g. '11:00'
+    now_et: Optional[str] = None            # 'HH:MM' ET, the caller's clock
 
     def __post_init__(self):
         if self.direction not in (+1, -1): raise ValueError("direction must be +1/-1")
@@ -41,6 +56,9 @@ class TradeState:
             v = getattr(self, f_)
             if v is None or (isinstance(v, (int, float)) and v != v):
                 raise ValueError(f"bad field {f_}={v}")   # fail loud, never guess
+        for f_ in ("flatten_at_et", "now_et"):            # validate iff supplied
+            v = getattr(self, f_)
+            if v is not None: _et_minutes(v, f_)
         if self.hwm is None: self.hwm = self.price
 
 @dataclass
@@ -71,6 +89,12 @@ def decide_exit(state: TradeState) -> List[Action]:
     if (state.price <= state.sl if state.direction > 0 else state.price >= state.sl):
         return [Action("EXIT_ALL", reason="stop hit")]
 
+    # 1b. time-flatten — always live once a clock is supplied (doctrine: flat
+    #     before 11:00). No clock given == rule not armed, never a guessed time.
+    if state.flatten_at_et is not None and state.now_et is not None:
+        if _et_minutes(state.now_et, "now_et") >= _et_minutes(state.flatten_at_et, "flatten_at_et"):
+            return [Action("EXIT_ALL", reason=f"time flatten {state.flatten_at_et} ET")]
+
     # 2. TP1: arm breakeven — rule #1, do not lose on the day
     if not state.tp1_done and _crossed(state, state.tp1):
         state.tp1_done = True
@@ -92,6 +116,21 @@ def decide_exit(state: TradeState) -> List[Action]:
 
     return acts or [Action("HOLD", reason="set it and forget it")]
 
+def apply_action(state: TradeState, action: Action) -> None:
+    """Fold one Action back into the state. ONE implementation, same reason
+    decide_exit is one implementation: the replay, the live runner and any
+    backtest harness must evolve state identically or their logs can't be
+    diffed (APEX DoD). Unknown or malformed actions raise.
+    """
+    if action.kind == "MOVE_SL":
+        if action.sl is None: raise ValueError("MOVE_SL carries no sl")
+        state.sl = action.sl
+    elif action.kind == "TAKE_PARTIAL":
+        if action.fraction is None: raise ValueError("TAKE_PARTIAL carries no fraction")
+        state.qty = state.qty * (1.0 - action.fraction)   # what's still held
+    elif action.kind not in ("HOLD", "EXIT_ALL"):
+        raise ValueError(f"unknown action kind {action.kind!r}")
+
 if __name__ == "__main__":
     # deterministic replay — the same log this must produce in any harness
     s = TradeState(direction=+1, entry=204.0, qty=163, price=204.0,
@@ -100,7 +139,7 @@ if __name__ == "__main__":
     for i, px in enumerate(path):
         s.price = px
         for a in decide_exit(s):
-            if a.kind == "MOVE_SL": s.sl = a.sl
+            apply_action(s, a)
             print(f"t{i} px={px:7.2f} -> {a.kind:12s} sl={a.sl} frac={a.fraction} | {a.reason}")
     s.price, s.urgent = 206.5, "exit"
     for a in decide_exit(s):

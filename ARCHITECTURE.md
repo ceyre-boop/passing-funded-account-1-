@@ -81,8 +81,12 @@ Nothing in the system touches a broker; advice out, human executes.
 5. Rule changes commit BEFORE the next attempt, never after a loss.
 
 ## Build order from here (Molly / local Claude Code lane)
-1. Local runner: live quotes -> decide_exit -> advice lines printed. (imports,
-   never copies, stockfish_exit.py)
+1. ~~Local runner: live quotes -> decide_exit -> advice lines printed.~~ **DONE
+   2026-08-03 — `daytrade/runner.py`.** Imports decide_exit + apply_action,
+   never copies. yfinance 1m bars (Alpaca 403s under 15 min, see
+   execution/alpaca.py:31-39); stale quote = loud skip, ladder does not advance.
+   Logs every cycle to data/daytrade/session_YYYY-MM-DD.jsonl — that file is the
+   live half of step 3's diff.
 2. ALPHAZERO v2: real feed + calibrated scoring, graded vs the ledger.
 3. Backtest harness through the SAME decide_exit; diff logs vs live (DoD).
 4. Cursus Honorum Elo arena — only after 1-3 exist and are proven.

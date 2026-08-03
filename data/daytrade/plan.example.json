@@ -1,0 +1,17 @@
+{
+  "_what": "The pre-open blueprint (I_AM_A_GOOD_TRADER.md Layer 0). Copy to plan.json, fill in, set it BEFORE the open. Nothing here is inferred at runtime.",
+  "_levels": "Give EITHER tp2 (an explicit price) OR day_goal_usd (the $300 goal, converted to a price using qty). Both, or neither, is an error.",
+  "_flatten": "flatten_at_et is optional. Set it and the exit engine flattens at that ET time. Omit it and the rule stays disarmed — no guessed time.",
+  "_source": "Values mirror ledger row 1 (2026-08-03 NVDA long, qty 163) and the stockfish_exit.py replay, so this file walks the same ladder.",
+
+  "symbol": "NVDA",
+  "direction": "long",
+  "entry": 204.0,
+  "qty": 163,
+  "sl": 202.9,
+  "tp1": 204.9,
+  "tp2": 205.8,
+  "trail_dist": 0.8,
+  "goal_fraction": 0.5,
+  "flatten_at_et": null
+}
