@@ -8,8 +8,11 @@ is IMPORTED, never copied — a second implementation is how live diverges from
 test (ARCHITECTURE.md Layer 2). State evolves through `stockfish_exit.apply_action`
 for the same reason.
 
-SAFETY (APEX spine #1): there is no broker in this file and there never will be.
-It prints advice; Colin places the orders. Paper/live separation is physical.
+SAFETY (APEX spine #1, as amended 2026-08-03): a PAPER broker is permitted, and
+it is OFF unless you ask for it. Default `--broker off` prints advice and nothing
+else. `--broker shadow` shows the orders it would send. `--broker armed` sends
+them to the Alpaca paper endpoint after an interactive confirm. Live capital is
+out of scope and daytrade/broker.py refuses any non-paper host.
 
 FAIL LOUD (spine #2): a missing or stale quote prints a loud skip line and the
 cycle is ABANDONED — decide_exit is not called. The ladder never advances on a
@@ -34,6 +37,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # import the engine beside us
 from stockfish_exit import TradeState, decide_exit, apply_action  # noqa: E402
+import broker as broker_mod  # noqa: E402
 
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
@@ -186,7 +190,7 @@ def log_cycle(rec: dict) -> None:
 # ---------------------------------------------------------------------- loop
 
 def run(plan: dict, *, interval: int, once: bool, replay: list | None,
-        max_stale: int, require_bias: bool) -> int:
+        max_stale: int, require_bias: bool, broker=None) -> int:
     s = state_from_plan(plan)
     symbol = plan["symbol"]
     live = replay is None
@@ -195,7 +199,8 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
     print(f"# runner {src} | {symbol} {'LONG' if s.direction > 0 else 'SHORT'} "
           f"entry {s.entry} qty {s.qty:g} sl {s.sl} tp1 {s.tp1} tp2 {s.tp2:.2f} "
           f"trail {s.trail_dist} flatten {s.flatten_at_et or 'off'}")
-    print("# advice only. no broker. ctrl-c to stop.\n")
+    mode = f"broker {broker.mode} -> {broker.base}" if broker else "advice only, no broker"
+    print(f"# {mode}. ctrl-c to stop.\n")
 
     step = 0
     while True:
@@ -235,6 +240,15 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
             apply_action(s, a)
 
         print_cycle(clock, symbol, price, s, bias_note, age_note, actions)
+
+        # Broker is downstream of the decision, never upstream of it. Whatever it
+        # does or refuses to do, the engine already decided and the ladder already
+        # advanced — so a broker failure never silently changes the exit policy.
+        orders = []
+        if broker is not None:
+            for intent in broker_mod.intents_from_actions(actions, symbol):
+                orders.append(broker.send(intent))
+
         log_cycle({
             "ts": datetime.now(timezone.utc).isoformat(), "source": src, "step": step,
             "symbol": symbol, "price": price, "quote_ts": qts_iso,
@@ -243,6 +257,8 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
             "urgent": urgency, "bias_note": bias_note,
             "actions": [{"kind": a.kind, "sl": a.sl, "fraction": a.fraction,
                          "reason": a.reason} for a in actions],
+            "broker_mode": broker.mode if broker else "off",
+            "orders": orders,
         })
 
         if any(a.kind == "EXIT_ALL" for a in actions):
@@ -265,16 +281,24 @@ def main(argv=None) -> int:
     ap.add_argument("--replay", metavar="FILE", help="JSON list of prices — offline test path")
     ap.add_argument("--max-stale", type=int, default=180, help="seconds before a quote is refused")
     ap.add_argument("--require-bias", action="store_true", help="hard-fail if bias.json is absent")
+    ap.add_argument("--broker", choices=("off", "shadow", "armed"), default="off",
+                    help="off: advice only. shadow: print the orders. armed: send them (paper).")
+    ap.add_argument("--yes", action="store_true", help="skip the arming confirmation prompt")
     a = ap.parse_args(argv)
 
     plan = load_plan(Path(a.plan))
     replay = json.loads(Path(a.replay).read_text()) if a.replay else None
     if replay is not None and not isinstance(replay, list):
         raise ValueError(f"--replay {a.replay} must contain a JSON list of prices")
+    if a.broker == "armed" and replay is not None:
+        raise ValueError("refusing --broker armed with --replay: replayed prices are not "
+                         "a market, and orders placed against them would be nonsense")
+
+    broker = None if a.broker == "off" else broker_mod.Broker(mode=a.broker, assume_yes=a.yes)
 
     try:
         return run(plan, interval=a.interval, once=a.once, replay=replay,
-                   max_stale=a.max_stale, require_bias=a.require_bias)
+                   max_stale=a.max_stale, require_bias=a.require_bias, broker=broker)
     except KeyboardInterrupt:
         print("\n# stopped by hand — position untouched, nothing was ever sent anywhere")
         return 0

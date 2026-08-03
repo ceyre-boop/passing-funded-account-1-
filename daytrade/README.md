@@ -64,6 +64,39 @@ path offline — how the ladder gets tested without a market).
 python3 daytrade/stockfish_exit.py                # engine replay/self-test
 ```
 
+## Paper execution (spine #1 as amended 2026-08-03)
+The runner can place the orders instead of only advising. Three levels, and it
+starts at the safest one every single run:
+
+```
+--broker off       (default) advice only, nothing leaves the machine
+--broker shadow    prints the exact order it would send, sends nothing
+--broker armed     sends to the Alpaca PAPER endpoint after one confirm
+```
+
+`daytrade/broker.py` refuses any base URL whose host is not
+`paper-api.alpaca.markets`, re-checked on every request, so a live key or a
+stray env var still cannot reach live. `--broker armed` with `--replay` is
+refused outright — replayed prices are not a market. Nothing persists the armed
+state; every run starts at `off` again.
+
+Credentials go in `.env` (gitignored), both halves required:
+```
+ALPACA_API_KEY=PK...
+ALPACA_SECRET_KEY=...
+```
+Connectivity check, read-only, never places an order:
+```
+python3 daytrade/broker.py --symbol NVDA
+```
+
+**What the broker does not do:** decide anything. It receives `Action`s the
+engine already produced and expresses them as orders. Consecutive stop moves in
+one cycle collapse to the final level (the TP2 cycle would otherwise send two
+stops, the second superseding the first) with the superseded reasoning kept in
+the log. A broker failure never changes the exit policy — the ladder has already
+advanced by the time an order is attempted.
+
 ## Next iterations (in order, per APEX: discrete versioned steps)
 1. ~~Local runner that feeds live quotes into decide_exit and prints advice lines.~~
    **DONE 2026-08-03 — `runner.py`.**
