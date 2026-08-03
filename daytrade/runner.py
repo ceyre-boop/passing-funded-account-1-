@@ -18,9 +18,12 @@ FAIL LOUD (spine #2): a missing or stale quote prints a loud skip line and the
 cycle is ABANDONED — decide_exit is not called. The ladder never advances on a
 price we don't trust. Malformed plans raise on load rather than defaulting.
 
-QUOTE SOURCE: yfinance 1-minute bars. Alpaca is not usable here — that account
-403s on /quotes/latest and /snapshot and serves SIP only beyond a 15-minute lag
-(measured, documented at execution/alpaca.py:31-39).
+QUOTE SOURCE: Alpaca real-time bid/ask first, yfinance 1-minute bars behind it.
+Re-measured 2026-08-03 on this account: /quotes/latest returns 200 with a usable
+book (NVDA 206.89/207.20, 0.15%), which corrects the older note at
+execution/alpaca.py:31-39. `?feed=sip` is still 403, so the live feed is IEX —
+thin enough on some names to need the crossed/locked/wide guards, which is
+exactly why yfinance stays as the fallback rather than being deleted.
 
 Usage
     python3 daytrade/runner.py --plan data/daytrade/plan.json
@@ -33,6 +36,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # import the engine beside us
@@ -101,7 +105,78 @@ def state_from_plan(plan: dict) -> TradeState:
 
 # ------------------------------------------------------------------ the quote
 
-def fetch_quote(symbol: str, max_stale: int) -> tuple[float, datetime, float]:
+class Reading(NamedTuple):
+    price: float
+    ts: datetime
+    age: float
+    source: str
+    detail: dict
+
+
+def _age(ts: datetime, max_stale: int, symbol: str, what: str) -> float:
+    age = (datetime.now(timezone.utc) - ts).total_seconds()
+    if age > max_stale:
+        raise QuoteUnavailable(
+            f"newest {symbol} {what} is {age:.0f}s old (limit {max_stale}s) — "
+            "market closed, feed lagging, or symbol wrong")
+    return age
+
+
+def fetch_alpaca(symbol: str, max_stale: int, max_spread_pct: float) -> Reading:
+    """Real-time NBBO-style quote from Alpaca's default feed.
+
+    Measured 2026-08-03 on this account: /quotes/latest returns 200 and NVDA
+    quoted 206.89/207.20 — a 0.15% spread, perfectly usable. This contradicts
+    execution/alpaca.py's older note that these endpoints 403 and that IEX is
+    useless; see that file's corrected header. `?feed=sip` is still 403, so this
+    is IEX, which carries a small share of volume — hence the spread and
+    crossed/locked guards below, and the yfinance fallback behind them.
+
+    Reuses execution.quotes.Quote rather than re-deriving spread arithmetic.
+    """
+    import os
+    import urllib.error
+    import urllib.request
+
+    sys.path.insert(0, str(ROOT))
+    from execution.alpaca import load_env
+    from execution.quotes import _from_api
+
+    load_env()
+    kid = os.environ.get("ALPACA_API_KEY", "").strip()
+    sec = os.environ.get("ALPACA_SECRET_KEY", "").strip()
+    if not kid or not sec:
+        raise QuoteUnavailable("no Alpaca credentials in .env")
+
+    url = f"https://data.alpaca.markets/v2/stocks/{symbol}/quotes/latest"
+    req = urllib.request.Request(url, headers={
+        "APCA-API-KEY-ID": kid, "APCA-API-SECRET-KEY": sec})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            payload = json.loads(r.read())
+    except Exception as e:
+        raise QuoteUnavailable(f"alpaca quote failed for {symbol}: {e!r}") from e
+
+    if "quote" not in payload:
+        raise QuoteUnavailable(f"alpaca returned no quote for {symbol}")
+    q = _from_api(symbol, payload["quote"])
+
+    if not q.is_usable():
+        raise QuoteUnavailable(
+            f"{symbol} book unusable: bid {q.bid} ask {q.ask} "
+            f"(crossed={q.is_crossed()} locked={q.is_locked()})")
+    if q.spread_pct > max_spread_pct:
+        raise QuoteUnavailable(
+            f"{symbol} spread {q.spread_pct:.2%} exceeds {max_spread_pct:.2%} — "
+            "thin book, not a price worth acting on")
+
+    ts = datetime.fromisoformat(q.ts_utc.replace("Z", "+00:00"))
+    return Reading(q.mid, ts, _age(ts, max_stale, symbol, "quote"), "alpaca",
+                   {"bid": q.bid, "ask": q.ask, "bid_size": q.bid_size,
+                    "ask_size": q.ask_size, "spread_pct": round(q.spread_pct, 6)})
+
+
+def fetch_yfinance(symbol: str, max_stale: int) -> Reading:
     """Newest 1-minute close and how old it is. Raises rather than guessing."""
     import pandas as pd
     import yfinance as yf
@@ -123,12 +198,28 @@ def fetch_quote(symbol: str, max_stale: int) -> tuple[float, datetime, float]:
     if price != price or price <= 0:
         raise QuoteUnavailable(f"unusable close {price!r} for {symbol}")
 
-    age = (datetime.now(timezone.utc) - ts).total_seconds()
-    if age > max_stale:
-        raise QuoteUnavailable(
-            f"newest {symbol} bar is {age:.0f}s old (limit {max_stale}s) — "
-            "market closed, feed lagging, or symbol wrong")
-    return price, ts, age
+    return Reading(price, ts, _age(ts, max_stale, symbol, "bar"), "yfinance",
+                   {"kind": "1m bar close"})
+
+
+def fetch_quote(symbol: str, max_stale: int, *, source: str,
+                max_spread_pct: float) -> Reading:
+    """Alpaca first, yfinance behind it. Every rejection is reported, not hidden.
+
+    'auto' falls back only on QuoteUnavailable — a refused quote, not a bug. The
+    fallback is announced on the line it happens, because a silent downgrade from
+    a real bid/ask to a minute-old bar close is exactly the kind of quiet change
+    that makes a log untrustworthy later.
+    """
+    if source == "yfinance":
+        return fetch_yfinance(symbol, max_stale)
+    if source == "alpaca":
+        return fetch_alpaca(symbol, max_stale, max_spread_pct)
+    try:
+        return fetch_alpaca(symbol, max_stale, max_spread_pct)
+    except QuoteUnavailable as e:
+        print(f"           .. alpaca quote refused ({e}) — falling back to yfinance")
+        return fetch_yfinance(symbol, max_stale)
 
 
 # ------------------------------------------------------------------- the bias
@@ -190,7 +281,8 @@ def log_cycle(rec: dict) -> None:
 # ---------------------------------------------------------------------- loop
 
 def run(plan: dict, *, interval: int, once: bool, replay: list | None,
-        max_stale: int, require_bias: bool, broker=None) -> int:
+        max_stale: int, require_bias: bool, broker=None,
+        quote_source: str = "auto", max_spread_pct: float = 0.01) -> int:
     s = state_from_plan(plan)
     symbol = plan["symbol"]
     live = replay is None
@@ -208,7 +300,8 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
 
         if live:
             try:
-                price, qts, age = fetch_quote(symbol, max_stale)
+                r = fetch_quote(symbol, max_stale, source=quote_source,
+                                max_spread_pct=max_spread_pct)
             except QuoteUnavailable as e:
                 # loud, and the cycle is over — decide_exit is NOT called
                 print(f"{clock} !! NO USABLE QUOTE — cycle skipped, ladder not advanced\n"
@@ -218,12 +311,15 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
                     return 1
                 time.sleep(interval)
                 continue
-            age_note, qts_iso = f" q{age:.0f}s", qts.isoformat()
+            price = r.price
+            age_note, qts_iso = f" q{r.age:.0f}s/{r.source}", r.ts.isoformat()
+            qdetail = {"source": r.source, **r.detail}
         else:
             if step >= len(replay):
                 print(f"\n# replay exhausted after {step} price(s)")
                 return 0
             price, age_note, qts_iso = float(replay[step]), " replay", None
+            qdetail = {"source": "replay"}
 
         urgency, bias_note = read_urgency(require_bias)
         if bias_note in ("MISSING", "UNREADABLE"):
@@ -251,7 +347,7 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
 
         log_cycle({
             "ts": datetime.now(timezone.utc).isoformat(), "source": src, "step": step,
-            "symbol": symbol, "price": price, "quote_ts": qts_iso,
+            "symbol": symbol, "price": price, "quote_ts": qts_iso, "quote": qdetail,
             "hwm": s.hwm, "sl": s.sl, "qty": s.qty,
             "tp1_done": s.tp1_done, "tp2_done": s.tp2_done,
             "urgent": urgency, "bias_note": bias_note,
@@ -284,6 +380,10 @@ def main(argv=None) -> int:
     ap.add_argument("--broker", choices=("off", "shadow", "armed"), default="off",
                     help="off: advice only. shadow: print the orders. armed: send them (paper).")
     ap.add_argument("--yes", action="store_true", help="skip the arming confirmation prompt")
+    ap.add_argument("--quotes", choices=("auto", "alpaca", "yfinance"), default="auto",
+                    help="auto: alpaca real-time bid/ask, yfinance 1m bars behind it")
+    ap.add_argument("--max-spread", type=float, default=0.01,
+                    help="reject an alpaca quote wider than this fraction (default 1%%)")
     a = ap.parse_args(argv)
 
     plan = load_plan(Path(a.plan))
@@ -298,7 +398,8 @@ def main(argv=None) -> int:
 
     try:
         return run(plan, interval=a.interval, once=a.once, replay=replay,
-                   max_stale=a.max_stale, require_bias=a.require_bias, broker=broker)
+                   max_stale=a.max_stale, require_bias=a.require_bias, broker=broker,
+                   quote_source=a.quotes, max_spread_pct=a.max_spread)
     except KeyboardInterrupt:
         print("\n# stopped by hand — position untouched, nothing was ever sent anywhere")
         return 0

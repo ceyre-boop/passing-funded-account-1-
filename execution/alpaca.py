@@ -28,15 +28,29 @@ Replacement contract:
   anything else  -> re-raise immediately, no retry
   on exhaustion  -> AlpacaError carrying url, status, body, attempts, __cause__
 
-DATA ENTITLEMENT (measured 2026-07-18)
---------------------------------------
-This account serves SIP HISTORICAL quotes and bars, but 403s on anything inside
-a 15-minute recency window:
-    quotes at -16 min -> 200        quotes at -13 min -> 403
-    /quotes/latest    -> 403        /snapshot         -> 403
-Real-time IEX is permitted but useless for this purpose: AAPL quoted
-bid 314.75 / ask 347.97 (a ~10% spread) because IEX carries ~2% of volume.
-Hence the harness captures quotes on a DEFERRED pass beyond the boundary.
+DATA ENTITLEMENT (measured 2026-07-18, PARTLY CORRECTED 2026-08-03)
+-------------------------------------------------------------------
+SIP remains gated. Requesting it explicitly is refused in as many words:
+    /quotes/latest?feed=sip -> 403 "subscription does not permit querying
+                                    recent SIP data"
+so the DEFERRED capture pass this module performs is still the right design for
+any measurement that must be SIP-accurate.
+
+Two claims from the 2026-07-18 note did NOT survive re-measurement on the
+current account (2026-08-03, NVDA, mid-session):
+    /quotes/latest -> 200      /snapshot -> 200      /trades/latest -> 200
+and the default (IEX) book was tight, not useless:
+    NVDA bid 206.89 / ask 207.20 -> 0.15% spread, sub-second timestamp
+The original "IEX is useless" reading came from a single AAPL observation
+(314.75/347.97, ~10%) that was almost certainly a momentarily broken book, and
+it was generalised too far. IEX is thin — around 2% of volume — so a wide or
+crossed book is a real possibility on less liquid names and must be GUARDED,
+which is not the same as unusable.
+
+daytrade/runner.py therefore takes real-time IEX quotes as its primary source
+behind crossed/locked/wide guards (execution.quotes.Quote provides all three),
+with yfinance 1-minute bars as the fallback. Nothing in the historical harness
+changed; only the belief about what live quotes this account can see.
 """
 from __future__ import annotations
 

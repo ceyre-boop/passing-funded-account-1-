@@ -22,13 +22,29 @@ COLIN
    └─ places/adjusts the actual orders from the runner's advice lines.
 ```
 
-## Why yfinance and not Alpaca
-The Alpaca account in this repo 403s on `/quotes/latest` and `/snapshot` and
-serves SIP data only beyond a 15-minute lag — measured and documented at
-`execution/alpaca.py:31-39`. That is fine for the historical work in
-`backtester/`, and useless for a live cockpit. yfinance 1-minute bars carry a
-timestamp, which is the part that matters: staleness is *detectable*, so a lagging
-feed produces a loud skip instead of a confident wrong number.
+## Quote sources
+`--quotes auto` (default) takes Alpaca's real-time bid/ask and keeps yfinance
+1-minute bars behind it. Measured side by side on 2026-08-03 mid-session:
+
+| source | NVDA | age | what it is |
+|---|---|---|---|
+| alpaca | 206.95 | `q0s` | live bid/ask mid, sub-second |
+| yfinance | 206.94 | `q24s` | last 1-minute bar close |
+
+Both agree on price; the difference is 24 seconds of staleness, which on a
+1-5 minute continuation bet is the whole game.
+
+This corrects the repo's earlier belief. `execution/alpaca.py` recorded these
+endpoints as 403 and called IEX useless based on one bad AAPL book — see that
+file's amended header. SIP is still genuinely gated (`?feed=sip` -> 403), so the
+live feed is IEX, which is thin at roughly 2% of volume. That is guarded, not
+ignored: a crossed, locked, or wider-than-`--max-spread` book (default 1%) is
+refused and the runner falls back to yfinance, announcing it on the line where
+it happens. A silent downgrade from a real bid/ask to a minute-old bar close is
+exactly what makes a log untrustworthy later.
+
+Force either with `--quotes alpaca` or `--quotes yfinance`. The chosen source
+and the full bid/ask are recorded in every session log record.
 
 ## What's real vs placeholder (honest labels)
 - STOCKFISH: **real and final in shape.** Pure, deterministic, fail-loud, one

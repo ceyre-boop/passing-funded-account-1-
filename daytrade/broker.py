@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -205,16 +206,37 @@ class Broker:
                 return {**rec, "status": "DECLINED_BY_USER", "sent": False}
 
             if intent.kind == "CLOSE_ALL":
+                self._release(intent.symbol, held)
                 res = self._req("DELETE", f"/positions/{intent.symbol}")
             elif intent.kind == "REDUCE":
                 qty = self._whole(held * intent.fraction)
                 if qty <= 0:
                     raise BrokerRefused(
                         f"{intent.fraction:.0%} of {held:g} rounds to 0 shares — nothing to reduce")
+                restore = self._release(intent.symbol, qty)
                 res = self._req("POST", "/orders", {
                     "symbol": intent.symbol, "qty": str(qty),
                     "side": "sell" if long_side else "buy",
                     "type": "market", "time_in_force": "day"})
+                if restore is not None:
+                    # Re-arm the stop at the position's NEW size. The reduce has
+                    # to actually fill first, or the stop gets sized to shares
+                    # that are about to be sold.
+                    #
+                    # Past this line the partial is BANKED. A failure to restore
+                    # the stop must never be reported as if the reduce failed —
+                    # that would put a false refusal in the ledger for a fill
+                    # that really happened (non-negotiable #3). Hence the split
+                    # status: the position is real, the protection is not.
+                    try:
+                        self._await_fill(res["id"])
+                        stop_res = self._restore_stop(intent, restore, long_side)
+                        res = {"reduce": res, "stop_restored": stop_res}
+                    except BrokerRefused as e:
+                        print(f"           !! PARTIAL BANKED BUT STOP NOT RESTORED — "
+                              f"position is UNPROTECTED, place the stop by hand: {e}")
+                        return {**rec, "status": "SENT_STOP_UNPROTECTED", "sent": True,
+                                "response": {"reduce": res}, "error": str(e)}
             else:                               # STOP_SYNC
                 res = self._sync_stop(intent, held, long_side)
 
@@ -223,6 +245,73 @@ class Broker:
         except BrokerRefused as e:
             print(f"           !! BROKER REFUSED: {e}")
             return {**rec, "status": "REFUSED", "sent": False, "error": str(e)}
+
+    def _release(self, symbol: str, need: float) -> float | None:
+        """Free up shares that a working stop has reserved. Returns its price.
+
+        THE BUG THIS EXISTS FOR (found on the paper account 2026-08-03, not in
+        review): a stop order sized to the whole position puts every share in
+        Alpaca's `held_for_orders`, leaving `qty_available` at 0. Any subsequent
+        REDUCE or CLOSE_ALL is then rejected with
+        `insufficient qty available for order`.
+
+        Read literally: once the engine armed the TP1 breakeven stop, it could
+        never bank the TP2 partial and could never flatten — including the
+        ALPHAZERO urgent 'exit'. The exit machine would have been unable to exit.
+        Shadow mode cannot catch this; only a real broker says no.
+
+        Alpaca's own advice is "use complex orders" (OCO/bracket), but brackets
+        are declared at ENTRY, and entries deliberately do not live in this
+        module. Cancel-then-act is the honest fit for this architecture.
+        """
+        working = self.open_stop(symbol)
+        if working is None:
+            return None
+        price = float(working["stop_price"])
+        self._req("DELETE", f"/orders/{working['id']}")
+
+        deadline, avail = time.monotonic() + 5.0, 0.0
+        while time.monotonic() < deadline:      # release is asynchronous
+            pos = self.position(symbol)
+            if pos is None:
+                return price
+            avail = abs(float(pos.get("qty_available", pos["qty"])))
+            if avail >= need:
+                return price
+            time.sleep(0.3)
+        raise BrokerRefused(
+            f"{symbol}: cancelled the working stop but only {avail:g} of {need:g} shares "
+            "came free within 5s — refusing to send a partially-fillable order")
+
+    def _await_fill(self, order_id: str, timeout: float = 10.0) -> dict:
+        """Block until an order reaches a terminal state.
+
+        Sizing anything off the position while a market order is still working
+        reads shares that are already spoken for — which is how the first fix
+        attempt tried to place a 4-share stop against 2 free shares.
+        """
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            o = self._req("GET", f"/orders/{order_id}")
+            if o.get("status") in ("filled", "canceled", "expired", "rejected"):
+                return o
+            time.sleep(0.3)
+        raise BrokerRefused(f"order {order_id[:8]} did not settle within {timeout:g}s")
+
+    def _restore_stop(self, intent: OrderIntent, price: float, long_side: bool) -> dict:
+        """Put the protective stop back at the position's new size."""
+        pos = self.position(intent.symbol)
+        if pos is None:
+            return {"status": "position closed, no stop needed"}
+        # Size to what is actually FREE, not to the headline position — anything
+        # still held for another order cannot be protected by this stop.
+        qty = self._whole(abs(float(pos.get("qty_available", pos["qty"]))))
+        if qty <= 0:
+            return {"status": "nothing left to protect"}
+        return self._req("POST", "/orders", {
+            "symbol": intent.symbol, "qty": str(qty),
+            "side": "sell" if long_side else "buy",
+            "type": "stop", "stop_price": str(round(price, 2)), "time_in_force": "day"})
 
     def _sync_stop(self, intent: OrderIntent, held: float, long_side: bool) -> dict:
         """Move the protective stop: patch the working one, else place it.
@@ -235,10 +324,23 @@ class Broker:
         if existing:
             return self._req("PATCH", f"/orders/{existing['id']}",
                              {"stop_price": px, "qty": str(self._whole(held))})
-        return self._req("POST", "/orders", {
-            "symbol": intent.symbol, "qty": str(self._whole(held)),
-            "side": "sell" if long_side else "buy",
-            "type": "stop", "stop_price": px, "time_in_force": "day"})
+        try:
+            return self._req("POST", "/orders", {
+                "symbol": intent.symbol, "qty": str(self._whole(held)),
+                "side": "sell" if long_side else "buy",
+                "type": "stop", "stop_price": px, "time_in_force": "day"})
+        except BrokerRefused as e:
+            if "wash trade" in str(e):
+                # The entry order is still working, so an opposite-side stop is
+                # rejected. Not our bug and not fatal: the runner polls, so the
+                # next cycle places it once the entry fills. Say so plainly
+                # rather than letting it read as a broken stop.
+                raise BrokerRefused(
+                    f"{intent.symbol}: entry order still working, so the protective stop "
+                    "was rejected as a wash trade. It will be placed on the next cycle "
+                    "once the entry fills. If this persists, the entry is stuck — "
+                    "check it by hand.") from e
+            raise
 
     @staticmethod
     def _whole(q: float) -> int:
