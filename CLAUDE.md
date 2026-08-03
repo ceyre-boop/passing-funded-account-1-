@@ -1,6 +1,13 @@
 # CLAUDE.md — passing-funded-account-1
 **One repo, one job: pass the first funded evaluation. Nothing else lives here.**
 
+> **READ FIRST: `ARCHITECTURE.md`** — the definitive spec as of 2026-08-03
+> (day-trading cockpit: ALPHAZERO bias layer + STOCKFISH exit engine + Colin's
+> discretionary doctrine + ladder campaign math + shot ledger). It supersedes
+> the carry-eval framing below where the two conflict; the carry stack remains
+> valid as the swing lane. Doctrine: `I_AM_A_GOOD_TRADER.md`. Today's ops:
+> `MONDAY_OPEN.md`. Carry-forward tasks: `NEXT.md`.
+
 ---
 
 ## What this repo is
