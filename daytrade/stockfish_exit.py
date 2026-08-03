@@ -44,11 +44,17 @@ class TradeState:
     tp1_done: bool = False
     tp2_done: bool = False
     urgent: Optional[str] = None    # None | 'tighten' | 'exit'  (from ALPHAZERO)
-    goal_fraction: float = 0.5      # fraction banked at TP2
+    goal_fraction: float = 0.5      # fraction banked at TP2 (spec 008: partial_frac)
     # Time-flatten (doctrine: flat before 11:00). BOTH must be supplied for the
     # rule to arm; either left None means no clock was given, so no time exit.
     flatten_at_et: Optional[str] = None     # 'HH:MM' ET, e.g. '11:00'
     now_et: Optional[str] = None            # 'HH:MM' ET, the caller's clock
+    # --- exit policy (spec 003). Defaults reproduce pre-policy behaviour EXACTLY,
+    #     which is what lets the original replay log stay byte-identical.
+    trail_mult: Optional[float] = 1.0       # multiplies trail_dist; None = no trailing at all
+    be_arm_frac: float = 1.0                # breakeven arms at this fraction of the TP1 distance
+    hold_past_tp2: bool = True              # False = flatten fully at TP2 instead of partial+trail
+    exit_policy: str = "DEFAULT"            # provenance only; params above are authoritative
 
     def __post_init__(self):
         if self.direction not in (+1, -1): raise ValueError("direction must be +1/-1")
@@ -59,6 +65,12 @@ class TradeState:
         for f_ in ("flatten_at_et", "now_et"):            # validate iff supplied
             v = getattr(self, f_)
             if v is not None: _et_minutes(v, f_)
+        if self.trail_mult is not None and self.trail_mult <= 0:
+            raise ValueError(f"trail_mult must be positive or None, got {self.trail_mult}")
+        if not (0 < self.be_arm_frac <= 1.0):
+            raise ValueError(f"be_arm_frac must be in (0, 1], got {self.be_arm_frac}")
+        if not (0 <= self.goal_fraction <= 1.0):
+            raise ValueError(f"goal_fraction must be in [0, 1], got {self.goal_fraction}")
         if self.hwm is None: self.hwm = self.price
 
 @dataclass
@@ -67,6 +79,30 @@ class Action:
     sl: Optional[float] = None
     fraction: Optional[float] = None
     reason: str = ""
+
+# Named presets from spec 003. These are SUGAR — the authoritative values are the
+# fields on TradeState. Keeping the params on the state (rather than resolving a
+# string inside decide_exit) is what lets spec 008 sweep a wide grid of configs
+# the shipping policy table does not contain.
+POLICY_PARAMS = {
+    #                trail_mult  be_arm_frac  hold_past_tp2
+    "DEFAULT":       (1.0,       1.00,        True),
+    "STATIC":        (None,      1.00,        True),   # consolidation: stop churning
+    "TRAIL_WIDE":    (1.50,      1.00,        True),   # continuation: let it run
+    "TRAIL_TIGHT":   (0.50,      0.50,        True),   # manipulation: riskless sooner
+    "SCRATCH_FAST":  (0.25,      0.25,        True),   # [SKETCH] not emitted by regime v1
+}
+
+def policy_params(name: str) -> dict:
+    """Expand a preset into TradeState kwargs. Unknown name raises — a typo'd
+    policy must stop the session, never silently pick a different risk profile.
+    """
+    if name not in POLICY_PARAMS:
+        raise ValueError(f"unknown exit_policy {name!r}; known: {sorted(POLICY_PARAMS)}")
+    tm, be, hold = POLICY_PARAMS[name]
+    return {"trail_mult": tm, "be_arm_frac": be, "hold_past_tp2": hold,
+            "exit_policy": name}
+
 
 def _fav(state: TradeState, a: float, b: float) -> float:
     """More favorable of two prices for the trade's direction."""
@@ -83,7 +119,10 @@ def decide_exit(state: TradeState) -> List[Action]:
     # 0. urgent channel outranks everything
     if state.urgent == "exit":
         return [Action("EXIT_ALL", reason="ALPHAZERO urgent: exit")]
-    trail = state.trail_dist * (0.5 if state.urgent == "tighten" else 1.0)
+    # 'tighten' MULTIPLIES with the policy, it does not replace it (spec 003):
+    # TRAIL_WIDE + tighten = 1.5 * 0.5 = 0.75x, not 0.5x.
+    trail = (None if state.trail_mult is None else
+             state.trail_dist * state.trail_mult * (0.5 if state.urgent == "tighten" else 1.0))
 
     # 1. hard stop
     if (state.price <= state.sl if state.direction > 0 else state.price >= state.sl):
@@ -95,19 +134,32 @@ def decide_exit(state: TradeState) -> List[Action]:
         if _et_minutes(state.now_et, "now_et") >= _et_minutes(state.flatten_at_et, "flatten_at_et"):
             return [Action("EXIT_ALL", reason=f"time flatten {state.flatten_at_et} ET")]
 
-    # 2. TP1: arm breakeven — rule #1, do not lose on the day
-    if not state.tp1_done and _crossed(state, state.tp1):
+    # 2. TP1: arm breakeven — rule #1, do not lose on the day.
+    #    be_arm_frac < 1 arms it EARLIER (manipulation days steal stops; get to
+    #    riskless sooner). The == 1.0 branch uses state.tp1 verbatim rather than
+    #    recomputing it, because entry + (tp1-entry)*1.0 is not bit-identical to
+    #    tp1 in floating point and would silently shift the trigger.
+    arm = (state.tp1 if state.be_arm_frac == 1.0 else
+           state.entry + (state.tp1 - state.entry) * state.be_arm_frac)
+    if not state.tp1_done and _crossed(state, arm):
         state.tp1_done = True
-        acts.append(Action("MOVE_SL", sl=state.entry, reason="TP1: breakeven armed, day cannot go red"))
+        acts.append(Action("MOVE_SL", sl=state.entry,
+                           reason="TP1: breakeven armed, day cannot go red"
+                                  + ("" if state.be_arm_frac == 1.0
+                                     else f" (early, {state.be_arm_frac:g} of TP1)")))
 
     # 3. TP2: bank the set goal, stop rides to TP1
     if not state.tp2_done and _crossed(state, state.tp2):
         state.tp2_done = True
+        if not state.hold_past_tp2:
+            # No runner is kept. The day goal IS the trade — take it and be done.
+            return acts + [Action("EXIT_ALL", reason="TP2: day goal hit, full exit (hold_past_tp2=False)")]
         acts.append(Action("TAKE_PARTIAL", fraction=state.goal_fraction, reason="TP2: day goal banked"))
         acts.append(Action("MOVE_SL", sl=state.tp1, reason="TP2: stop rides to TP1"))
 
-    # 4. TP3: trail the runner
-    if state.tp2_done:
+    # 4. TP3: trail the runner. trail_mult=None means STATIC — after TP2 the
+    #    levels stay exactly where the plan put them, no churn on noise.
+    if state.tp2_done and trail is not None:
         trail_sl = state.hwm - state.direction * trail
         cur_ok = trail_sl > state.sl if state.direction > 0 else trail_sl < state.sl
         if cur_ok:
