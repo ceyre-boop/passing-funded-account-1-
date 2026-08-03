@@ -6,12 +6,14 @@ the build sequence.
 | # | file | component | status | build order |
 |---|---|---|---|---|
 | 000 | RULINGS_AND_ORDER | rulings, sequence, status legend | — | read first |
-| 005 | BACKTEST | `daytrade/backtest.py` | `[SPEC]` | **1st** |
+| 008 | CEILING | `daytrade/ceiling.py`, `splits.py` | `[SPEC]` | **1st (with 005)** |
+| 005 | BACKTEST | `daytrade/backtest.py` | `[SPEC]` | 1st |
 | 001 | REGIME | `daytrade/regime.py` | `[SPEC]` | 2nd |
 | 004 | SCORECARD | `daytrade/scorecard.py`, `streak.py` | `[SPEC]` | 3rd |
 | 002 | SURVIVAL | `daytrade/survival.py` | `[SPEC]` | 4th |
 | 003 | STOCKFISH_V2 | extend `stockfish_exit.py` | `[SPEC]` | 5th |
 | 006 | ALPHAZERO_V2 | extend `alphazero_bias.py` | `[SPEC]` | 6th |
+| 009 | CLAUDE_AS_NEWS | `daytrade/news_claude.py` + launchd | `[SPEC]` | with 006 |
 | 007 | BRIEF (in 006 file) | `daytrade/brief.py` | `[SKETCH]` | last |
 
 ## Status legend
@@ -34,7 +36,10 @@ the build sequence.
 3. **Every prediction gets scored, against a dumb baseline.** An accuracy number
    without the score a brainless model gets on identical data is not evidence.
 4. **Rule changes commit BEFORE the next session.** Never after a loss.
-5. **No look-ahead, ever.** `classify()` sees bars ≤ N; `grade()` sees N+1..N+K
+5. **Tune split only.** All tuning, eyeballing and ceiling measurement happens on
+   the oldest 40 sessions. The sealed 20 produce ONE number, ONCE, after
+   `rule_version` is frozen. Enforced in `daytrade/splits.py`, not in intentions.
+6. **No look-ahead, ever.** `classify()` sees bars ≤ N; `grade()` sees N+1..N+K
    and never feeds back into a classification. Assert it at the boundary.
 
 ## Where the ideas came from
