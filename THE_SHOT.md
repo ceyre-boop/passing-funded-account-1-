@@ -1,6 +1,16 @@
 # THE_SHOT — the exact mechanical rule that fires "take this trade"
 Locked 2026-08-03 05:15 ET, before the open. No edits mid-campaign. Changes require a new version committed BEFORE the next attempt, never after a loss.
 
+> **v2 AMENDMENT — 2026-08-03 05:35 ET, committed BEFORE attempt 1 (allowed).**
+> Account pivoted to **Tradeify $25K Select Evaluation (futures)** after MT5/cTrader
+> US-residency block. Changes: instrument **US500 CFD → MES (Micro E-mini S&P)**;
+> sizing switches from %-of-account to **fixed $ per select_pass_planner.py**:
+> daily target $300, risk/shot $140, micros = 140 / (5 × stop points), cap 10.
+> Target per shot = the daily $300 (2.14R), not +6% of account. Everything else
+> — OR windows, 5-min-close trigger, OCO, no management, 15:45 flatten, skip
+> rules, cooloff — unchanged. Campaign math for this account: 5 green days to
+> $1,500, consistency-safe at 20% biggest-day share. See MONDAY_OPEN.md.
+
 ## Colin's amendments (binding)
 - **Budget: 2 fees. HARD.** No third fee this campaign, no relitigating after a red morning.
 - BOGO at checkout → 2 fees may equal 4 accounts. Each account = one first-quality shot.
