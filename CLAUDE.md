@@ -7,6 +7,12 @@
 > the carry-eval framing below where the two conflict; the carry stack remains
 > valid as the swing lane. Doctrine: `I_AM_A_GOOD_TRADER.md`. Today's ops:
 > `MONDAY_OPEN.md`. Carry-forward tasks: `NEXT.md`.
+>
+> **Building anything? Read `specs/README.md` then `specs/000_RULINGS_AND_ORDER.md`.**
+> Written specs for all remaining components, labeled `[SPEC]` (safe to build
+> from) or `[SKETCH]` (needs a planning pass first — do not build). Build order
+> is fixed there: backtest bench → regime → scorecard → survival → stockfish v2
+> → alphazero v2 → brief.
 
 ---
 
