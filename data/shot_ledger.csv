@@ -1,2 +1,3 @@
 date,release,or_high,or_low,trigger_bar_time,direction,entry,stop,target,outcome_R,setup_grade,cooloff_honored,notes
 2026-08-03,ISM Mfg 10:00,,,10:0x,long NVDA,~204,per plan,204+TP1,+1.77,A,n/a,"Bet 1 of doctrine: bigger size little RR, TP1 smashed +$300, flat & green day 1. Qty 163, RR 1.77 per platform."
+2026-08-04,none (pre-AMD),,,no-trigger-taken,none,,,,NO_TRADE,A-setup-seen,n/a,"Training day 1. Setup DID appear (manipulation: sweep + reclaim, FVG retrace, R:R 2.5 to 219) but was not taken. Flat, $0. Counts toward trigger-rate denominator: setup present, shot not taken. Not a discipline pass - a hesitation. Logged as such."

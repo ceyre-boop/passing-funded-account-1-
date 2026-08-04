@@ -1,0 +1,23 @@
+{
+  "date": "2026-08-04", "symbol": "NVDA",
+  "source": "Colin, read live on the 1m/5m chart, called correctly, not traded",
+  "label": "MANIPULATION",
+  "time_block": "MORNING",
+  "confidence_human": 0.8,
+  "observed": {
+    "pattern": "sweep of prior level then reclaim, retrace into FVG, BOS marked",
+    "active_fvgs": 4,
+    "atr_5m": 0.47868,
+    "rsi": 57.4,
+    "trend_ema": "BULLISH",
+    "htf_trend": "BULL",
+    "bull_score": "3/6", "bear_score": "0/6",
+    "volume_spike": false,
+    "setup_rr": 2.5,
+    "proposed_sl": 205.78247,
+    "proposed_tp": 219.03882
+  },
+  "why_this_is_a_useful_label": "Time priors put MANIPULATION highest in the 10:30-11:30 MORNING block and the tape agreed. The classifier must produce MANIPULATION here. If it says CONTINUATION (EMA stack is bullish, HTF bull) or CONSOLIDATION (no volume spike), the rule weights are wrong - most likely the sweep+reclaim term is underweighted relative to the trend terms.",
+  "outcome_not_recorded": "Shot was not taken, so there is no R outcome. This example grades the CLASSIFICATION only, never the exit.",
+  "grade_version": "pending - spec 004 grade() not yet built"
+}
