@@ -40,7 +40,8 @@ from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # import the engine beside us
-from stockfish_exit import TradeState, decide_exit, apply_action  # noqa: E402
+from stockfish_exit import (TradeState, decide_exit, apply_action,  # noqa: E402
+                            policy_params)
 import broker as broker_mod  # noqa: E402
 
 ET = ZoneInfo("America/New_York")
@@ -48,7 +49,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BIAS = ROOT / "data" / "daytrade" / "bias.json"
 LOGDIR = ROOT / "data" / "daytrade"
 
-REQUIRED = ("symbol", "direction", "entry", "qty", "sl", "tp1", "trail_dist")
+REQUIRED = ("symbol", "direction", "entry", "qty", "sl")
 
 
 class QuoteUnavailable(RuntimeError):
@@ -76,19 +77,60 @@ def load_plan(path: Path) -> dict:
         raise ValueError(f"direction must be long/short or +1/-1, got {plan['direction']!r}")
     plan["direction"] = d
 
-    has_tp2, has_goal = plan.get("tp2") is not None, plan.get("day_goal_usd") is not None
-    if has_tp2 == has_goal:
-        raise ValueError("plan needs exactly one of tp2 or day_goal_usd, not both and not neither")
-    if has_goal:
+    # R-multiple geometry. Live, you know your fill and your stop; the ladder
+    # should follow from them rather than being hand-computed under time pressure.
+    entry, stop = float(plan["entry"]), float(plan["sl"])
+    risk = abs(entry - stop)
+    if risk <= 0:
+        raise ValueError(f"entry {entry} and sl {stop} give zero risk — no R geometry")
+    plan["risk_per_share"] = risk
+
+    if plan.get("tp1") is None:
+        if plan.get("tp1_r") is None:
+            raise ValueError("plan needs tp1 or tp1_r")
+        plan["tp1"] = entry + d * float(plan["tp1_r"]) * risk
+    if plan.get("trail_dist") is None:
+        if plan.get("trail_r") is None:
+            raise ValueError("plan needs trail_dist or trail_r")
+        plan["trail_dist"] = float(plan["trail_r"]) * risk
+
+    named = [k for k in ("tp2", "tp2_r", "day_goal_usd") if plan.get(k) is not None]
+    if len(named) != 1:
+        raise ValueError(f"plan needs exactly one of tp2, tp2_r, day_goal_usd — got {named}")
+    if "tp2_r" in named:
+        plan["tp2"] = entry + d * float(plan["tp2_r"]) * risk
+    elif "day_goal_usd" in named:
         qty = float(plan["qty"])
         if qty <= 0:
             raise ValueError(f"day_goal_usd needs a positive qty, got {qty}")
         # the "$300 goal" of the doctrine, expressed as a price level
-        plan["tp2"] = float(plan["entry"]) + d * (float(plan["day_goal_usd"]) / qty)
+        plan["tp2"] = entry + d * (float(plan["day_goal_usd"]) / qty)
     return plan
 
 
 def state_from_plan(plan: dict) -> TradeState:
+    """Build the engine state. Exit-policy params come from the plan because the
+    regime classifier (spec 001) does not exist yet — until it does, the exit
+    style is Colin's read, set before the open, which is the doctrine anyway.
+
+    Either name a preset in `exit_policy`, or set the params directly. Naming a
+    preset AND overriding its params is refused rather than silently resolved —
+    an ambiguous risk profile is not something to guess at 09:31.
+    """
+    # PRESENCE, not truthiness. `trail_mult: null` is a MEANINGFUL value — it is
+    # how a plan says "never trail" (STATIC). Filtering None out as "unset" made
+    # the engine fall back to its 1.0 default and trail at full width, which is
+    # the exact opposite of what the plan asked for, silently. Caught in
+    # pre-flight the night before training day 1; it would have run live.
+    explicit = {k: plan[k] for k in ("trail_mult", "be_arm_frac", "hold_past_tp2")
+                if k in plan}
+    preset = plan.get("exit_policy")
+    if preset and explicit:
+        raise ValueError(
+            f"plan sets exit_policy={preset!r} AND overrides {sorted(explicit)} — "
+            "pick one. Presets are in stockfish_exit.POLICY_PARAMS.")
+    params = policy_params(preset) if preset else explicit
+
     return TradeState(
         direction=plan["direction"],
         entry=float(plan["entry"]),
@@ -100,6 +142,7 @@ def state_from_plan(plan: dict) -> TradeState:
         trail_dist=float(plan["trail_dist"]),
         goal_fraction=float(plan.get("goal_fraction", 0.5)),
         flatten_at_et=plan.get("flatten_at_et"),
+        **params,
     )
 
 
@@ -292,6 +335,8 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
           f"entry {s.entry} qty {s.qty:g} sl {s.sl} tp1 {s.tp1} tp2 {s.tp2:.2f} "
           f"trail {s.trail_dist} flatten {s.flatten_at_et or 'off'}")
     mode = f"broker {broker.mode} -> {broker.base}" if broker else "advice only, no broker"
+    print(f"# policy {s.exit_policy} | trail_mult {s.trail_mult} | be_arm {s.be_arm_frac} "
+          f"| hold_past_tp2 {s.hold_past_tp2} | risk/share ${plan.get('risk_per_share', 0):.2f}")
     print(f"# {mode}. ctrl-c to stop.\n")
 
     step = 0

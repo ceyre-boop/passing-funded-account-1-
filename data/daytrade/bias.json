@@ -1,8 +1,10 @@
 {
- "ts": "2026-08-03T14:53:39.521291+00:00",
- "bias": null,
- "urgency": "stale",
- "n_headlines": 0,
- "detail": [],
- "model": "keyword-valence v1 (placeholder, unvalidated)"
+ "ts": "2026-08-03T22:00:00+00:00",
+ "bias": -0.1,
+ "urgency": "none",
+ "n_headlines": 1,
+ "detail": [
+  {"ticker": "NVDA", "headline": "AMD Q2 earnings Tue 8/4 after close; options pricing ~9.8% move. Tue session is PRE-catalyst.", "score": 0}
+ ],
+ "model": "MANUAL v0 (hand-written from a Claude report, unvalidated, scored in news_scorecard.csv). NOT written by alphazero_bias.py — do not start the v1 keyword loop while a position is open."
 }

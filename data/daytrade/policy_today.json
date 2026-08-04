@@ -1,0 +1,17 @@
+{
+  "_what": "Tomorrow's PRE-OPEN policy block. Decided the night before, per doctrine. newplan.py merges your actual fill and stop into this to produce plan.json.",
+  "_date": "2026-08-04 (Tue) — training day 1, Alpaca paper, NVDA only",
+  "_why_these_params": "The 2026-08-03 ceiling measurement (data/daytrade/ceiling_report.json) found the oracle reached for early breakeven and a hard flatten, and essentially never for trailing. 17 of its 24 picks were be_arm~0.25 / no trail / flat by 11:00. That is also Colin's own doctrine, and it is NOT one of the three shipped policies. Tomorrow tests it live at n=1.",
+  "_honest_label": "n=24 entries, 3 winners. This parameter choice is a hypothesis, not a validated edge.",
+
+  "symbol": "NVDA",
+  "tp1_r": 1.0,
+  "tp2_r": 2.14,
+  "trail_r": 0.5,
+  "goal_fraction": 0.5,
+
+  "be_arm_frac": 0.25,
+  "trail_mult": null,
+  "hold_past_tp2": true,
+  "flatten_at_et": "11:00"
+}
