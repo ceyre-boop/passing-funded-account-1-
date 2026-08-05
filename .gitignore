@@ -6,4 +6,8 @@ __pycache__/
 .DS_Store
 logs/
 *.log
+# ...except the committed replay baselines. These are evidence, not runtime noise:
+# `*.log` silently swallowed them once already, so stockfish_exit.py's docstring
+# described a directory that did not exist in the pushed commit.
+!data/daytrade/replay_expected/*.log
 data/agent/*.jsonl

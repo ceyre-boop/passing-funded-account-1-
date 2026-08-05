@@ -1,0 +1,11 @@
+t0 px= 204.20 -> HOLD         sl=None frac=None | set it and forget it
+t1 px= 204.90 -> MOVE_SL      sl=204.0 frac=None | TP1: breakeven armed, day cannot go red
+t2 px= 205.10 -> HOLD         sl=None frac=None | set it and forget it
+t3 px= 205.80 -> TAKE_PARTIAL sl=None frac=0.5 | TP2: day goal banked
+t3 px= 205.80 -> MOVE_SL      sl=204.9 frac=None | TP2: stop rides to TP1
+t3 px= 205.80 -> MOVE_SL      sl=205.0 frac=None | TP3 trail (0.8 pts off HWM)
+t4 px= 206.40 -> MOVE_SL      sl=205.6 frac=None | TP3 trail (0.8 pts off HWM)
+t5 px= 207.10 -> MOVE_SL      sl=206.3 frac=None | TP3 trail (0.8 pts off HWM)
+t6 px= 206.90 -> HOLD         sl=None frac=None | set it and forget it
+t7 px= 206.20 -> EXIT_ALL     sl=None frac=None | stop hit
+urgent px=206.50 -> EXIT_ALL     | ALPHAZERO urgent: exit

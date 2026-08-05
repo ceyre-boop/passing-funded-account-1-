@@ -39,15 +39,21 @@ class ReplayMismatch(RuntimeError):
 
 
 def _state_from_record(rec: dict, plan: dict) -> TradeState:
-    """Rebuild the engine's starting state from the plan the runner used."""
-    return TradeState(
-        direction=plan["direction"], entry=float(plan["entry"]),
-        qty=float(plan["qty"]), price=float(plan["entry"]),
-        sl=float(plan["sl"]), tp1=float(plan["tp1"]), tp2=float(plan["tp2"]),
-        trail_dist=float(plan["trail_dist"]),
-        goal_fraction=float(plan.get("goal_fraction", 0.5)),
-        flatten_at_et=plan.get("flatten_at_et"),
-    )
+    """Rebuild the engine's starting state — via the RUNNER'S OWN constructor.
+
+    This used to build a TradeState by hand, and it silently drifted: it never
+    threaded trail_mult / be_arm_frac / hold_past_tp2 / exit_policy, so the
+    harness reconstructed engine DEFAULTS no matter what the plan said. On
+    plan.example.json that is invisible, because the example uses the defaults.
+    On data/daytrade/policy_today.json — the config actually configured to trade
+    — the harness trailed at full width and armed breakeven late while the live
+    runner did neither, and the DoD diff failed on four of eight cycles.
+
+    A second way to build the state is a second implementation, which is the one
+    thing this architecture forbids. There is now one: runner.state_from_plan.
+    """
+    from runner import state_from_plan
+    return state_from_plan(plan)
 
 
 def replay_session(session_jsonl: Path, plan: dict) -> list[dict]:
@@ -60,6 +66,20 @@ def replay_session(session_jsonl: Path, plan: dict) -> list[dict]:
     rows = [json.loads(l) for l in session_jsonl.open() if l.strip()]
     if not rows:
         raise ReplayMismatch(f"{session_jsonl} is empty — nothing to replay")
+
+    # The session's own recorded plan always wins. A plan passed on the command
+    # line is a guess about what the runner used; the log knows.
+    embedded = rows[0].get("plan")
+    if embedded:
+        # Already RESOLVED — the runner stamped it after load_plan had computed
+        # tp1/tp2/trail_dist and normalised direction. Re-running load_plan on it
+        # would fail its own "exactly one of tp2/tp2_r/day_goal_usd" check, since
+        # a resolved plan legitimately carries both the ratio and the price.
+        plan = embedded
+    else:
+        print("  !! this session log predates plan-stamping, so the plan passed on\n"
+              "     the command line is being TRUSTED, not verified. If it is not the\n"
+              "     plan the runner actually ran, this diff is meaningless.")
 
     st = _state_from_record(rows[0], plan)
     out = []

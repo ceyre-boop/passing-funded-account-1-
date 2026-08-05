@@ -1,0 +1,10 @@
+t0 px= 204.20 [ENTERED  ] -> HOLD         sl=None frac=None | set it and forget it
+t1 px= 204.90 [PROTECTED] -> MOVE_SL      sl=204.0 frac=None | breakeven now most protective (202.9 -> 204): TP1: breakeven armed, day cannot go red
+t2 px= 205.10 [PROTECTED] -> HOLD         sl=None frac=None | set it and forget it
+t3 px= 205.80 [SCALED   ] -> TAKE_PARTIAL sl=None frac=0.5 | TP2: day goal banked
+t3 px= 205.80 [SCALED   ] -> MOVE_SL      sl=205.0 frac=None | trail now most protective (204 -> 205): trail 0.8 pts off HWM
+t4 px= 206.40 [RUNNER   ] -> MOVE_SL      sl=205.6 frac=None | trail now most protective (205 -> 205.6): trail 0.8 pts off HWM
+t5 px= 207.10 [RUNNER   ] -> MOVE_SL      sl=206.3 frac=None | trail now most protective (205.6 -> 206.3): trail 0.8 pts off HWM
+t6 px= 206.90 [RUNNER   ] -> HOLD         sl=None frac=None | set it and forget it
+t7 px= 206.20 [CLOSED   ] -> EXIT_ALL     sl=None frac=None | stop hit
+urgent px=206.50 [CLOSING  ] -> EXIT_ALL     | ALPHAZERO urgent: exit

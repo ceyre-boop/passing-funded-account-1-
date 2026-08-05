@@ -390,7 +390,7 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
             for intent in broker_mod.intents_from_actions(actions, symbol):
                 orders.append(broker.send(intent))
 
-        log_cycle({
+        rec = {
             "ts": datetime.now(timezone.utc).isoformat(), "source": src, "step": step,
             "symbol": symbol, "price": price, "quote_ts": qts_iso, "quote": qdetail,
             "hwm": s.hwm, "sl": s.sl, "qty": s.qty,
@@ -401,7 +401,15 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
                          "reason": a.reason} for a in actions],
             "broker_mode": broker.mode if broker else "off",
             "orders": orders,
-        })
+        }
+        if step == 0:
+            # Stamp the resolved plan into the first record. The harness then
+            # reconstructs state from the session's OWN provenance instead of
+            # being handed a plan on the command line — where the default was
+            # plan.example.json, which is the wrong plan for every real session
+            # and quietly produced a passing DoD diff for a config nobody traded.
+            rec["plan"] = {k: v for k, v in plan.items() if not k.startswith("_")}
+        log_cycle(rec)
 
         if any(a.kind == "EXIT_ALL" for a in actions):
             print_flatten(symbol, price,
