@@ -175,7 +175,16 @@ def simulate(session, e: Entry, cfg: dict) -> float:
 # --- action spaces -----------------------------------------------------------
 
 def narrow_space() -> dict[str, dict]:
-    """The three policies as spec 003 ships them."""
+    """The three policies as spec 003 shipped them.
+
+    DELIBERATELY still the legacy names (STATIC / TRAIL_WIDE / TRAIL_TIGHT) even
+    though v3 renamed the vocabulary to DEFEND / HARVEST / RIDE / EVENT /
+    SALVAGE. `prize_narrow` means "what was reachable through the policies as
+    designed at the time of measurement"; swapping in a different, larger set
+    would silently redefine the quantity and make the 2026-08-03 number
+    incomparable with every later one. Re-cut it deliberately, with a new
+    baseline, or not at all.
+    """
     out = {}
     for name in ("STATIC", "TRAIL_WIDE", "TRAIL_TIGHT"):
         p = policy_params(name)

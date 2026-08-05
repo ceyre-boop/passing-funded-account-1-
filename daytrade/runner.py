@@ -41,7 +41,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # import the engine beside us
 from stockfish_exit import (TradeState, decide_exit, apply_action,  # noqa: E402
-                            policy_params)
+                            policy_params, effective_stop)
 import broker as broker_mod  # noqa: E402
 
 ET = ZoneInfo("America/New_York")
@@ -129,7 +129,7 @@ def state_from_plan(plan: dict) -> TradeState:
         raise ValueError(
             f"plan sets exit_policy={preset!r} AND overrides {sorted(explicit)} — "
             "pick one. Presets are in stockfish_exit.POLICY_PARAMS.")
-    params = policy_params(preset) if preset else explicit
+    params = policy_params(preset, plan) if preset else explicit
 
     return TradeState(
         direction=plan["direction"],
@@ -297,7 +297,7 @@ def read_urgency(require: bool) -> tuple[str | None, str]:
 def print_cycle(clock: str, symbol: str, price: float, s: TradeState,
                 bias_note: str, age_note: str, actions) -> None:
     head = (f"{clock} {symbol} {price:9.2f}  hwm {s.hwm:9.2f}  sl {s.sl:9.2f}  "
-            f"qty {s.qty:g}  bias:{bias_note}{age_note}")
+            f"qty {s.qty:g}  [{s.stage.value}]  bias:{bias_note}{age_note}")
     for i, a in enumerate(actions):
         tail = a.kind if a.kind != "MOVE_SL" else f"MOVE_SL -> {a.sl:.2f}"
         if a.kind == "TAKE_PARTIAL":
@@ -394,6 +394,7 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
             "ts": datetime.now(timezone.utc).isoformat(), "source": src, "step": step,
             "symbol": symbol, "price": price, "quote_ts": qts_iso, "quote": qdetail,
             "hwm": s.hwm, "sl": s.sl, "qty": s.qty,
+            "stage": s.stage.value, "stop_layer": effective_stop(s).name,
             "tp1_done": s.tp1_done, "tp2_done": s.tp2_done,
             "urgent": urgency, "bias_note": bias_note,
             "actions": [{"kind": a.kind, "sl": a.sl, "fraction": a.fraction,

@@ -1,34 +1,113 @@
 #!/usr/bin/env python3
-"""STOCKFISH — the mechanical exit engine. ONE implementation, zero judgment.
+"""STOCKFISH v3 — the deterministic trade operating system.
 
-decide_exit(state) -> Action. Pure function: same state in, same action out,
-importable by a backtest harness and the live advisor alike (APEX DoD: run the
-same stream through both, diff the logs, byte-identical).
+Answers exactly one question: *given the approved trade plan and the current
+facts, what actions are legally allowed right now?* It has no opinion about the
+market. AlphaZero communicates meaning; Stockfish controls mechanics, and that
+boundary does not move as either side grows (specs/000 ruling 1).
 
-Doctrine encoded (I_AM_A_GOOD_TRADER.md):
-  TP1  = don't lose on the day  -> stop moves to breakeven the moment TP1 trades
-  TP2  = the set goal ($300)    -> bank the goal (partial), stop rides to TP1
-  TP3  = trail the rest         -> dynamic trail, "you never know when it rips"
-  Urgent channel (from ALPHAZERO): 'exit' = flatten now; 'tighten' = halve trail.
-  Exit doctrine: the entry doesn't matter, the exit is the profession.
+THREE STRUCTURES, one file:
 
-SAFETY (APEX): this module never talks to a broker. It emits advice actions;
-a human (or a separately-flagged, manually-confirmed runner) executes them.
-Fail loud: malformed state raises, never guesses.
+  1. LIFECYCLE STAGES — a position moves ENTERED -> PROTECTED -> SCALED ->
+     RUNNER -> CLOSING -> CLOSED, monotonically. Each stage declares which
+     actions are legal in it, so an impossible transition is structurally
+     unavailable rather than merely unlikely.
+
+  2. LAYERED PROTECTION — several candidate stops exist at once (catastrophic,
+     thesis, time-decay, breakeven, volatility, profit-lock, trail) and the most
+     protective ACTIVE one wins. This makes "the stop never loosens" an
+     invariant of the selection rule instead of an accident of branch ordering,
+     and it makes every stop move explain itself: which layer took over, from
+     what level to what level.
+
+  3. INTENT POLICIES — DEFEND / HARVEST / RIDE / EVENT / SALVAGE. Named intent
+     expands into deterministic mechanical parameters. The parameters remain
+     authoritative on TradeState so spec 008's ceiling can sweep configurations
+     the shipped policy table does not contain.
+
+DOCTRINE ENCODED (I_AM_A_GOOD_TRADER.md):
+  TP1 = don't lose on the day  -> breakeven layer arms
+  TP2 = the set goal ($300)    -> bank the goal, profit-lock layer arms
+  TP3 = trail the rest         -> trail layer, "you never know when it rips"
+  Urgent channel (ALPHAZERO): 'exit' flattens; 'tighten' halves the trail.
+  The entry doesn't matter, the exit is the profession.
+
+SAFETY (APEX): never talks to a broker. Emits advice actions; a human executes.
+Fail loud: malformed state raises, unknown policy raises, an action illegal in
+the current stage raises. Nothing is ever silently downgraded to a safe guess.
+
+v3 NOTE ON THE REPLAY BASELINE: at TP2 the v2 engine emitted two stop moves
+(to TP1, then to the trail). Under most-protective-wins both are candidates at
+that instant and the trail already dominates, so v3 emits one. The stop LEVELS
+are identical; only the announcement granularity changed. The v2 log is kept at
+data/daytrade/replay_expected/v2_baseline.log beside the v3 one so the change is
+reviewable. The invariant that actually matters — runner log == harness log —
+is unaffected, and every one of the ceiling's 9,576 per-config R values is
+unchanged, which is the real regression test.
 """
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Optional, List
 
-def _et_minutes(hhmm: str, field: str) -> int:
+# ---------------------------------------------------------------- lifecycle
+
+class Stage(str, Enum):
+    ENTERED   = "ENTERED"      # hard stop + emergency exit only
+    PROTECTED = "PROTECTED"    # breakeven armed; first reduction allowed
+    SCALED    = "SCALED"       # goal banked; profit ladder + volatility allowed
+    RUNNER    = "RUNNER"       # trailing only
+    CLOSING   = "CLOSING"      # no new adjustments; reconcile remaining orders
+    CLOSED    = "CLOSED"       # terminal
+
+_ORDER = {s: i for i, s in enumerate(
+    [Stage.ENTERED, Stage.PROTECTED, Stage.SCALED, Stage.RUNNER,
+     Stage.CLOSING, Stage.CLOSED])}
+
+# What each stage is allowed to emit. A trade in RUNNER cannot take a new
+# partial; a trade in CLOSING cannot adjust anything. Violations raise.
+ALLOWED_ACTIONS = {
+    Stage.ENTERED:   frozenset({"HOLD", "EXIT_ALL"}),
+    Stage.PROTECTED: frozenset({"HOLD", "MOVE_SL", "TAKE_PARTIAL", "EXIT_ALL"}),
+    Stage.SCALED:    frozenset({"HOLD", "MOVE_SL", "TAKE_PARTIAL", "EXIT_ALL"}),
+    Stage.RUNNER:    frozenset({"HOLD", "MOVE_SL", "EXIT_ALL"}),
+    Stage.CLOSING:   frozenset({"EXIT_ALL"}),
+    Stage.CLOSED:    frozenset(),
+}
+
+
+class StageError(RuntimeError):
+    """An illegal transition or an action not permitted in the current stage."""
+
+
+def advance(state: "TradeState", target: Stage) -> None:
+    """Move the position forward. Backwards is structurally impossible.
+
+    This is the guarantee the lifecycle exists for: a trade can never fall back
+    from RUNNER into an earlier, riskier state. It already held in v2 because
+    the tp1/tp2 flags were never unset — here it is enforced rather than
+    inherited from the order the branches happen to run in.
+    """
+    if _ORDER[target] < _ORDER[state.stage]:
+        raise StageError(f"cannot go {state.stage.value} -> {target.value}: "
+                         "lifecycle is forward-only")
+    state.stage = target
+
+
+# ------------------------------------------------------------------- helpers
+
+def _et_minutes(hhmm: str, field_: str) -> int:
     """'HH:MM' -> minutes since midnight ET. Malformed input raises."""
     try:
         h, m = hhmm.strip().split(":")
         h, m = int(h), int(m)
     except Exception as e:
-        raise ValueError(f"{field} must be 'HH:MM', got {hhmm!r}") from e
+        raise ValueError(f"{field_} must be 'HH:MM', got {hhmm!r}") from e
     if not (0 <= h < 24 and 0 <= m < 60):
-        raise ValueError(f"{field} out of range: {hhmm!r}")
+        raise ValueError(f"{field_} out of range: {hhmm!r}")
     return h * 60 + m
+
+
+# --------------------------------------------------------------------- state
 
 @dataclass
 class TradeState:
@@ -36,25 +115,28 @@ class TradeState:
     entry: float
     qty: float
     price: float                # current
-    sl: float
+    sl: float                   # the effective stop, as last applied
     tp1: float                  # breakeven trigger
     tp2: float                  # day-goal level ($300 worth)
     trail_dist: float           # trail distance beyond TP2 (points)
     hwm: float = None           # best price seen since entry (favorable extreme)
-    tp1_done: bool = False
-    tp2_done: bool = False
     urgent: Optional[str] = None    # None | 'tighten' | 'exit'  (from ALPHAZERO)
     goal_fraction: float = 0.5      # fraction banked at TP2 (spec 008: partial_frac)
     # Time-flatten (doctrine: flat before 11:00). BOTH must be supplied for the
     # rule to arm; either left None means no clock was given, so no time exit.
     flatten_at_et: Optional[str] = None     # 'HH:MM' ET, e.g. '11:00'
     now_et: Optional[str] = None            # 'HH:MM' ET, the caller's clock
-    # --- exit policy (spec 003). Defaults reproduce pre-policy behaviour EXACTLY,
-    #     which is what lets the original replay log stay byte-identical.
-    trail_mult: Optional[float] = 1.0       # multiplies trail_dist; None = no trailing at all
-    be_arm_frac: float = 1.0                # breakeven arms at this fraction of the TP1 distance
-    hold_past_tp2: bool = True              # False = flatten fully at TP2 instead of partial+trail
-    exit_policy: str = "DEFAULT"            # provenance only; params above are authoritative
+    # --- mechanical params. Authoritative; policy names are sugar over these.
+    trail_mult: Optional[float] = 1.0       # multiplies trail_dist; None = never trail
+    be_arm_frac: float = 1.0                # breakeven arms at this fraction of TP1
+    hold_past_tp2: bool = True              # False = flatten fully at TP2
+    exit_policy: str = "DEFAULT"            # provenance only
+    # --- lifecycle
+    stage: Stage = Stage.ENTERED
+    catastrophic_sl: Optional[float] = None  # the ORIGINAL plan stop; never removed
+    # --- inactive layers, awaiting their inputs (see stop_candidates)
+    atr: Optional[float] = None              # volatility layer needs this
+    thesis_sl: Optional[float] = None        # AlphaZero invalidation level
 
     def __post_init__(self):
         if self.direction not in (+1, -1): raise ValueError("direction must be +1/-1")
@@ -72,6 +154,17 @@ class TradeState:
         if not (0 <= self.goal_fraction <= 1.0):
             raise ValueError(f"goal_fraction must be in [0, 1], got {self.goal_fraction}")
         if self.hwm is None: self.hwm = self.price
+        if self.catastrophic_sl is None: self.catastrophic_sl = self.sl
+
+    # Kept as derived properties: runner.py writes both into every session-log
+    # record, and the harness diffs against that schema. Changing it would break
+    # the diffability the architecture rests on.
+    @property
+    def tp1_done(self) -> bool: return _ORDER[self.stage] >= _ORDER[Stage.PROTECTED]
+
+    @property
+    def tp2_done(self) -> bool: return _ORDER[self.stage] >= _ORDER[Stage.SCALED]
+
 
 @dataclass
 class Action:
@@ -80,93 +173,242 @@ class Action:
     fraction: Optional[float] = None
     reason: str = ""
 
-# Named presets from spec 003. These are SUGAR — the authoritative values are the
-# fields on TradeState. Keeping the params on the state (rather than resolving a
-# string inside decide_exit) is what lets spec 008 sweep a wide grid of configs
-# the shipping policy table does not contain.
-POLICY_PARAMS = {
-    #                trail_mult  be_arm_frac  hold_past_tp2
-    "DEFAULT":       (1.0,       1.00,        True),
-    "STATIC":        (None,      1.00,        True),   # consolidation: stop churning
-    "TRAIL_WIDE":    (1.50,      1.00,        True),   # continuation: let it run
-    "TRAIL_TIGHT":   (0.50,      0.50,        True),   # manipulation: riskless sooner
-    "SCRATCH_FAST":  (0.25,      0.25,        True),   # [SKETCH] not emitted by regime v1
-}
 
-def policy_params(name: str) -> dict:
-    """Expand a preset into TradeState kwargs. Unknown name raises — a typo'd
-    policy must stop the session, never silently pick a different risk profile.
-    """
-    if name not in POLICY_PARAMS:
-        raise ValueError(f"unknown exit_policy {name!r}; known: {sorted(POLICY_PARAMS)}")
-    tm, be, hold = POLICY_PARAMS[name]
-    return {"trail_mult": tm, "be_arm_frac": be, "hold_past_tp2": hold,
-            "exit_policy": name}
+@dataclass(frozen=True)
+class StopCandidate:
+    """One reason a stop could sit at a level. Several are live at once."""
+    name: str
+    level: Optional[float]
+    active: bool
+    reason: str
 
 
-def _fav(state: TradeState, a: float, b: float) -> float:
-    """More favorable of two prices for the trade's direction."""
-    return max(a, b) if state.direction > 0 else min(a, b)
+# -------------------------------------------------------------- the layers
+
+def _fav(direction: int, a: float, b: float) -> float:
+    return max(a, b) if direction > 0 else min(a, b)
+
 
 def _crossed(state: TradeState, level: float) -> bool:
     return state.price >= level if state.direction > 0 else state.price <= level
 
+
+def _arm_level(state: TradeState) -> float:
+    """Where breakeven arms. be_arm_frac < 1 arms it EARLIER.
+
+    The == 1.0 branch returns state.tp1 verbatim rather than recomputing it:
+    entry + (tp1-entry)*1.0 is not bit-identical to tp1 in floating point and
+    would silently shift the trigger.
+    """
+    return (state.tp1 if state.be_arm_frac == 1.0 else
+            state.entry + (state.tp1 - state.entry) * state.be_arm_frac)
+
+
+def trail_distance(state: TradeState) -> Optional[float]:
+    """Effective trail width. 'tighten' MULTIPLIES with the policy rather than
+    replacing it: RIDE + tighten = 1.5 * 0.5 = 0.75x, not 0.5x."""
+    if state.trail_mult is None:
+        return None
+    return state.trail_dist * state.trail_mult * (0.5 if state.urgent == "tighten" else 1.0)
+
+
+def stop_candidates(state: TradeState) -> List[StopCandidate]:
+    """Every stop layer, active or not. Inactive layers are CONSTRUCTED and
+    returned carrying the reason they are dark — they are not commented-out code
+    and not silently absent, so `daytrade/stockfish_exit.py --layers` shows the
+    whole protection picture including what is missing and why.
+    """
+    d, scaled = state.direction, state.tp2_done
+    trail = trail_distance(state)
+
+    return [
+        StopCandidate("catastrophic", state.catastrophic_sl, True,
+                      "original plan stop — never removed, never loosened"),
+
+        StopCandidate("thesis", state.thesis_sl, state.thesis_sl is not None,
+                      "AlphaZero invalidation level"
+                      if state.thesis_sl is not None else
+                      "INACTIVE: needs an invalidation level from the classifier; "
+                      "daytrade/regime.py is a stub"),
+
+        StopCandidate("time_decay", None, False,
+                      "INACTIVE: time pressure is expressed as the flatten_at_et "
+                      "EXIT_ALL rule, not as a stop level. A tightening schedule "
+                      "is a separate design — see the [SKETCH] note in this file"),
+
+        StopCandidate("breakeven", state.entry, state.tp1_done,
+                      "TP1: breakeven armed, day cannot go red"
+                      + ("" if state.be_arm_frac == 1.0
+                         else f" (early, {state.be_arm_frac:g} of TP1)")),
+
+        StopCandidate("volatility", None, False,
+                      "INACTIVE: needs ATR on TradeState; no caller supplies it. "
+                      "Would sit at hwm - k*ATR to survive normal noise"),
+
+        StopCandidate("profit_lock", state.tp1, scaled,
+                      "TP2 banked: stop rides to TP1"),
+
+        # NOTE the round(): only the trail level is rounded, and only to 4dp.
+        # breakeven and profit_lock sit on prices the plan already chose, so
+        # rounding them would move a level the trader set. v2 had this same
+        # asymmetry implicitly; making it explicit here is what keeps all 9,576
+        # ceiling R values bit-identical across the refactor.
+        StopCandidate("trail", (None if trail is None else round(state.hwm - d * trail, 4)),
+                      scaled and trail is not None,
+                      "" if trail is None else
+                      f"trail {'tightened ' if state.urgent == 'tighten' else ''}"
+                      f"{trail:g} pts off HWM"),
+    ]
+
+
+def effective_stop(state: TradeState) -> StopCandidate:
+    """The most protective ACTIVE candidate. This is where the never-loosen
+    invariant lives.
+
+    'Most protective' is the highest level for a long, the lowest for a short.
+    Because every active layer is either constant or monotonically tightening
+    (the trail rides a monotonic high-water mark), the maximum over them is
+    monotonic too — so the effective stop cannot loosen. In v2 that property was
+    real but accidental, held up by branch ordering plus a single `cur_ok` check;
+    nothing prevented a future branch from emitting a looser MOVE_SL, since
+    apply_action assigns whatever it is handed.
+    """
+    live = [c for c in stop_candidates(state) if c.active and c.level is not None]
+    if not live:
+        raise StageError("no active stop layer — a position is never unprotected")
+    return max(live, key=lambda c: c.level * state.direction)
+
+
+# ------------------------------------------------------------ intent policies
+
+# Named intent -> mechanical parameters. Values are informed by the 2026-08-03
+# ceiling measurement, not by taste: of the oracle's 24 picks, 22 used NO
+# trailing, 22 armed breakeven early at 0.25R, and all 24 carried a flatten
+# time. Trail width — the axis v2's presets differed on — was reached for twice.
+#                 trail_mult  be_arm_frac  hold_past_tp2
+INTENT = {
+    "DEFEND":     (None,       0.25,        True),   # risk reduction first
+    "HARVEST":    (None,       0.50,        False),  # realize the goal, be done
+    "RIDE":       (1.50,       1.00,        True),   # maximize participation
+    "EVENT":      (None,       0.25,        True),   # out before a known catalyst
+    "SALVAGE":    (0.25,       0.25,        True),   # thesis weakened, minimize damage
+    # --- legacy names, kept as aliases for one release. ceiling.narrow_space(),
+    #     data/daytrade/policy_today.json and TRAINING_DAY_1.md all use these,
+    #     and breaking the runbook is a bad trade for a rename.
+    "DEFAULT":      (1.0,      1.00,        True),
+    "STATIC":       (None,     1.00,        True),
+    "TRAIL_WIDE":   (1.50,     1.00,        True),
+    "TRAIL_TIGHT":  (0.50,     0.50,        True),
+    "SCRATCH_FAST": (0.25,     0.25,        True),
+}
+
+# Policies whose meaning depends on a field the plan must supply.
+REQUIRES = {"EVENT": ("flatten_at_et",)}
+
+# Policies that exist and may be chosen BY HAND, but that nothing in the system
+# may emit automatically, because the signal they respond to does not exist yet.
+NOT_AUTO_EMITTABLE = {
+    "SALVAGE": "means 'the original thesis has weakened' — only AlphaZero can "
+               "assert that, and daytrade/regime.py is a stub",
+    "SCRATCH_FAST": "reserved for a confirmed sweep against the position; "
+                    "mis-specified it becomes 'panic out of every wick'",
+}
+POLICY_PARAMS = INTENT          # back-compat alias for spec 003 readers
+
+
+def policy_params(name: str, plan: dict | None = None) -> dict:
+    """Expand a named intent into TradeState kwargs.
+
+    An unknown name raises — a typo'd policy must stop the session, never
+    silently select a different risk profile. A policy with unmet requirements
+    also raises: EVENT means "be out before the catalyst", so EVENT without a
+    catalyst time is an error, not a quiet fallback to DEFEND.
+    """
+    if name not in INTENT:
+        raise ValueError(f"unknown exit_policy {name!r}; known: {sorted(INTENT)}")
+    for req in REQUIRES.get(name, ()):
+        if plan is None or plan.get(req) is None:
+            raise ValueError(
+                f"exit_policy {name!r} requires {req!r} in the plan. "
+                f"{name} exists to be out before a known catalyst; without the "
+                "time it has no meaning and must not fall back to a default.")
+    tm, be, hold = INTENT[name]
+    return {"trail_mult": tm, "be_arm_frac": be, "hold_past_tp2": hold,
+            "exit_policy": name}
+
+
+# ----------------------------------------------------------------- the engine
+
 def decide_exit(state: TradeState) -> List[Action]:
-    """The whole exit policy. Returns ordered actions (may be several)."""
+    """The whole exit policy. Returns ordered actions (may be several).
+
+    PRECEDENCE — never violate this order:
+      1. urgent == 'exit'   -> EXIT_ALL      (ALPHAZERO news shock)
+      2. hard stop hit      -> EXIT_ALL
+      3. time flatten       -> EXIT_ALL      (ruling 1: lives HERE, not the runner)
+      4. lifecycle advance  -> TAKE_PARTIAL  (TP1 / TP2 ladder)
+      5. layered stop       -> MOVE_SL       (most protective active layer)
+    """
     acts: List[Action] = []
-    state.hwm = _fav(state, state.hwm, state.price)
+    state.hwm = _fav(state.direction, state.hwm, state.price)
 
-    # 0. urgent channel outranks everything
+    # 1. urgent channel outranks everything
     if state.urgent == "exit":
-        return [Action("EXIT_ALL", reason="ALPHAZERO urgent: exit")]
-    # 'tighten' MULTIPLIES with the policy, it does not replace it (spec 003):
-    # TRAIL_WIDE + tighten = 1.5 * 0.5 = 0.75x, not 0.5x.
-    trail = (None if state.trail_mult is None else
-             state.trail_dist * state.trail_mult * (0.5 if state.urgent == "tighten" else 1.0))
+        advance(state, Stage.CLOSING)
+        return _gate(state, [Action("EXIT_ALL", reason="ALPHAZERO urgent: exit")])
 
-    # 1. hard stop
+    # 2. hard stop, tested against the stop as it stood BEFORE this bar advanced
+    #    anything — you cannot be stopped at a level that only just became active
     if (state.price <= state.sl if state.direction > 0 else state.price >= state.sl):
-        return [Action("EXIT_ALL", reason="stop hit")]
+        advance(state, Stage.CLOSING)
+        return _gate(state, [Action("EXIT_ALL", reason="stop hit")])
 
-    # 1b. time-flatten — always live once a clock is supplied (doctrine: flat
-    #     before 11:00). No clock given == rule not armed, never a guessed time.
+    # 3. time-flatten — live once a clock is supplied. No clock == rule not armed,
+    #    never a guessed time.
     if state.flatten_at_et is not None and state.now_et is not None:
-        if _et_minutes(state.now_et, "now_et") >= _et_minutes(state.flatten_at_et, "flatten_at_et"):
-            return [Action("EXIT_ALL", reason=f"time flatten {state.flatten_at_et} ET")]
+        if _et_minutes(state.now_et, "now_et") >= _et_minutes(state.flatten_at_et,
+                                                              "flatten_at_et"):
+            advance(state, Stage.CLOSING)
+            return _gate(state, [Action("EXIT_ALL",
+                                        reason=f"time flatten {state.flatten_at_et} ET")])
 
-    # 2. TP1: arm breakeven — rule #1, do not lose on the day.
-    #    be_arm_frac < 1 arms it EARLIER (manipulation days steal stops; get to
-    #    riskless sooner). The == 1.0 branch uses state.tp1 verbatim rather than
-    #    recomputing it, because entry + (tp1-entry)*1.0 is not bit-identical to
-    #    tp1 in floating point and would silently shift the trigger.
-    arm = (state.tp1 if state.be_arm_frac == 1.0 else
-           state.entry + (state.tp1 - state.entry) * state.be_arm_frac)
-    if not state.tp1_done and _crossed(state, arm):
-        state.tp1_done = True
-        acts.append(Action("MOVE_SL", sl=state.entry,
-                           reason="TP1: breakeven armed, day cannot go red"
-                                  + ("" if state.be_arm_frac == 1.0
-                                     else f" (early, {state.be_arm_frac:g} of TP1)")))
-
-    # 3. TP2: bank the set goal, stop rides to TP1
-    if not state.tp2_done and _crossed(state, state.tp2):
-        state.tp2_done = True
+    # 4. lifecycle advancement
+    if state.stage is Stage.SCALED:
+        advance(state, Stage.RUNNER)          # the partial is behind us; trail only
+    if state.stage is Stage.ENTERED and _crossed(state, _arm_level(state)):
+        advance(state, Stage.PROTECTED)
+    if state.stage is Stage.PROTECTED and _crossed(state, state.tp2):
+        advance(state, Stage.SCALED)
         if not state.hold_past_tp2:
-            # No runner is kept. The day goal IS the trade — take it and be done.
-            return acts + [Action("EXIT_ALL", reason="TP2: day goal hit, full exit (hold_past_tp2=False)")]
-        acts.append(Action("TAKE_PARTIAL", fraction=state.goal_fraction, reason="TP2: day goal banked"))
-        acts.append(Action("MOVE_SL", sl=state.tp1, reason="TP2: stop rides to TP1"))
+            advance(state, Stage.CLOSING)
+            return _gate(state, [Action("EXIT_ALL",
+                                        reason="TP2: day goal hit, full exit "
+                                               "(hold_past_tp2=False)")])
+        acts.append(Action("TAKE_PARTIAL", fraction=state.goal_fraction,
+                           reason="TP2: day goal banked"))
 
-    # 4. TP3: trail the runner. trail_mult=None means STATIC — after TP2 the
-    #    levels stay exactly where the plan put them, no churn on noise.
-    if state.tp2_done and trail is not None:
-        trail_sl = state.hwm - state.direction * trail
-        cur_ok = trail_sl > state.sl if state.direction > 0 else trail_sl < state.sl
-        if cur_ok:
-            acts.append(Action("MOVE_SL", sl=round(trail_sl, 4),
-                               reason=f"TP3 trail ({'tightened ' if state.urgent=='tighten' else ''}{trail:g} pts off HWM)"))
+    # 5. the layered stop. One MOVE_SL, naming the layer that took over.
+    eff = effective_stop(state)
+    tighter = (eff.level > state.sl if state.direction > 0 else eff.level < state.sl)
+    if tighter:
+        acts.append(Action("MOVE_SL", sl=eff.level,
+                           reason=f"{eff.name} now most protective "
+                                  f"({state.sl:g} -> {eff.level:g}): {eff.reason}"))
 
-    return acts or [Action("HOLD", reason="set it and forget it")]
+    return _gate(state, acts or [Action("HOLD", reason="set it and forget it")])
+
+
+def _gate(state: TradeState, acts: List[Action]) -> List[Action]:
+    """Refuse any action illegal in the current stage. Raises, never drops —
+    a silently swallowed action is a decision made by omission."""
+    allowed = ALLOWED_ACTIONS[state.stage]
+    for a in acts:
+        if a.kind not in allowed:
+            raise StageError(
+                f"{a.kind} is not permitted in stage {state.stage.value} "
+                f"(allowed: {sorted(allowed) or 'nothing'}) — reason was {a.reason!r}")
+    return acts
+
 
 def apply_action(state: TradeState, action: Action) -> None:
     """Fold one Action back into the state. ONE implementation, same reason
@@ -176,15 +418,51 @@ def apply_action(state: TradeState, action: Action) -> None:
     """
     if action.kind == "MOVE_SL":
         if action.sl is None: raise ValueError("MOVE_SL carries no sl")
+        looser = (action.sl < state.sl if state.direction > 0 else action.sl > state.sl)
+        if looser:
+            raise StageError(
+                f"refusing to loosen the stop {state.sl:g} -> {action.sl:g}. "
+                "The layered selector cannot produce this; something bypassed it.")
         state.sl = action.sl
     elif action.kind == "TAKE_PARTIAL":
         if action.fraction is None: raise ValueError("TAKE_PARTIAL carries no fraction")
         state.qty = state.qty * (1.0 - action.fraction)   # what's still held
-    elif action.kind not in ("HOLD", "EXIT_ALL"):
+    elif action.kind == "EXIT_ALL":
+        state.stage = Stage.CLOSED
+    elif action.kind != "HOLD":
         raise ValueError(f"unknown action kind {action.kind!r}")
 
+
+# --- [SKETCH] deliberately unfinished, do not build without a planning pass ---
+#
+# time_decay AS A TIGHTENING SCHEDULE. Today time pressure is a cliff: hold
+# normally, then flatten at flatten_at_et. A schedule that walks the stop in as
+# the clock runs down is probably better and is definitely more dangerous — it
+# converts a rule you can reason about into a curve you have to tune, and the
+# ceiling has 24 entries. Prerequisites: the 3-of-24 entry problem addressed, and
+# a counterfactual showing schedule beats cliff on days that reached TP1.
+#
+# volatility LAYER. Needs ATR on TradeState and a defensible k. Would sit at
+# hwm - k*ATR so normal noise cannot take the trade out. Cheap to add once any
+# caller actually supplies ATR — bars.py has the data, nothing threads it through.
+#
+# SALVAGE AUTO-EMISSION. See NOT_AUTO_EMITTABLE. Blocked on regime.py.
+
+
 if __name__ == "__main__":
-    # deterministic replay — the same log this must produce in any harness
+    import sys
+    if "--layers" in sys.argv:
+        s = TradeState(direction=+1, entry=204.0, qty=163, price=205.9, sl=204.0,
+                       tp1=204.9, tp2=205.8, trail_dist=0.8, stage=Stage.SCALED)
+        print(f"stage {s.stage.value}   price {s.price}   effective stop "
+              f"{effective_stop(s).level:.2f} via {effective_stop(s).name}\n")
+        for c in stop_candidates(s):
+            mark = "ACTIVE  " if c.active else "inactive"
+            lvl = f"{c.level:8.2f}" if c.level is not None else "       -"
+            print(f"  {mark} {c.name:14s} {lvl}   {c.reason}")
+        sys.exit(0)
+
+    # deterministic replay — the log any harness must reproduce
     s = TradeState(direction=+1, entry=204.0, qty=163, price=204.0,
                    sl=202.9, tp1=204.9, tp2=205.8, trail_dist=0.8)
     path = [204.2, 204.9, 205.1, 205.8, 206.4, 207.1, 206.9, 206.2]
@@ -192,7 +470,10 @@ if __name__ == "__main__":
         s.price = px
         for a in decide_exit(s):
             apply_action(s, a)
-            print(f"t{i} px={px:7.2f} -> {a.kind:12s} sl={a.sl} frac={a.fraction} | {a.reason}")
-    s.price, s.urgent = 206.5, "exit"
-    for a in decide_exit(s):
-        print(f"urgent px=206.50 -> {a.kind:12s} | {a.reason}")
+            print(f"t{i} px={px:7.2f} [{s.stage.value:9s}] -> {a.kind:12s} "
+                  f"sl={a.sl} frac={a.fraction} | {a.reason}")
+    s2 = TradeState(direction=+1, entry=204.0, qty=163, price=206.5, sl=205.0,
+                    tp1=204.9, tp2=205.8, trail_dist=0.8, stage=Stage.RUNNER,
+                    urgent="exit")
+    for a in decide_exit(s2):
+        print(f"urgent px=206.50 [{s2.stage.value:9s}] -> {a.kind:12s} | {a.reason}")

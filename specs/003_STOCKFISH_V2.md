@@ -1,4 +1,25 @@
-# 003 — STOCKFISH v2  `daytrade/stockfish_exit.py` (EXTEND, never fork)   `[SPEC]`
+# 003 — STOCKFISH v2  `daytrade/stockfish_exit.py` (EXTEND, never fork)   `[BUILT, SUPERSEDED BY v3]`
+
+> **STATUS 2026-08-05.** v2's parameterisation shipped early, as a dependency of
+> spec 008 — the wide action space could not be measured through an engine that
+> could not express it. v3 then landed on top: lifecycle stages, layered stops,
+> and an intent vocabulary (DEFEND / HARVEST / RIDE / EVENT / SALVAGE) replacing
+> STATIC / TRAIL_WIDE / TRAIL_TIGHT, which survive as aliases for one release.
+>
+> **v3 fixed a real v2 defect this file specified.** The trail's `cur_ok` test
+> compared against `state.sl` before the same call's earlier MOVE_SL had been
+> applied, so on wide trails (trail landing between breakeven and TP1) the engine
+> emitted "stop rides to TP1" followed by a LOOSER trail level, and the caller
+> applied both in order. The stop went backwards. It affected 48 of the ceiling's
+> 9,576 measured outcomes, all at trail_mult 3.0 — v3 is better on all 48 by
+> +0.165R mean. The layered selector cannot reproduce it, and `apply_action` now
+> raises on any loosening MOVE_SL regardless of where it came from.
+>
+> The four-policy replay DoD below is superseded by three stronger tests:
+> all 9,576 ceiling R values pinned across the refactor, a 10,080-path fuzz over
+> 42 configs asserting stop-never-loosens / stage-never-regresses / no illegal
+> action, and the unchanged runner-vs-harness diff.
+
 The engine already exists and is correct. v2 adds exactly one input field and
 one behavior switch. Resist every temptation to add more — this file is the one
 thing in the system that must stay small enough to hold in your head.

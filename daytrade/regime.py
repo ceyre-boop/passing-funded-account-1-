@@ -23,6 +23,12 @@ WHAT THIS MEANS FOR THIS FILE:
      trail_mult. If a classifier is built, the thing worth classifying is
      "should I still be in this after 11:00?", not "how wide should the trail be."
      Spec 001's POLICY table points at the lever the oracle ignores.
+     v3 UPDATE: the policy vocabulary is now DEFEND / HARVEST / RIDE / EVENT /
+     SALVAGE (stockfish_exit.INTENT), not STATIC / TRAIL_WIDE / TRAIL_TIGHT.
+     A RegimeRead's `exit_policy` must emit one of the new names. Note that
+     SALVAGE is in stockfish_exit.NOT_AUTO_EMITTABLE precisely BECAUSE it waits
+     on this file: it means "the thesis has weakened", which only a classifier
+     can assert. Building regime.py is what unblocks it.
   3. n=24 is far too few to trust any of this. More sessions, or a looser entry
      filter, before betting a build on it.
 

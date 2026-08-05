@@ -35,7 +35,7 @@
  "prescribed_action": "The rule thresholds on prize as a %% of Z, but Z = +0.083 R/trade is indistinguishable from zero, so the percentage (173%%) is an artefact of the denominator. Absolute figures: prize_wide +0.144 R/trade, prize_narrow +0.052 R/trade, ratio 2.8x. Re-register a rule in R/trade BEFORE reading these again.",
  "prize_narrow_R_per_trade": 0.05189075949588501,
  "prize_wide_R_per_trade": 0.1439969916141124,
- "random_picker_R": -2.315773626636065,
+ "random_picker_R": -2.2957209320209433,
  "anti_oracle_R": -11.156942435147139,
  "days_with_any_winning_config": 3,
  "n_entries": 24

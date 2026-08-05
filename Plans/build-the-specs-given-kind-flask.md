@@ -1,144 +1,194 @@
-# Plan — Build order item 1: the local runner
+# Plan — Stockfish v3: lifecycle stages, layered stops, intent policies
 
 ## Context
 
-`ARCHITECTURE.md` is the spec for this repo as of 2026-08-03, and its build order
-names four steps. Steps 2-4 are explicitly gated behind step 1:
+The reframing is a sharpening of ruling 1, not a departure from it: AlphaZero
+communicates *meaning*, Stockfish controls *mechanics*, and that boundary holds
+as both grow. What changes is Stockfish's internal shape — from one flat ladder
+of conditions into a position-lifecycle state machine, a layered protection
+system, and a named-intent policy vocabulary.
 
-> 1. Local runner: live quotes -> decide_exit -> advice lines printed. (imports,
->    never copies, stockfish_exit.py)
+**State of the evidence, recorded so the plan is read in context.** Training day 1
+did not happen: zero orders on the paper account on Aug 4, no session log, no
+ledger row 2. The system has one ledger row (Aug 3, taken by hand, not through
+this system), zero live runner sessions, and 24 backtest entries with 3 winners.
+The Aug 3 ceiling found the binding constraint is the **entry** — on 21 of 24
+days no exit configuration, perfect and with hindsight across 396 configs, could
+make money. Spec 003 says this file "must stay small enough to hold in your head."
 
-Right now `daytrade/stockfish_exit.py` is a correct, deterministic exit engine
-with no way to feed it. The only thing that exercises `decide_exit` is the
-hardcoded replay in its own `__main__`. During a live trade Colin has no path
-from a real price to an advice line — he'd be running the doctrine from memory,
-which is exactly what the exit engine exists to prevent.
+I raised that this argues for a smaller slice first. Colin's call is the full
+vision now. Proceeding with it — the job of this plan is to make a change this
+size survivable, which means the invariants below are not optional.
 
-This plan builds that path and nothing else. Scope confirmed with Colin:
-**item 1 only** (items 2-4 deferred), **yfinance polling** for quotes,
-**equities** (NVDA-style dollars-per-share) for the point math.
+**What the ceiling says about the policy values** (use data, not intuition, for
+the parameter tables). Of the oracle's 24 picks: **22 used no trailing at all**,
+**22 armed breakeven early at 0.25R**, and **all 24 carried a flatten time**.
+Trail width — the axis the current five presets differ on — was reached for in
+2 of 24. `EVENT` maps to `flatten_at_et`, the one lever every pick used.
 
-Two constraints drive the design:
+---
 
-- **`execution/alpaca.py:31-39` rules out the obvious source.** That account 403s
-  on `/quotes/latest` and `/snapshot`; it serves SIP data only beyond a 15-minute
-  lag. Documented, measured, not a bug to fix. Hence yfinance.
-- **No second implementation of the exit policy, ever** (ARCHITECTURE.md Layer 2).
-  The runner imports `decide_exit`. It does not re-derive a single rule.
+## The conflict this plan has to resolve first
 
-## What gets built
+Byte-identical replay against the 2026-08-03 baseline **cannot survive this
+refactor**, and pretending otherwise would produce a worse design.
 
-### 1. `daytrade/runner.py` — NEW, the whole deliverable
+At TP2 today the engine emits two stop moves: `MOVE_SL 204.90` ("stop rides to
+TP1") then `MOVE_SL 205.00` (trail). Under most-protective-wins, both are
+candidates at that instant and the trail already dominates, so the layered system
+emits **one** `MOVE_SL` to 205.00. Final stop identical, action sequence not.
 
-A single-trade advisor loop. Reads a plan, polls a price, calls `decide_exit`,
-prints advice, logs every cycle. Never touches a broker — printing is the output.
+Resolution: **the baseline is deliberately re-cut, once.** That property was a
+refactor-safety check, not the Definition of Done. The DoD is
+`runner log == harness log`, and that must stay empty throughout. Both the old
+and new expected logs get committed side by side under
+`data/daytrade/replay_expected/` so the change is visible and reviewable rather
+than silent.
 
-**Inputs**
-- `--plan data/daytrade/plan.json` — the blueprint, set BEFORE the open per Layer 0
-  doctrine. JSON: `symbol, direction, entry, qty, sl, tp1, trail_dist` plus either
-  `tp2` or `day_goal_usd`. If `day_goal_usd` is given and `tp2` is not, compute
-  `tp2 = entry + direction * (day_goal_usd / qty)` — this is the "$300 goal" of
-  the doctrine expressed in dollars instead of hand-computed price levels.
-  Giving both, or neither, raises. Same for any missing field: fail loud.
-- `--interval 15` seconds, `--once` for a single reading, `--replay FILE` for an
-  offline price path (a JSON list of floats) so the ladder is testable without a
-  live market.
+The stronger replacement test, which does not depend on emission granularity:
+**every one of the ceiling's 24 per-config R values must be unchanged.** The
+refactor changes *when stop moves are announced*, never *where the stop ends up* —
+so if any R moves, the refactor changed behaviour and is wrong.
 
-**Quote fetch — fail loud, no silent staleness**
-`yf.download(symbol, period="1d", interval="1m")`, take the last bar's close and
-its index timestamp. The timestamp is the point: it makes staleness *detectable*.
-If the newest bar is older than `--max-stale 180` seconds, or the frame is empty,
-print a loud `STALE`/`NO QUOTE` line and **skip the cycle without calling
-decide_exit**. A stale print must never advance the ladder.
+---
 
-Deliberately not reusing the yfinance helpers in `sovereign/forex/signal_engine.py:115-140`
-or `macro_engine.py` — those are daily-bar fetches wrapped in bare `except: pass`,
-the exact silent-failure pattern ARCHITECTURE.md's safety spine forbids.
+## 1. Lifecycle state machine — `daytrade/stockfish_exit.py`
 
-**Bias coupling — urgency only**
-Read `data/daytrade/bias.json`, take **only** the `urgency` field (Layer 2:
-"reads ONLY the urgency field from bias.json"). Mapping, stated explicitly in
-code and in the log:
-- `"exit"` / `"tighten"` -> passed through to `TradeState.urgent`
-- `"none"` / `"stale"` -> `None` (a stale reader must not fabricate an interrupt)
-- file missing or malformed -> `None`, plus a loud warning line **every cycle**,
-  and `--require-bias` to hard-fail instead. Loud, never silent.
+```python
+class Stage(str, Enum):
+    ENTERED   = "ENTERED"     # hard stop + emergency exit only
+    PROTECTED = "PROTECTED"   # breakeven armed; first reduction allowed
+    SCALED    = "SCALED"      # profit ladder + volatility stop allowed
+    RUNNER    = "RUNNER"      # trailing only
+    CLOSING   = "CLOSING"     # no new adjustments; reconcile remaining orders
+    CLOSED    = "CLOSED"
+```
 
-**The loop**
-Build `TradeState` once from the plan, then per cycle: fetch quote -> read
-urgency -> `decide_exit(state)` -> print advice -> apply actions back into state
--> append a JSONL record. On `EXIT_ALL`, print the flatten advice in a way that
-cannot be missed and stop the loop.
+`stage` becomes authoritative on `TradeState`. `tp1_done` / `tp2_done` stay as
+**read-only properties** derived from it — `runner.py` writes both into every
+session-log record, and changing that schema would break the diffability the
+whole architecture rests on.
 
-**Session log — `data/daytrade/session_YYYY-MM-DD.jsonl`**
-One record per cycle: `ts, symbol, price, quote_ts, hwm, sl, tp1_done, tp2_done,
-urgent, actions[]`. This format is designed now because it is the artifact build-order
-item 3 will diff against a backtest run. Getting it right here is what makes the
-DoD achievable later; getting it wrong means rewriting the runner then.
+Transitions are **monotonic by construction**: a single `advance(state, target)`
+refuses any move to a lower ordinal. That is the guarantee the proposal is after
+("could never fall back from RUNNER to an earlier risk state"). Worth being
+honest that this guarantee already holds today — `tp1_done`/`tp2_done` are never
+unset — so the value here is structural enforcement, not a bug fix.
 
-### 2. `daytrade/stockfish_exit.py` — two small additive changes
+`ALLOWED_ACTIONS: dict[Stage, frozenset[str]]` gates emission. `decide_exit`
+filters its action list through the current stage's allowlist and **raises** on
+violation rather than dropping silently, per APEX #2. On the existing code path
+the gate must be a no-op — if it changes which actions fire, the mapping is wrong.
 
-**`apply_action(state, action) -> None`.** The `__main__` replay currently does
-`if a.kind == "MOVE_SL": s.sl = a.sl` inline (line 103). That inline handling is
-already a partial second implementation of state-application, and the runner would
-make it a third. Extract it once, into the module that owns the policy. Both the
-replay and the runner call it. Item 3's harness will too.
+---
 
-**Optional time-flatten.** ARCHITECTURE.md Layer 2 says "Hard stop and time-flatten
-always live," but `TradeState` has no clock and `decide_exit` has no time branch —
-a real gap between spec and code. Colin's doctrine is flat before 11:00 and he was
-flat before 11 on day 1, so this is live doctrine going unenforced. Add
-`flatten_at_et: Optional[str] = None` and `now_et: Optional[str] = None` to
-`TradeState`, and a branch in `decide_exit` that returns `EXIT_ALL` when the clock
-reaches it. **Defaults are `None`, so with no clock supplied nothing changes** —
-the existing replay output stays byte-identical. Time-flatten belongs in
-`decide_exit`, never in the runner; putting it in the runner would be the second
-implementation the spec forbids.
+## 2. Layered protection system — same file
 
-### 3. Supporting files
+```python
+@dataclass(frozen=True)
+class StopCandidate:
+    name: str          # catastrophic | thesis | time_decay | breakeven |
+                       # volatility | profit_lock | trail
+    level: float
+    active: bool
+    reason: str
 
-- `data/daytrade/plan.example.json` — a filled-in NVDA blueprint matching ledger
-  row 1 (entry 204, qty 163), so the format is self-documenting.
-- `daytrade/README.md` — update the run instructions, mark build-order item 1 done.
-- `ARCHITECTURE.md` — tick item 1 in the build order; leave the rest untouched.
+def stop_candidates(state) -> list[StopCandidate]
+def effective_stop(state) -> StopCandidate   # most protective ACTIVE candidate
+```
 
-## Explicitly NOT in scope
+"Most protective" = max level for a long, min for a short. This makes the
+never-loosen invariant **structural**. It currently holds — I fuzzed 4,000 random
+paths × 60 bars across all five policies and both directions, zero violations —
+but it is enforced by branch *ordering* plus a single `cur_ok` check at
+`stockfish_exit.py:164`. Nothing prevents a future branch from emitting a looser
+`MOVE_SL`; `apply_action` assigns whatever it is handed.
 
-- No broker calls, no order placement (safety spine #1). `execution/alpaca.py` and
-  `execution/paper_trading.py` are not imported — the latter is a broken orphan
-  anyway, importing `integration.production_engine` and `meta_evaluator`, neither
-  of which exists in this repo.
-- No ALPHAZERO changes. v1 stays the labeled placeholder it says it is.
-- No backtest harness, no Elo arena.
-- No multi-position support. One trade at a time — that is the doctrine's own
-  two-bet sequence, not a limitation to design around.
+The payoff the proposal names is real and should be delivered: the emitted
+`reason` becomes structural rather than a hand-written string —
+*"profit_lock became more protective than volatility, effective stop 204.90 → 205.00."*
+
+Layers at v3, honestly labelled:
+
+| layer | v3 status |
+|---|---|
+| catastrophic | **active** — the original plan stop, never removed |
+| breakeven | **active** from PROTECTED — `entry` |
+| profit_lock | **active** from SCALED — `tp1` |
+| trail | **active** from SCALED when `trail_mult` is not None |
+| volatility | **inactive** — needs ATR on `TradeState`; no caller supplies it |
+| thesis | **inactive** — needs an invalidation level from AlphaZero; `regime.py` is a stub |
+| time_decay | **inactive** — the flatten rule stays an `EXIT_ALL`, not a stop level |
+
+Inactive layers are defined, constructed, and return `active=False` with the
+reason they are dark. They are not commented-out code and not silently absent.
+
+---
+
+## 3. Intent policies — same file, replacing `POLICY_PARAMS`
+
+`DEFEND` · `HARVEST` · `RIDE` · `EVENT` · `SALVAGE`, each expanding to the same
+authoritative params on `TradeState` (`policy_params()` keeps its current shape,
+so `ceiling.py`'s grid sweep is untouched).
+
+Two design rules that matter more than the names:
+
+- **`EVENT` requires `flatten_at_et`.** A policy whose entire meaning is "be out
+  before the catalyst" must fail loud when no catalyst time is supplied, not
+  quietly behave like DEFEND. `policy_params()` grows a required-field check.
+- **`SALVAGE` is definable but never auto-emitted.** It means "the original
+  thesis has weakened," and nothing in the system can currently assert that —
+  that is AlphaZero's job and the classifier does not exist. Same treatment
+  `SCRATCH_FAST` already carries: hand-selectable, labelled `[SKETCH]`, and
+  documented as blocked on `regime.py`.
+
+The legacy names (`STATIC`/`TRAIL_WIDE`/`TRAIL_TIGHT`/`SCRATCH_FAST`/`DEFAULT`)
+stay as **aliases** for one release. `ceiling.py:narrow_space()`,
+`data/daytrade/policy_today.json` and `TRAINING_DAY_1.md` all reference them, and
+breaking the runbook the night before a session it might finally be used is a bad
+trade.
+
+---
+
+## Files
+
+- `daytrade/stockfish_exit.py` — all three changes; the only file with new logic
+- `daytrade/runner.py` — log `stage` and `effective_stop.name` per cycle; handle
+  `EVENT`'s required-param error at plan load
+- `daytrade/ceiling.py` — `narrow_space()` onto the new names; grid sweep unchanged
+- `data/daytrade/replay_expected/{v2_baseline,v3}.log` — both committed
+- `specs/003_STOCKFISH_V2.md` — record what was built and that v3 supersedes it
+- `daytrade/regime.py` (stub) — its docstring names the old `exit_policy`
+  vocabulary; update so the next builder isn't handed a stale contract
+
+---
 
 ## Verification
 
-1. **Byte-identical replay (the DoD that matters most here).** Capture
-   `python3 daytrade/stockfish_exit.py > /tmp/before.txt` *before* touching the
-   file; after the `apply_action` + time-flatten edits, run again and
-   `diff` against it. Must be empty. If the refactor changed behavior, it was
-   the wrong refactor.
-2. **Offline ladder walk.** `python3 daytrade/runner.py --plan data/daytrade/plan.example.json
-   --replay <the same price path as the replay test>` must print the same
-   ladder progression: TP1 -> breakeven, TP2 -> partial + stop to TP1, then
-   trailing. Proves the runner drives the engine correctly with no market.
-3. **Live single reading.** `python3 daytrade/runner.py --plan data/daytrade/plan.example.json
-   --once` during market hours prints a real NVDA price, a real quote timestamp,
-   and one advice line.
-4. **Staleness fails loud.** Run `--once` against a nonsense symbol and against a
-   `--max-stale 0`; both must print the loud skip line and must not print a price
-   or an action. Confirm `decide_exit` was never called on a stale print.
-5. **Bias interrupt end-to-end.** Hand-write `urgency: "exit"` into
-   `data/daytrade/bias.json`, run one replay cycle, confirm `EXIT_ALL` and loop
-   halt. Restore the file afterward.
-6. **Session log shape.** Confirm `data/daytrade/session_*.jsonl` has one
-   well-formed record per cycle and that actions round-trip as JSON.
-7. **Import hygiene.** `grep -n "^import\|^from" daytrade/runner.py` — expect only
-   stdlib, yfinance, and `stockfish_exit`. Any `execution.*` import is a bug.
+1. **Ceiling R values unchanged.** Re-run `ceiling.py`; all 24 per-config returns
+   must match `data/daytrade/ceiling_report.json` exactly. This is the primary
+   correctness test — it is insensitive to emission granularity and sensitive to
+   any real behaviour change.
+2. **DoD diff empty.** `backtest.py --replay-session` on a runner-produced log.
+   Non-empty means the runner is deciding something the engine is not.
+3. **Fuzz the invariants** — the harness from this session, extended: stop never
+   loosens (now asserted inside `effective_stop`), stage never regresses, no
+   action fires outside its stage allowlist. 4,000 paths minimum, both directions,
+   every policy.
+4. **Re-baselined replay reviewed, not just regenerated.** Diff
+   `v2_baseline.log` against `v3.log` by hand and confirm every difference is a
+   collapsed intermediate `MOVE_SL` and nothing else.
+5. **`EVENT` without `flatten_at_et` raises**; `SALVAGE` is selectable by hand and
+   emitted by nothing.
+6. **Runbook still runs.** `newplan.py` → `runner.py --once` against
+   `policy_today.json` unchanged, since that file is what a live session loads.
 
-## Commit shape
+---
 
-Per safety spine #4 (discrete versioned growth), one commit:
-`daytrade: local runner — live quotes through the same decide_exit, advice out, no broker`
+## Left explicitly undone, with reasons in the code
+
+`volatility` and `thesis` stop layers (need ATR and an invalidation level),
+`SALVAGE` auto-emission (needs `regime.py`), and the `time_decay` layer as a
+tightening schedule rather than a flat exit. Each ships as a constructed,
+inactive layer carrying its blocker — visible in the layer list at runtime, not
+buried in markdown.
