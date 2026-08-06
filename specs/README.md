@@ -15,6 +15,10 @@ the build sequence.
 | 006 | ALPHAZERO_V2 | extend `alphazero_bias.py` | `[SPEC]` | 6th |
 | 009 | CLAUDE_AS_NEWS | `daytrade/news_claude.py` + launchd | `[SPEC]` | with 006 |
 | 007 | BRIEF (in 006 file) | `daytrade/brief.py` | `[SKETCH]` | last |
+| 010 | LONG_TERM_VISION | backlog and architecture map | `[SKETCH]` | planning only |
+| 011 | STOCKFISH_CONSTITUTION | `daytrade/stockfish_constitution.py` | `[BUILT]` | done 2026-08-06 |
+| 018 | CONTEXT_DIRECTIVE_CONTRACT | `daytrade/context_directive.py` | `[BUILT]` | done 2026-08-06, with 011 |
+| 012–017 | LONG_TERM_CARDS | future Stockfish/AlphaZero contracts | `[PLAN]` | one card at a time, per the handoff |
 
 ## Status legend
 - `[BUILT]` exists, tested, in the repo
@@ -26,6 +30,10 @@ the build sequence.
 ## Already built (not specs — real code)
 `daytrade/stockfish_exit.py` · `daytrade/runner.py` · `daytrade/broker.py` ·
 `daytrade/alphazero_bias.py` (v1 placeholder brain) — see `daytrade/README.md`.
+
+The post-v1 scaffold is in `010_LONG_TERM_VISION.md`. Its `[PLAN]` cards are
+deliberately not safe to build from until they are promoted to `[SPEC]`. The
+Claude implementation handoff is `CLAUDE_LONG_TERM_HANDOFF.md`.
 
 ## The five rules that govern every file here
 1. **One implementation of every decision.** Runner and harness are I/O; they
