@@ -25,6 +25,22 @@ MONEY IS THE BINDING CONSTRAINT, so it is enforced rather than hoped for:
      force it.
   4. COUNT BEFORE SPEND. --estimate prices a call via count_tokens, no call made.
 
+TWO TIERS, because the morning read and the delta checks are different jobs:
+
+  MORNING (Opus 5, high effort, ONCE per day) sets the day's frame — every
+  important headline, a predicted schedule of what happens when, key levels, a
+  day plan, and the specific things that would invalidate it. This is the call
+  worth paying for: everything after it is measured against this frame.
+
+  DELTA (Sonnet 5, low effort, every 5 min when headlines change) does NOT
+  re-read the day from scratch. It receives the morning plan and answers one
+  question: does that thesis still hold, and if not, what changed? A narrower
+  question on a smaller output, which is why a capable cheaper model is the
+  right tool rather than a compromise.
+
+The morning read is guarded to one per day — burning Opus on a repeat is a
+mistake the code should prevent, not one to remember not to make.
+
 URGENCY IS DISARMED BY DEFAULT. `urgency: exit` flattens a live position. This
 model has zero scored calls, so it does not get that authority until it earns
 it: the field is forced to "none" unless --allow-urgency is passed, while the
@@ -39,6 +55,7 @@ import hashlib
 import json
 import sys
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -46,6 +63,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from execution.alpaca import load_env                       # noqa: E402  one env path
 
+ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "daytrade"
 BIAS = OUT / "bias.json"
@@ -63,6 +81,15 @@ PRICES = {
 CACHE_WRITE_MULT, CACHE_READ_MULT = 1.25, 0.10
 
 DEFAULT_CAP_USD = 5.00          # under the $6 remaining, deliberately
+
+# The two jobs and what each is worth. Opus buys the frame once; Sonnet tracks
+# against it. Effort follows the same logic — the morning read is the one place
+# thinking depth pays for itself.
+MODES = {
+    "morning": {"model": "claude-opus-5",   "effort": "high"},
+    "delta":   {"model": "claude-sonnet-5", "effort": "low"},
+}
+PLAN = OUT / "morning_plan.json"
 
 
 class SpendCapReached(RuntimeError):
@@ -116,8 +143,39 @@ def record_spend(model: str, usage, cost: float, kind: str) -> None:
 from pydantic import BaseModel, Field                       # noqa: E402
 
 
+class ScheduleItem(BaseModel):
+    time_et: str = Field(description="HH:MM ET, or 'pre-open' / 'after-close'")
+    event: str = Field(description="what happens")
+    why_it_matters: str = Field(description="why a day trader in this name cares")
+
+
+class MorningPlan(BaseModel):
+    """The day's frame. Opus, once. Everything else is measured against this."""
+    bias: float = Field(description="-1.0 to +1.0 for TODAY's session")
+    conviction: Literal["low", "medium", "high"]
+    thesis: str = Field(description="ONE sentence: what today is actually about")
+    important_news: list[str] = Field(description="the headlines that actually matter, most important first; drop the noise")
+    schedule: list[ScheduleItem] = Field(description="predicted schedule for today — releases, earnings, known catalysts, and the session's own structural moments")
+    key_levels: list[str] = Field(description="price levels or technical markers worth watching, with why")
+    day_plan: str = Field(description="2-3 sentences: what a day trader should be prepared for today")
+    invalidators: list[str] = Field(description="specific, checkable things that would break this read")
+    consensus_eps: Optional[float] = Field(default=None)
+    projected_eps: Optional[float] = Field(default=None)
+    suggested_urgency: Literal["none", "tighten", "exit"]
+
+
+class DeltaRead(BaseModel):
+    """Does the morning thesis still hold? Sonnet, cheap, narrow."""
+    still_holds: bool = Field(description="does the morning thesis still hold?")
+    bias: float = Field(description="-1.0 to +1.0, updated")
+    conviction: Literal["low", "medium", "high"]
+    what_changed: str = Field(description="ONE sentence. 'nothing material' is a valid and common answer")
+    invalidator_triggered: Optional[str] = Field(default=None, description="which morning invalidator fired, if any")
+    suggested_urgency: Literal["none", "tighten", "exit"]
+
+
 class NewsRead(BaseModel):
-    """Structured, never prose. Prose cannot be scored."""
+    """Legacy single-shot shape, kept for the standalone --mode read path."""
     bias: float = Field(description="-1.0 (definitely down) to +1.0 (definitely up), today only")
     conviction: Literal["low", "medium", "high"]
     thesis: str = Field(description="ONE sentence naming the actual catalyst")
@@ -126,6 +184,51 @@ class NewsRead(BaseModel):
     watch_for: list[str] = Field(description="2-5 specific checkable things that would change this read")
     suggested_urgency: Literal["none", "tighten", "exit"] = Field(
         description="'exit' only for a shock that makes holding through it unreasonable")
+
+
+MORNING_SYSTEM = """You set the day's frame for a single-name day trader, once, before the open.
+
+This is the expensive call and the only one that gets to think hard. Everything
+later in the session is checked against what you produce here, so an omission
+now is invisible for the rest of the day.
+
+Your output is scored. Every call is graded against what the tape actually did,
+alongside dumb baselines (always-flat, yesterday's direction, coin flip). A
+confident-sounding paragraph that turns out wrong scores worse than an honest
+low-conviction read. `conviction: high` is a claim you are betting a track
+record on.
+
+What matters most, in order:
+- `schedule` — be concrete about WHEN. Scheduled releases with times, earnings
+  before/after the bell, and the session's own structure (the open, the 10:30
+  regime shift, the close). A day trader plans around clock, so vague timing is
+  worse than an omitted item.
+- `important_news` — rank ruthlessly. Two headlines that move the stock beat ten
+  that fill a page. Drop retail listicles and ETF filler entirely.
+- `invalidators` — specific and checkable ("AMD guides data-center revenue below
+  $2B"), never vague ("sentiment sours"). These are what the cheap 5-minute
+  checks test against all day, so a lazy invalidator wastes the whole session.
+- `key_levels` — say why each level matters, not just the number.
+- `bias` is TODAY's session only.
+
+If today genuinely has no catalyst, say so: bias near 0, conviction low, and a
+day plan that says the honest thing. Manufacturing a view is the failure mode."""
+
+
+DELTA_SYSTEM = """You monitor a day trader's morning thesis during the session.
+
+You are NOT re-reading the day from scratch. The morning plan is given to you.
+Your only job is: does that thesis still hold, and if not, what changed?
+
+- "nothing material" is the correct answer most of the time. Say it plainly.
+  Inventing a change to seem useful is the failure mode here.
+- If one of the morning `invalidators` actually fired, name it in
+  `invalidator_triggered`. That is the highest-value thing you can report.
+- `suggested_urgency` is 'exit' ONLY for a shock that makes holding through it
+  unreasonable: a halt, a fraud allegation, a withdrawn guide. Routine
+  volatility is 'none'. A false 'exit' closes a live position for nothing.
+
+Your output is scored against what the tape did, same as the morning read."""
 
 
 SYSTEM = """You read market news for a single-name day trader.
@@ -152,6 +255,49 @@ def _client():
     load_env()
     import anthropic
     return anthropic.Anthropic()
+
+
+def _morning_blocks(symbol: str, headlines: list[dict], context: str):
+    system = [{"type": "text", "text": MORNING_SYSTEM, "cache_control": {"type": "ephemeral"}}]
+    lines = "\n".join(
+        f"- [{h.get('published_utc','')[:16]}] {h.get('publisher','')}: {h.get('title','')}"
+        f"{chr(10) + '    ' + h['description'][:200] if h.get('description') else ''}"
+        for h in headlines) or "(no headlines returned)"
+    user = [{"type": "text", "text":
+             f"Symbol: {symbol}\nContext: {context}\n\nHeadlines:\n{lines}"}]
+    return system, user
+
+
+def _delta_blocks(symbol: str, headlines: list[dict], context: str, plan: dict):
+    """The morning plan goes in the CACHED prefix, not the volatile user turn.
+
+    Measured: with the plan in the user block, a delta call was 2816 input
+    tokens for 103 output — the cost was almost entirely re-sending a document
+    that does not change all day. The plan is stable from the open to the close,
+    so it belongs in the cached prefix; only the headlines vary. This also pushes
+    the prefix past Sonnet 5's 1024-token cache minimum, which the 391-token
+    system prompt alone never reached, so the breakpoint stops being decorative
+    and starts billing reads at ~0.1x.
+    """
+    frame = (f"THIS MORNING'S PLAN ({plan.get('ts','')[:16]}):\n"
+             f"  thesis: {plan.get('thesis')}\n"
+             f"  bias: {plan.get('bias')} ({plan.get('conviction')})\n"
+             f"  day plan: {plan.get('day_plan')}\n"
+             f"  schedule:\n" +
+             "".join(f"    {i.get('time_et','')}: {i.get('event','')}\n"
+                     for i in plan.get("schedule", [])) +
+             f"  invalidators:\n" +
+             "".join(f"    - {i}\n" for i in plan.get("invalidators", [])) +
+             f"  key levels:\n" +
+             "".join(f"    - {l}\n" for l in plan.get("key_levels", [])))
+    system = [{"type": "text", "text": DELTA_SYSTEM + "\n\n" + frame,
+               "cache_control": {"type": "ephemeral"}}]
+    lines = "\n".join(
+        f"- [{h.get('published_utc','')[:16]}] {h.get('publisher','')}: {h.get('title','')}"
+        for h in headlines) or "(no headlines returned)"
+    user = [{"type": "text", "text":
+             f"Symbol: {symbol}\nNow: {context}\n\nCURRENT HEADLINES:\n{lines}"}]
+    return system, user
 
 
 def _blocks(symbol: str, headlines: list[dict], context: str):
@@ -192,6 +338,109 @@ def read_news(symbol: str, headlines: list[dict], context: str, *,
           f"in {r.usage.input_tokens} cache_r {getattr(r.usage,'cache_read_input_tokens',0) or 0} "
           f"out {r.usage.output_tokens}")
     return r.parsed_output, cost
+
+
+class TruncatedResponse(RuntimeError):
+    """The model hit max_tokens mid-answer. Loud, because a truncated JSON body
+    is indistinguishable from a malformed one at the parse site."""
+
+
+# Per-mode output ceilings. The morning plan is a much larger object (schedule +
+# ranked news + levels + invalidators) AND Opus 5 thinks by default, with
+# thinking counted against the same max_tokens. 2048 truncated it mid-string on
+# the first real run — and that truncated call still cost money.
+MAX_TOKENS = {"morning": 8000, "delta": 2048}
+
+
+def _call(system, user, schema, *, model: str, cap: float, effort: str, kind: str):
+    """One priced, ledgered API call. Every call in this file goes through here.
+
+    Uses create() + manual parse rather than messages.parse() for one reason:
+    parse() validates inside the SDK's response handler, so a validation failure
+    raises before any of our code sees `usage` — the call is billed and the
+    ledger never hears about it. A budget guard that under-counts on exactly the
+    calls that went wrong is worse than none. Here `usage` is recorded FIRST and
+    parsing happens after, so every cent that leaves the account is on the ledger.
+
+    Note this leans on two private SDK helpers (anthropic.lib._parse). If a
+    version bump moves them, the fallback below keeps working with the ledger gap
+    stated out loud rather than hidden.
+    """
+    used = check_budget(cap)
+    client = _client()
+    max_tok = MAX_TOKENS.get(kind, 2048)
+
+    oc: dict = {}
+    if model.startswith(("claude-opus-5", "claude-sonnet-5")):
+        oc["effort"] = effort
+
+    try:
+        from pydantic import TypeAdapter
+        from anthropic.lib._parse._transform import transform_schema
+        from anthropic.lib._parse._response import parse_text
+        oc["format"] = {"type": "json_schema",
+                        "schema": transform_schema(TypeAdapter(schema).json_schema())}
+        kw = {"model": model, "max_tokens": max_tok, "system": system,
+              "messages": [{"role": "user", "content": user}], "output_config": oc}
+        if model.startswith(("claude-opus-5", "claude-sonnet-5")):
+            kw["thinking"] = {"type": "adaptive"}
+
+        r = client.messages.create(**kw)
+        cost = cost_of(r.usage, model)
+        record_spend(model, r.usage, cost, kind)          # BEFORE parsing. Always.
+        _report(model, kind, effort, cost, used, r.usage, max_tok)
+
+        if r.stop_reason == "max_tokens":
+            raise TruncatedResponse(
+                f"{model} hit max_tokens={max_tok} on a {kind} read — the JSON body is "
+                f"cut off. The call was still billed (${cost:.5f}) and is on the ledger. "
+                f"Raise MAX_TOKENS[{kind!r}].")
+        text = next(b.text for b in r.content if b.type == "text")
+        return parse_text(text, schema), cost
+
+    except ImportError:
+        print("  !! SDK private parse helpers moved — falling back to messages.parse().\n"
+              "     A validation failure on this path is billed but NOT ledgered.")
+        kw = {"model": model, "max_tokens": max_tok, "system": system,
+              "messages": [{"role": "user", "content": user}], "output_format": schema}
+        if oc:
+            kw["output_config"], kw["thinking"] = oc, {"type": "adaptive"}
+        r = client.messages.parse(**kw)
+        cost = cost_of(r.usage, model)
+        record_spend(model, r.usage, cost, kind)
+        _report(model, kind, effort, cost, used, r.usage, max_tok)
+        return r.parsed_output, cost
+
+
+def _report(model, kind, effort, cost, used, usage, max_tok) -> None:
+    print(f"  [{model} {kind} effort={effort}] ${cost:.5f}   "
+          f"(total ${used + cost:.4f} / cap)   "
+          f"in {usage.input_tokens} out {usage.output_tokens}/{max_tok}")
+
+
+def morning_read(symbol: str, headlines: list[dict], context: str, *, cap: float,
+                 model: str = None, effort: str = None):
+    m = MODES["morning"]
+    return _call(*_morning_blocks(symbol, headlines, context), MorningPlan,
+                 model=model or m["model"], cap=cap,
+                 effort=effort or m["effort"], kind="morning")
+
+
+def delta_read(symbol: str, headlines: list[dict], context: str, plan: dict, *,
+               cap: float, model: str = None, effort: str = None):
+    m = MODES["delta"]
+    return _call(*_delta_blocks(symbol, headlines, context, plan), DeltaRead,
+                 model=model or m["model"], cap=cap,
+                 effort=effort or m["effort"], kind="delta")
+
+
+def plan_is_from_today() -> bool:
+    """Morning read is once per day. Burning Opus on a repeat is a mistake the
+    code should prevent, not one to remember not to make."""
+    if not PLAN.exists():
+        return False
+    from datetime import date
+    return json.loads(PLAN.read_text()).get("ts", "")[:10] == str(date.today())
 
 
 def estimate(symbol: str, headlines: list[dict], context: str, model: str) -> None:
@@ -255,15 +504,59 @@ def append_scorecard(read, symbol: str, model: str, cost: float) -> None:
                     f"cost ${cost:.5f}; suggested_urgency={read.suggested_urgency}"])
 
 
+def _write_outputs(obj, symbol: str, model: str, n: int, allow_urgency: bool,
+                   cost: float, mode: str, plan: dict | None = None) -> None:
+    """bias.json (frozen contract, additive only) + one scorecard row."""
+    urgency = obj.suggested_urgency if allow_urgency else "none"
+    if obj.suggested_urgency != "none" and not allow_urgency:
+        print(f"  !! model suggested urgency={obj.suggested_urgency!r} — SUPPRESSED to 'none'.\n"
+              f"     Recorded in the scorecard so it can be graded. Pass --allow-urgency to give\n"
+              f"     an unvalidated model authority over a live position.")
+    body = {
+        "ts": datetime.now(timezone.utc).isoformat(), "symbol": symbol, "mode": mode,
+        "bias": obj.bias, "urgency": urgency, "n_headlines": n,
+        "conviction": obj.conviction,
+        "suggested_urgency": obj.suggested_urgency, "urgency_armed": allow_urgency,
+        "model": f"{model} (spec 009 {mode}, scored — see news_scorecard.csv)",
+    }
+    if mode == "morning":
+        body.update({"thesis": obj.thesis, "day_plan": obj.day_plan,
+                     "important_news": obj.important_news,
+                     "schedule": [i.model_dump() for i in obj.schedule],
+                     "key_levels": obj.key_levels, "invalidators": obj.invalidators,
+                     "consensus_eps": obj.consensus_eps, "projected_eps": obj.projected_eps})
+        PLAN.write_text(json.dumps(body, indent=1))
+    else:
+        body.update({"thesis": (plan or {}).get("thesis"),
+                     "still_holds": obj.still_holds, "what_changed": obj.what_changed,
+                     "invalidator_triggered": obj.invalidator_triggered})
+    BIAS.write_text(json.dumps(body, indent=1))
+
+    new = not SCORECARD.exists()
+    with SCORECARD.open("a", newline="") as fh:
+        w = csv.writer(fh)
+        if new:
+            w.writerow(["call_date", "session_graded", "source", "model_version", "bias",
+                        "conviction", "thesis", "predicted", "actual", "hit", "notes"])
+        thesis = obj.thesis if mode == "morning" else obj.what_changed
+        pred = "; ".join(obj.invalidators) if mode == "morning" else (obj.invalidator_triggered or "")
+        w.writerow([datetime.now(timezone.utc).date(), "", f"news_claude:{mode}:{symbol}",
+                    model, f"{obj.bias:+.2f}", obj.conviction, thesis, pred, "", "",
+                    f"cost ${cost:.5f}; suggested_urgency={obj.suggested_urgency}"])
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="spec 009 — Claude as the news brain")
+    ap.add_argument("--mode", default="delta", choices=("morning", "delta"),
+                    help="morning: Opus, once/day, sets the frame. delta: Sonnet, tracks it.")
     ap.add_argument("--symbol", default="NVDA")
-    ap.add_argument("--model", default="claude-opus-5", choices=sorted(PRICES))
-    ap.add_argument("--effort", default="low", choices=("low", "medium", "high"))
+    ap.add_argument("--model", default=None, help="override the mode's model")
+    ap.add_argument("--effort", default=None, choices=("low", "medium", "high"))
     ap.add_argument("--cap", type=float, default=DEFAULT_CAP_USD, help="hard $ ceiling")
-    ap.add_argument("--context", default="regular session")
+    ap.add_argument("--context", default=None)
     ap.add_argument("--estimate", action="store_true", help="price it without calling")
-    ap.add_argument("--force", action="store_true", help="call even if headlines unchanged")
+    ap.add_argument("--force", action="store_true",
+                    help="call even if headlines unchanged / morning already ran")
     ap.add_argument("--allow-urgency", action="store_true",
                     help="let the model set bias.json urgency (it can flatten a position)")
     ap.add_argument("--spend", action="store_true", help="print the spend ledger and exit")
@@ -272,42 +565,73 @@ def main(argv=None) -> int:
     if a.spend:
         print(f"  spent: ${spent_so_far():.4f}")
         if SPEND.exists():
-            for l in list(SPEND.open())[-10:]:
+            for l in list(SPEND.open())[-12:]:
                 d = json.loads(l)
-                print(f"    {d['ts'][:19]} {d['model']:16s} {d['kind']:9s} ${d['cost_usd']:.5f}")
+                print(f"    {d['ts'][:19]} {d['model']:16s} {d['kind']:8s} ${d['cost_usd']:.5f}")
         return 0
 
-    from polygon_news import fetch_headlines
+    ctx = a.context or datetime.now(ET).strftime("%a %Y-%m-%d %H:%M ET")
+    from polygon_news import fetch_headlines, baseline_bias
     heads = fetch_headlines(a.symbol)
-    print(f"  {len(heads)} headlines for {a.symbol}")
+    print(f"  {len(heads)} headlines for {a.symbol}   "
+          f"(polygon baseline bias {baseline_bias(heads)} — held out, not shown to Claude)")
 
     if a.estimate:
         for m in sorted(PRICES):
-            estimate(a.symbol, heads, a.context, m)
+            estimate(a.symbol, heads, ctx, m)
         return 0
 
+    if a.mode == "morning":
+        if plan_is_from_today() and not a.force:
+            print(f"  today's morning plan already exists ({PLAN.name}) — Opus runs ONCE a day.\n"
+                  f"  Use --force to pay for a second one, or --mode delta to track against it.")
+            return 0
+        obj, cost = morning_read(a.symbol, heads, ctx, cap=a.cap,
+                                 model=a.model, effort=a.effort)
+        _write_outputs(obj, a.symbol, a.model or MODES["morning"]["model"], len(heads),
+                       a.allow_urgency, cost, "morning")
+        print(f"\n  bias {obj.bias:+.2f} ({obj.conviction})   urgency={obj.suggested_urgency}")
+        print(f"  thesis: {obj.thesis}\n  plan:   {obj.day_plan}\n")
+        print("  today's schedule:")
+        for i in obj.schedule:
+            print(f"    {i.time_et:>12s}  {i.event}\n{'':18s}{i.why_it_matters}")
+        print("\n  news that matters:")
+        for x in obj.important_news:
+            print(f"    - {x}")
+        print("\n  levels:")
+        for x in obj.key_levels:
+            print(f"    - {x}")
+        print("\n  invalidators (what the 5-min checks test against all day):")
+        for x in obj.invalidators:
+            print(f"    - {x}")
+        return 0
+
+    # --- delta ---
+    if not PLAN.exists():
+        print(f"  no morning plan at {PLAN.name} — run --mode morning first.\n"
+              f"  Delta checks measure against the morning frame; without one there is nothing to check.")
+        return 1
+    plan = json.loads(PLAN.read_text())
     fp = headline_fingerprint(heads)
     if not changed(fp) and not a.force:
         print("  headlines unchanged since the last call — no API call, no cost. (--force to override)")
         return 0
 
     try:
-        read, cost = read_news(a.symbol, heads, a.context, model=a.model, cap=a.cap,
-                               effort=a.effort, kind="read")
+        obj, cost = delta_read(a.symbol, heads, ctx, plan, cap=a.cap,
+                               model=a.model, effort=a.effort)
     except SpendCapReached as e:
         print(f"  !! SPEND CAP: {e}")
         return 1
 
     STATE.write_text(json.dumps({"fingerprint": fp, "ts": datetime.now(timezone.utc).isoformat()}))
-    write_bias(read, a.symbol, a.model, len(heads), a.allow_urgency)
-    append_scorecard(read, a.symbol, a.model, cost)
-
-    print(f"\n  bias {read.bias:+.2f} ({read.conviction})   suggested_urgency={read.suggested_urgency}")
-    print(f"  thesis: {read.thesis}")
-    for w in read.watch_for:
-        print(f"    watch: {w}")
-    if read.consensus_eps is not None or read.projected_eps is not None:
-        print(f"  EPS: consensus {read.consensus_eps} vs Claude's projection {read.projected_eps}")
+    _write_outputs(obj, a.symbol, a.model or MODES["delta"]["model"], len(heads),
+                   a.allow_urgency, cost, "delta", plan)
+    flag = "HOLDS" if obj.still_holds else "!! THESIS BROKEN"
+    print(f"\n  {flag}   bias {obj.bias:+.2f} ({obj.conviction})   urgency={obj.suggested_urgency}")
+    print(f"  changed: {obj.what_changed}")
+    if obj.invalidator_triggered:
+        print(f"  !! INVALIDATOR FIRED: {obj.invalidator_triggered}")
     return 0
 
 

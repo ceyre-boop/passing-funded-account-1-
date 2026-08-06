@@ -1,0 +1,83 @@
+{
+ "ts": "2026-08-06T15:56:41.094722+00:00",
+ "symbol": "NVDA",
+ "mode": "morning",
+ "bias": 0.1,
+ "urgency": "none",
+ "n_headlines": 12,
+ "conviction": "low",
+ "suggested_urgency": "none",
+ "urgency_armed": false,
+ "model": "claude-opus-5 (spec 009 morning, scored \u2014 see news_scorecard.csv)",
+ "thesis": "No NVDA-specific catalyst today \u2014 the stock sits near all-time highs with earnings still three weeks out (Aug 26), so today is a macro/semis-sentiment drift session where the AMD hangover and pre-payrolls positioning matter more than any NVDA headline.",
+ "day_plan": "Treat this as a no-catalyst drift session inside 203-210 with a mild upward lean: NVDA held while AMD broke, ARK added, and the Aug 26 narrative gives dip-buyers cover. Trade the levels rather than a thesis \u2014 fade extensions away from VWAP, respect the 13:00 30-year auction and the pre-payrolls afternoon as the two windows where an orderly tape can turn, and keep size small because Friday's jobs report is the real event. Do not chase a gap in either direction before 10:30.",
+ "important_news": [
+  "AMD fell 7-9% after Tue-night earnings despite data-center revenue doubling to $6.7B \u2014 the market punished flat 56% gross-margin guidance, i.e. 'growth is getting expensive.' That is the read-through risk for NVDA multiple, but NVDA's margin structure is the counter-argument and NVDA held up Wednesday.",
+  "Musk/SpaceX chip-sourcing announcement is cited as the direct trigger for AMD's drop \u2014 verify at the open whether it is Nvidia-exclusive (bullish NVDA, explains relative strength) or SpaceX in-house silicon (bearish for the whole merchant-AI-silicon complex, including NVDA over time). This is the single most important unresolved fact this morning.",
+  "Sell-side/press previews pushing an Aug 26 blowout (~$95B rev vs ~$91B guide) and a 'low-20s forward P/E' \u2014 narrative support for dip-buying, no cash-flow event today, but it sets up buy-the-rumor drift into late August.",
+  "Cathie Wood/ARK added to NVDA Wednesday \u2014 flow-positive optics, immaterial size for a ~$5T name; treat as sentiment color only.",
+  "Insider-selling story ($3.4B across NVDA/PLTR/GOOGL/META) is recycled 10b5-1 filler \u2014 ignore unless a fresh Form 4 with unusual size prints today.",
+  "CXMT's ~500% IPO debut and $10B DRAM raise \u2014 background signal on memory/HBM supply and AI capex intensity; not a same-day NVDA driver."
+ ],
+ "schedule": [
+  {
+   "time_et": "pre-open",
+   "event": "Premarket tape 07:00-09:30: check NVDA vs AMD, MU, AVGO, SMH/SOXX for whether Tuesday's AMD margin scare is still bleeding into the complex or has been ring-fenced.",
+   "why_it_matters": "NVDA's relative strength vs AMD Wednesday is the whole bull case for today. If NVDA is red while AMD stabilizes, the leadership rotation flipped and the drift-up thesis is gone."
+  },
+  {
+   "time_et": "08:30",
+   "event": "Weekly initial jobless claims (plus Q2 nonfarm productivity / unit labor costs).",
+   "why_it_matters": "Last macro print before Friday payrolls. A hot claims number pulls rate-cut odds and hits long-duration megacap tech first; NVDA is the highest-beta expression of that."
+  },
+  {
+   "time_et": "09:30",
+   "event": "Cash open / opening range. Gap direction against 206.69 defines the day.",
+   "why_it_matters": "With no stock-specific news, the first 15-30 minutes usually sets the day's range for a no-catalyst megacap. Fading the open works far more often than chasing it on days like this."
+  },
+  {
+   "time_et": "10:30",
+   "event": "Opening-range expiry / regime shift \u2014 is NVDA above or below the opening 30-min VWAP?",
+   "why_it_matters": "On catalyst-free sessions NVDA typically transitions here from headline noise into either a slow VWAP grind (most likely) or a trend day tied to SPX/NDX. Position size should shrink if it's the former."
+  },
+  {
+   "time_et": "13:00",
+   "event": "Treasury 30-year bond auction (quarterly refunding week: 3y Tue, 10y Wed, 30y Thu).",
+   "why_it_matters": "A tailing long-bond auction lifts back-end yields and reliably pressures high-multiple AI names in the 13:00-13:30 window. This is the most underappreciated intraday risk today."
+  },
+  {
+   "time_et": "14:00-15:00",
+   "event": "Afternoon drift / any scheduled Fed speakers.",
+   "why_it_matters": "Thin, headline-sensitive window; the AI complex often makes its high or low of day here on a single tape headline about chip export policy or hyperscaler capex."
+  },
+  {
+   "time_et": "15:30-16:00",
+   "event": "Close and pre-payrolls de-risking.",
+   "why_it_matters": "Traders flatten AI-beta into Friday's jobs report; late-day supply into the bell is common and can undo a decent 2pm gain."
+  },
+  {
+   "time_et": "after-close",
+   "event": "No NVDA event. Watch any AI-adjacent Q2 reports on tonight's calendar for read-through into Friday's semis open.",
+   "why_it_matters": "Overnight semis headlines set NVDA's Friday gap; do not carry oversized swing risk into an NFP morning."
+  }
+ ],
+ "key_levels": [
+  "206.69 \u2014 prior close and the day's pivot. Holding above it all session is the simplest confirmation the AMD read-through was rejected.",
+  "210 \u2014 round number and heavy option strike just above; the natural magnet/rejection zone near all-time-high territory. A clean break and hold above on volume is the only genuine breakout setup today.",
+  "203-204 \u2014 Wednesday's rally base / likely prior-day low zone. First real support; losing it turns the day into a broader AI-complex de-rate, not NVDA noise.",
+  "200 \u2014 psychological round number and the largest open-interest strike below. A flush there without a macro catalyst is a high-probability mean-reversion bounce spot.",
+  "Session VWAP \u2014 with no news flow, VWAP is the day's referee: repeated failures beneath it signal institutional distribution near highs, reclaim-and-hold signals passive bid.",
+  "SMH / SOXX relative performance \u2014 NVDA outperforming a red semis tape is the tell that the SpaceX headline was Nvidia-favorable; underperforming a green tape is the warning."
+ ],
+ "invalidators": [
+  "NVDA opens or trades below 203 and fails to reclaim it within the first hour \u2014 the AMD margin read-through is being applied to NVDA and the mild-long bias is dead.",
+  "Confirmation that Musk's SpaceX announcement is about in-house/non-Nvidia silicon rather than Nvidia exclusivity \u2014 that reframes Tuesday's AMD drop as a merchant-silicon TAM story, bearish NVDA.",
+  "Initial jobless claims come in materially hot (roughly 260k+) or unit labor costs spike, sending the 10-year yield up 8bp+ \u2014 long-duration tech leadership breaks and NVDA underperforms SPX.",
+  "AMD trades down another 3%+ today (second-day follow-through rather than stabilization), signaling the market is repricing AI-hardware margins broadly, not just AMD.",
+  "NVDA closes red while SMH/SOXX close green \u2014 relative-strength thesis invalidated, no reason to hold long exposure into payrolls.",
+  "A clean break above 210 with expanding volume \u2014 the fade-the-extension part of this plan is wrong; the name is in breakout mode into earnings and shorts should stand aside.",
+  "Any fresh chip export-control or China headline \u2014 an unscheduled policy shock overrides every level here."
+ ],
+ "consensus_eps": null,
+ "projected_eps": null
+}
