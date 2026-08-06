@@ -5,3 +5,5 @@
 {"ts": "2026-08-06T15:57:06.129321+00:00", "model": "claude-sonnet-5", "kind": "delta", "input": 2816, "output": 103, "cache_write": 0, "cache_read": 0, "cost_usd": 0.009993}
 {"ts": "2026-08-06T15:57:35.453209+00:00", "model": "claude-sonnet-5", "kind": "delta", "input": 777, "output": 131, "cache_write": 2391, "cache_read": 0, "cost_usd": 0.01326225}
 {"ts": "2026-08-06T15:57:43.679982+00:00", "model": "claude-sonnet-5", "kind": "delta", "input": 777, "output": 110, "cache_write": 0, "cache_read": 2391, "cost_usd": 0.0046983}
+{"ts": "2026-08-06T16:01:28.891826+00:00", "model": "claude-opus-5", "kind": "morning", "input": 1738, "output": 2513, "cache_write": 1812, "cache_read": 0, "cost_usd": 0.08284}
+{"ts": "2026-08-06T16:02:53.261831+00:00", "model": "claude-opus-5", "kind": "morning", "input": 1860, "output": 2184, "cache_write": 0, "cache_read": 1812, "cost_usd": 0.064806}

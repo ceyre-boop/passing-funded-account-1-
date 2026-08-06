@@ -83,13 +83,19 @@ CACHE_WRITE_MULT, CACHE_READ_MULT = 1.25, 0.10
 DEFAULT_CAP_USD = 5.00          # under the $6 remaining, deliberately
 
 # The two jobs and what each is worth. Opus buys the frame once; Sonnet tracks
-# against it. Effort follows the same logic — the morning read is the one place
-# thinking depth pays for itself.
+# against it.
+#
+# Morning effort dropped high -> medium 2026-08-06 (Colin's call), after high
+# measured at $0.105 — about 70% of a session's total spend. Measured side by
+# side on identical headlines; see the comparison in the commit for what the
+# downgrade actually costs in output quality. Raise it back with --effort high
+# on any morning that genuinely warrants it (earnings day, a live policy shock).
 MODES = {
-    "morning": {"model": "claude-opus-5",   "effort": "high"},
+    "morning": {"model": "claude-opus-5",   "effort": "medium"},
     "delta":   {"model": "claude-sonnet-5", "effort": "low"},
 }
 PLAN = OUT / "morning_plan.json"
+CALENDAR = OUT / "macro_calendar.md"
 
 
 class SpendCapReached(RuntimeError):
@@ -197,6 +203,12 @@ alongside dumb baselines (always-flat, yesterday's direction, coin flip). A
 confident-sounding paragraph that turns out wrong scores worse than an honest
 low-conviction read. `conviction: high` is a claim you are betting a track
 record on.
+
+If a macro calendar is supplied below, USE IT — those are known facts and every
+one of them belongs in `schedule` with its real time and a reason it matters to
+this specific name. Do not hedge a supplied event into "possible macro data."
+If no calendar is supplied, say so honestly in the relevant schedule entries
+rather than guessing at times you are not sure of.
 
 What matters most, in order:
 - `schedule` — be concrete about WHEN. Scheduled releases with times, earnings
@@ -571,6 +583,24 @@ def main(argv=None) -> int:
         return 0
 
     ctx = a.context or datetime.now(ET).strftime("%a %Y-%m-%d %H:%M ET")
+    if a.mode == "morning":
+        # MEASURED 2026-08-06: the schedule's quality tracks whether the model was
+        # GIVEN the macro calendar, not how hard it thought. At medium effort with
+        # no calendar it hedged ("possible secondary macro ... -type filler") and
+        # missed the 13:00 30-year auction entirely; at medium effort WITH the
+        # calendar it named the auction, the refunding sequence, and the
+        # pre-payrolls close — matching high effort at 21% less cost, and without
+        # relying on the model to recall a date correctly.
+        #
+        # So: supply the calendar. It is public information and cheaper as input
+        # than as inference.
+        if CALENDAR.exists():
+            ctx += "\n\nTODAY'S MACRO CALENDAR:\n" + CALENDAR.read_text().strip()
+            print(f"  macro calendar supplied from {CALENDAR.name}")
+        else:
+            print(f"  !! no {CALENDAR.name} — the schedule will hedge on macro timing.\n"
+                  f"     Write today's releases there (or pass --context); it measurably\n"
+                  f"     beats paying higher effort to recall them.")
     from polygon_news import fetch_headlines, baseline_bias
     heads = fetch_headlines(a.symbol)
     print(f"  {len(heads)} headlines for {a.symbol}   "
