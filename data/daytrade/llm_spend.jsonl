@@ -1,0 +1,3 @@
+{"ts": "2026-08-06T15:30:15.009699+00:00", "model": "claude-haiku-4-5", "kind": "read", "input": 1490, "output": 163, "cache_write": 0, "cache_read": 0, "cost_usd": 0.002305}
+{"ts": "2026-08-06T15:30:23.019866+00:00", "model": "claude-sonnet-5", "kind": "read", "input": 790, "output": 220, "cache_write": 1156, "cache_read": 0, "cost_usd": 0.010005}
+{"ts": "2026-08-06T15:30:28.117729+00:00", "model": "claude-opus-5", "kind": "read", "input": 790, "output": 183, "cache_write": 1156, "cache_read": 0, "cost_usd": 0.01575}

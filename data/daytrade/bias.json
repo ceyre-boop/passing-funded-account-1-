@@ -1,10 +1,20 @@
 {
- "ts": "2026-08-03T22:00:00+00:00",
- "bias": -0.1,
+ "ts": "2026-08-06T15:30:28.117913+00:00",
+ "bias": 0.0,
  "urgency": "none",
- "n_headlines": 1,
- "detail": [
-  {"ticker": "NVDA", "headline": "AMD Q2 earnings Tue 8/4 after close; options pricing ~9.8% move. Tue session is PRE-catalyst.", "score": 0}
+ "n_headlines": 12,
+ "conviction": "low",
+ "thesis": "No NVDA-specific catalyst today; only retail commentary ahead of Aug 26 earnings, with AMD's post-print drop already digested.",
+ "consensus_eps": null,
+ "projected_eps": null,
+ "watch_for": [
+  "Any NVDA export-license or China policy headline",
+  "Hyperscaler capex commentary or AI-datacenter order news",
+  "SOX index direction as sector proxy",
+  "Sell-side price-target changes into Aug 26 print"
  ],
- "model": "MANUAL v0 (hand-written from a Claude report, unvalidated, scored in news_scorecard.csv). NOT written by alphazero_bias.py — do not start the v1 keyword loop while a position is open."
+ "suggested_urgency": "none",
+ "urgency_armed": false,
+ "model": "claude-opus-5 (spec 009, scored \u2014 see news_scorecard.csv)",
+ "symbol": "NVDA"
 }
