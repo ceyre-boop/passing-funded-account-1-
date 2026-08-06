@@ -137,6 +137,10 @@ class TradeState:
     # --- inactive layers, awaiting their inputs (see stop_candidates)
     atr: Optional[float] = None              # volatility layer needs this
     thesis_sl: Optional[float] = None        # AlphaZero invalidation level
+    # --- constitution (spec 011). Additive: state, not emitted actions, so the
+    #     v3 replay log is unchanged. Missing in older session JSONL reads as 0.
+    state_revision: int = 0                  # monotonic; advances on MUTATING actions only
+    last_now_et: Optional[str] = None        # for C004, no-stale-facts
 
     def __post_init__(self):
         if self.direction not in (+1, -1): raise ValueError("direction must be +1/-1")
@@ -473,8 +477,15 @@ def decide_exit(state: TradeState) -> List[Action]:
             return _gate(state, [Action("EXIT_ALL",
                                         reason="TP2: day goal hit, full exit "
                                                "(hold_past_tp2=False)")])
-        acts.append(Action("TAKE_PARTIAL", fraction=state.goal_fraction,
-                           reason="TP2: day goal banked"))
+        if state.goal_fraction > 0:
+            acts.append(Action("TAKE_PARTIAL", fraction=state.goal_fraction,
+                               reason="TP2: day goal banked"))
+        # goal_fraction == 0 means "bank nothing at TP2, just move the stop".
+        # Emitting a zero-fraction TAKE_PARTIAL would be an instruction to do
+        # nothing dressed as an action — constitution C006 refuses it, and
+        # broker.intents_from_actions already refused it too, so this path would
+        # have raised live on any plan with goal_fraction 0. Found by C006
+        # firing across the ceiling's wide grid, which sweeps partial_frac 0.0.
 
     # 5. the layered stop. One MOVE_SL, naming the layer that took over.
     eff = effective_stop(state)
@@ -499,27 +510,39 @@ def _gate(state: TradeState, acts: List[Action]) -> List[Action]:
     return acts
 
 
-def apply_action(state: TradeState, action: Action) -> None:
+def apply_action(state: TradeState, action: Action, *,
+                 applied_keys: frozenset[str] = frozenset()) -> None:
     """Fold one Action back into the state. ONE implementation, same reason
     decide_exit is one implementation: the replay, the live runner and any
     backtest harness must evolve state identically or their logs can't be
-    diffed (APEX DoD). Unknown or malformed actions raise.
+    diffed (APEX DoD).
+
+    This is also where the CONSTITUTION runs (spec 011). Validation is a
+    predicate, not a decision — it can only refuse an action decide_exit already
+    chose, so it is not a second decision engine. Enforcing here means no path
+    can bypass it without also bypassing the thing that makes logs diffable.
+
+    `applied_keys` is caller-owned because only the caller knows whether a crash
+    happened between "broker accepted" and "state persisted". Pass the set of
+    idempotency keys already applied and C005 will refuse a replayed reduction.
     """
+    from stockfish_constitution import enforce, MUTATING
+    enforce(state, action, applied_keys=applied_keys)
+
     if action.kind == "MOVE_SL":
-        if action.sl is None: raise ValueError("MOVE_SL carries no sl")
-        looser = (action.sl < state.sl if state.direction > 0 else action.sl > state.sl)
-        if looser:
-            raise StageError(
-                f"refusing to loosen the stop {state.sl:g} -> {action.sl:g}. "
-                "The layered selector cannot produce this; something bypassed it.")
-        state.sl = action.sl
+        state.sl = action.sl                      # C003 verified it is not looser
     elif action.kind == "TAKE_PARTIAL":
-        if action.fraction is None: raise ValueError("TAKE_PARTIAL carries no fraction")
         state.qty = state.qty * (1.0 - action.fraction)   # what's still held
     elif action.kind == "EXIT_ALL":
         state.stage = Stage.CLOSED
-    elif action.kind != "HOLD":
-        raise ValueError(f"unknown action kind {action.kind!r}")
+
+    if action.kind in MUTATING:
+        # C009 — advances on MUTATING actions only. HOLD changes nothing, and
+        # advancing on a no-op would make this a call counter rather than a
+        # state identity, breaking the C005 duplicate key.
+        state.state_revision += 1
+    if state.now_et:
+        state.last_now_et = state.now_et
 
 
 # --- [SKETCH] deliberately unfinished, do not build without a planning pass ---
