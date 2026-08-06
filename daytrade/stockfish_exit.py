@@ -316,6 +316,95 @@ NOT_AUTO_EMITTABLE = {
 POLICY_PARAMS = INTENT          # back-compat alias for spec 003 readers
 
 
+# How protective each policy is. Lower = tighter grip on capital. Used when a
+# scenario distribution is NOT decisive: under genuine uncertainty the engine
+# takes the most conservative recommendation on the table rather than the most
+# probable one, because a 42% call is not a mandate.
+CONSERVATISM = {"SALVAGE": 0, "EVENT": 1, "DEFEND": 2, "SCRATCH_FAST": 0,
+                "TRAIL_TIGHT": 1, "STATIC": 2, "DEFAULT": 3,
+                "HARVEST": 3, "TRAIL_WIDE": 4, "RIDE": 4}
+
+
+def _satisfiable(policy: str, plan: dict | None) -> bool:
+    """Can this plan actually run this policy? EVENT means 'be out before the
+    catalyst' and needs a catalyst time; picking it for a plan with no
+    flatten_at_et would raise at TradeState construction — at 09:31, live."""
+    try:
+        policy_params(policy, plan)
+        return True
+    except ValueError:
+        return False
+
+
+def policy_from_scenarios(scenario_set, *, fallback: str, decisive_floor: float = 0.50,
+                          now=None, plan: dict | None = None) -> tuple[str, str]:
+    """Resolve a scenario DISTRIBUTION into the one policy actually in force.
+
+    This is mechanics, so it lives here rather than in scenarios.py — AlphaZero
+    recommends a policy per scenario, Stockfish decides which one runs (ruling 1).
+    Returns (policy, why) so the choice is always explainable in the log.
+
+    Three rules, in order:
+      1. A STALE distribution steers nothing. Freshness is checked at the point
+         of use, not trusted from the producer.
+      2. A distribution with no dominant scenario resolves to the MOST
+         CONSERVATIVE policy among its scenarios — uncertainty tightens the
+         grip, it does not average opinions into a middle that no scenario
+         actually recommended.
+      3. Only a decisive distribution gets to select its top scenario's policy.
+    """
+    if scenario_set is None:
+        return fallback, "no scenario set — using the plan's policy"
+    if not scenario_set.is_fresh(now):
+        return fallback, (f"scenario set is STALE ({scenario_set.age_min(now):.0f}m old, "
+                          f"max {scenario_set.max_age_min}m) — refusing to steer on it")
+    if not scenario_set.is_decisive(decisive_floor):
+        cands = {s.recommended_policy for s in scenario_set.scenarios}
+        usable = {c for c in cands if _satisfiable(c, plan)}
+        if not usable:
+            return fallback, (f"no scenario above {decisive_floor:.0%} and none of "
+                              f"{sorted(cands)} is satisfiable by this plan")
+        pick = min(usable, key=lambda p: CONSERVATISM.get(p, 99))
+        skipped = sorted(cands - usable)
+        return pick, (f"no scenario above {decisive_floor:.0%} "
+                      f"(top {scenario_set.top.name} at {scenario_set.top.probability:.0%}) — "
+                      f"most conservative of {sorted(usable)}"
+                      + (f"; skipped {skipped} (plan cannot satisfy)" if skipped else ""))
+    top = scenario_set.top
+    if not _satisfiable(top.recommended_policy, plan):
+        return fallback, (f"{top.name} at {top.probability:.0%} recommends "
+                          f"{top.recommended_policy}, which this plan cannot satisfy "
+                          f"(e.g. EVENT with no flatten_at_et) — using the plan's policy")
+    return top.recommended_policy, (f"{top.name} at {top.probability:.0%} "
+                                    f"(confidence {top.confidence:.2f})")
+
+
+def urgency_for_thesis(state: str, *, armed: bool = False) -> tuple[Optional[str], str]:
+    """Translate a THESIS STATE into the engine's EXISTING urgent vocabulary.
+
+    Deliberately creates no new mechanical authority. A thesis state maps onto
+    None / 'tighten' / 'exit' — the same three values the ALPHAZERO news channel
+    already uses — so every path through decide_exit is one the parity tests and
+    the replay baselines already cover. The thesis monitor produces meaning; this
+    function is the whole of its mechanical reach.
+
+    INVALIDATED and EXPIRED are gated behind `armed` for the same reason the
+    news urgency is: flattening a live position is authority a signal earns by
+    being scored, not one it is handed on arrival. Unarmed, they tighten and say
+    loudly what they would have done.
+    """
+    if state in ("THESIS_PENDING", "THESIS_CONFIRMED"):
+        return None, f"{state}: no change"
+    if state == "THESIS_WEAKENING":
+        return "tighten", "THESIS_WEAKENING: halving the trail"
+    if state in ("THESIS_INVALIDATED", "THESIS_EXPIRED"):
+        if armed:
+            return "exit", f"{state}: the reason to hold is gone — flatten"
+        return "tighten", (f"{state}: would FLATTEN, but the thesis channel is not armed "
+                           f"— tightening instead. Arm it deliberately once it is scored.")
+    raise ValueError(f"unknown thesis state {state!r}")
+
+
 def policy_params(name: str, plan: dict | None = None) -> dict:
     """Expand a named intent into TradeState kwargs.
 
