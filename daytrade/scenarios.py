@@ -36,6 +36,7 @@ cannot be proven wrong is a mood, not a forecast, and it can never be scored.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, asdict, field
 from datetime import datetime, timezone
 from typing import Literal, Optional
@@ -82,8 +83,12 @@ class Scenario:
             v = getattr(self, f_)
             if not (0.0 <= v <= 1.0):
                 raise ScenarioError(f"{self.name}.{f_}={v} outside [0, 1]")
-        if self.expected_duration_min <= 0:
-            raise ScenarioError(f"{self.name}: expected_duration_min must be positive")
+        # isfinite first: nan/inf sail straight through a bare `<= 0` comparison
+        # (nan <= 0 and inf <= 0 are both False). Found by card 019's
+        # test_rejects_nan_and_inf.
+        if not math.isfinite(self.expected_duration_min) or self.expected_duration_min <= 0:
+            raise ScenarioError(f"{self.name}: expected_duration_min must be a positive "
+                                f"finite number, got {self.expected_duration_min!r}")
         if not self.invalidation:
             raise ScenarioError(
                 f"{self.name}: no invalidation conditions. A scenario that cannot be "

@@ -71,6 +71,13 @@ class Dimension:
             return
         if self.value is None:
             raise RegimeError(f"{self.name}: source={self.source} but no value")
+        # Explicit, named NaN rejection (019:91). The range check below would also
+        # catch NaN — but only as an accident of NaN comparisons being False, and a
+        # future refactor of the range check must not be able to silently stop
+        # catching it.
+        if math.isnan(self.value):
+            raise RegimeError(f"{self.name}: value is NaN — refused explicitly, not as a "
+                              "side effect of the range check")
         lo, hi = SPEC[self.name][:2]
         if not (lo - 1e-9 <= self.value <= hi + 1e-9):
             raise RegimeError(f"{self.name}={self.value} outside its declared range [{lo}, {hi}]")
@@ -108,6 +115,22 @@ class RegimeVector:
             v = "     -" if d.value is None else f"{d.value:+6.2f}"
             out.append(f"  {mark} {k:26s} {v}   {d.detail}")
         return "\n".join(out)
+
+
+def require(vec: RegimeVector, name: str) -> float:
+    """The fail-loud accessor (card 019). For callers that need the number FOR A
+    DECISION, not a display: raises `RegimeError` if the dimension is missing or
+    unavailable, instead of letting absence quietly become a value. `available()`
+    remains for callers that legitimately want the partial view.
+    """
+    if name not in vec.dims:
+        raise RegimeError(f"required dimension {name!r} is not in the vector; "
+                          f"known: {sorted(vec.dims)}")
+    d = vec.dims[name]
+    if d.source == "unavailable":
+        raise RegimeError(f"required dimension {name!r} is unavailable ({d.detail}) — "
+                          "refusing to hand a decision-maker a number that does not exist")
+    return d.value
 
 
 # --------------------------------------------------------------- arithmetic
