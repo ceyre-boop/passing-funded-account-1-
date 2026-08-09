@@ -1,12 +1,31 @@
 # 020 — AZ wiring: one AlphaZero → Stockfish spine
 
-`[DRAFT — awaiting Colin/architect approval. DO NOT BUILD.]`
+`[SPEC — promoted 2026-08-09. Build only after Gate 0 certification.]`
 
-Drafted by the implementing seat after card 019 cleared its mutation loop; per
-the handoff's roles, this draft becomes a `[SPEC]` only when the architect seat
-reviews and promotes it. It exists so the two items 019 explicitly deferred
-(019:125-132) and the handoff's "AZ wiring card" have a written home, and so
-the gate sequence is recorded once instead of re-derived.
+Promoted by the architect seat after review of card 019, the wiring mutation
+evidence, and the 41-test suite. It exists so the two items 019 explicitly
+deferred (019:125-132) and the handoff's "AZ wiring card" have a written home,
+and so the gate sequence is recorded once instead of re-derived.
+
+## Architect rulings at promotion
+
+- **C004 midnight wraparound: refuse by design.** `_et_minutes` is a
+  same-session clock, not a date-aware timestamp. A clock transition from
+  `23:59` to `00:00` is a session-boundary violation and must raise C004; no
+  overnight position is in scope for this day-trade engine. Gate 1 tests must
+  pin the refusal and its explicit error message.
+- **`compute()` silent zeros: harden in this card.** The five fallbacks in
+  `regime_vector.compute()` (ATR/price, volatility expansion, VWAP stretch,
+  zero-denominator autocorrelation, and index-correlation `StatisticsError`)
+  must emit `unavailable` with a reason, or raise when input is malformed; they
+  may not emit `0.0` with source `computed`. A downstream `require()` call
+  cannot repair a fabricated zero. Add deterministic compute fixtures and
+  mutation rows for these cases to the Gate 1 evidence.
+- **Caller-side wiring: required in 020.** Add named tests for runner and
+  ceiling caller threading, using small testable loop helpers or synthetic bar
+  fixtures. The existing backtest test remains required. These are part of the
+  wiring spine, not an accepted residual; missing coverage blocks Gate 1
+  integration certification.
 
 ## Why this card exists
 
@@ -55,22 +74,16 @@ module changes except the call-site switches named below.
   crash-retry scenario the rule exists for is undefended until card 012
   persists keys+state together. The threading is in place precisely so 012 can
   make it effective. Comments in runner.py/backtest.py say this explicitly.
-- **Runner and ceiling caller-side threading has no automated test** — the
-  backtest caller does (`test_backtest_replay_threads_one_session_lifetime_key_set`
-  + mutation row); `run()`'s loop is not unit-callable and `simulate()` needs
-  bar fixtures. Either refactor the loop bodies to testable functions here, or
-  accept and restate the gap.
+- Caller-side runner and ceiling tests are in scope above; the pre-promotion
+  gap is closed only when those tests and their mutation rows land.
 - **C004 midnight wraparound** (adversarial review, LOW): `_et_minutes`-based
   clock comparison has no day component; a live runner held past midnight with
   `flatten_at_et` unset would raise C004 on the 00:00 sample. Architect call:
   refuse-by-design (a day-trade cockpit has no business open at midnight — make
   the error message say so) or add a day-aware clock.
 
-- `regime_vector.compute()` silent-zero fallbacks (five sites: atr_pct, the
-  volatility-expansion ratio, VWAP stretch, `_autocorr1` zero-denominator,
-  index-correlation StatisticsError → all emit real `0.0` labeled `computed`
-  instead of `unavailable`). Out of scope for 019 (parquet-free); the architect
-  should rule whether they land here or in a compute-hardening card.
+- The five `compute()` silent-zero fallbacks are in scope above; 019 remains
+  correctly parquet-free and is not retroactively expanded.
 - 018 signing deferral (018:110-114): still fine while in-process; must be
   revisited before any directive crosses a process boundary.
 - `regime_vector.compute()` test coverage generally (needs pyarrow fixtures).
@@ -79,7 +92,7 @@ module changes except the call-site switches named below.
 
 | Gate | What | Card(s) | Notes |
 |---|---|---|---|
-| 0 | Verifier before vision | 019 + constitution wiring | DONE pending review — mutation logs in `specs/019_MUTATION_LOG.md`, `specs/WIRING_MUTATION_LOG.md` |
+| 0 | Verifier before vision | 019 + constitution wiring | 019 certified 2026-08-09; wiring 5/5 mutations verified, with runner/ceiling caller tests carried into 020 |
 | 1 | One AZ→Stockfish spine | **this card (020)** | integration invariants above |
 | 2 | Event-sourced memory | 012 | golden histories; destroy-state → reconstruct → identical decision |
 | 3 | Execution + partial fills | 013 | treat vision Stockfish items 6+7 as one vertical program |
@@ -92,12 +105,17 @@ Per-card pipeline for every gate: SPEC → RED → IMPLEMENT → MUTATE → INTE
 ADVERSARIAL REVIEW → HUMAN VALIDATION → MERGE. The mutation loop is the
 VERIFIED bar; pytest-green alone is not evidence.
 
-## DoD (draft)
+## DoD
 
 - The spine test runs the full route on synthetic fixtures, deterministic, no
   network, no parquet.
 - Each of the three invariants: named test, fault applied → red → reverted →
   green, logged in a mutation log like 019's.
+- `regime_vector.compute()` has no silent-zero fallback on the five named paths;
+  each behavior is covered by a named test and mutation row.
+- Runner, backtest, and ceiling caller threading each have a named test and
+  mutation row.
+- The C004 `23:59 → 00:00` session-boundary refusal has a named test.
 - `context_directive.evaluate` gains its first real caller on a test path;
   production wiring remains 016's.
 - Engine replay stays byte-identical; ceiling R values unchanged.
