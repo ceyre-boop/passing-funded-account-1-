@@ -43,6 +43,7 @@ from bars import load_sessions                                    # noqa: E402
 from splits import tune_sessions, describe                        # noqa: E402
 from stockfish_exit import (TradeState, decide_exit, apply_action,  # noqa: E402
                             policy_params, POLICY_PARAMS)
+from stockfish_constitution import idempotency_key                # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "daytrade"
@@ -148,6 +149,7 @@ def simulate(session, e: Entry, cfg: dict) -> float:
                     flatten_at_et=cfg["flatten_et"])
 
     realized, held = 0.0, 1.0
+    applied_reduction_keys: set = set()          # C005 threading, mirrors the runner
     bars = session.after(e.ts[11:16])
 
     for ts, bar in bars.iterrows():
@@ -158,14 +160,20 @@ def simulate(session, e: Entry, cfg: dict) -> float:
 
         for px in (adverse, favour, c):
             st.price = px
-            for a in decide_exit(st):
+            acts = decide_exit(st)
+            for a in acts:
                 if a.kind == "TAKE_PARTIAL":
                     realized += held * a.fraction * (st.tp2 - e.entry) * e.direction
                     held -= held * a.fraction
                 elif a.kind == "EXIT_ALL":
                     realized += held * (_fill(a, st, e, o, c) - e.entry) * e.direction
                     return (realized - COST_PER_SHARE) / e.risk
-                apply_action(st, a)
+                # key computed BEFORE the apply advances state_revision (C005)
+                key = idempotency_key(st, a) if a.kind == "TAKE_PARTIAL" else None
+                apply_action(st, a, applied_keys=frozenset(applied_reduction_keys),
+                             batch=acts)
+                if key is not None:
+                    applied_reduction_keys.add(key)
 
     # never resolved — flat at the last print
     realized += held * (float(bars["Close"].iloc[-1]) - e.entry) * e.direction

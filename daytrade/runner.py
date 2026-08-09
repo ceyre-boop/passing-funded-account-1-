@@ -40,7 +40,7 @@ from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # import the engine beside us
-from stockfish_exit import (TradeState, decide_exit, apply_action,  # noqa: E402
+from stockfish_exit import (TradeState, decide_exit, apply_actions,  # noqa: E402
                             policy_params, effective_stop)
 import broker as broker_mod  # noqa: E402
 
@@ -340,6 +340,10 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
     print(f"# {mode}. ctrl-c to stop.\n")
 
     step = 0
+    # C005 threading: session-lifetime set of applied reduction keys, so a
+    # replayed TAKE_PARTIAL (retry after a crash between broker-accept and
+    # state-persist) is refused by the constitution instead of double-reducing.
+    applied_reduction_keys: set = set()
     while True:
         clock = datetime.now(ET).strftime("%H:%M:%S")
 
@@ -377,8 +381,7 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
         s.now_et = datetime.now(ET).strftime("%H:%M") if live else None
 
         actions = decide_exit(s)
-        for a in actions:
-            apply_action(s, a)
+        apply_actions(s, actions, applied_reduction_keys)
 
         print_cycle(clock, symbol, price, s, bias_note, age_note, actions)
 

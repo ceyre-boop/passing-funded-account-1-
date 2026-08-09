@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from stockfish_exit import TradeState, decide_exit, apply_action  # noqa: E402
+from stockfish_exit import TradeState, decide_exit, apply_actions  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 LOGDIR = ROOT / "data" / "daytrade"
@@ -83,13 +83,13 @@ def replay_session(session_jsonl: Path, plan: dict) -> list[dict]:
 
     st = _state_from_record(rows[0], plan)
     out = []
+    applied_reduction_keys: set = set()          # C005 threading, mirrors the runner
     for rec in rows:
         st.price = float(rec["price"])
         st.urgent = rec.get("urgent")
         st.now_et = None            # replay has no honest clock; runner logged its own
         actions = decide_exit(st)
-        for a in actions:
-            apply_action(st, a)
+        apply_actions(st, actions, applied_reduction_keys)
         out.append({
             "step": rec.get("step"), "price": st.price,
             "actions": [{"kind": a.kind, "sl": a.sl, "fraction": a.fraction,

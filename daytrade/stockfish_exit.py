@@ -511,7 +511,8 @@ def _gate(state: TradeState, acts: List[Action]) -> List[Action]:
 
 
 def apply_action(state: TradeState, action: Action, *,
-                 applied_keys: frozenset[str] = frozenset()) -> None:
+                 applied_keys: frozenset[str] = frozenset(),
+                 batch: Optional[List[Action]] = None) -> None:
     """Fold one Action back into the state. ONE implementation, same reason
     decide_exit is one implementation: the replay, the live runner and any
     backtest harness must evolve state identically or their logs can't be
@@ -525,9 +526,15 @@ def apply_action(state: TradeState, action: Action, *,
     `applied_keys` is caller-owned because only the caller knows whether a crash
     happened between "broker accepted" and "state persisted". Pass the set of
     idempotency keys already applied and C005 will refuse a replayed reduction.
+
+    `batch` is the full ordered decide_exit output this action came from; with
+    it, C007 (emergency precedence) can see the ordering. `state.now_et` is
+    forwarded so C004 (no stale facts) can see the clock — None (replay) leaves
+    the rule unarmed, exactly like time-flatten.
     """
     from stockfish_constitution import enforce, MUTATING
-    enforce(state, action, applied_keys=applied_keys)
+    enforce(state, action, applied_keys=applied_keys, actions=batch,
+            now_et=state.now_et)
 
     if action.kind == "MOVE_SL":
         state.sl = action.sl                      # C003 verified it is not looser
@@ -543,6 +550,29 @@ def apply_action(state: TradeState, action: Action, *,
         state.state_revision += 1
     if state.now_et:
         state.last_now_et = state.now_et
+
+
+def apply_actions(state: TradeState, actions: List[Action],
+                  applied_keys: Optional[set] = None) -> None:
+    """Apply one decide_exit batch in order, threading the constitution's full
+    context — ONE implementation, so the runner and any harness cannot drift
+    on how a batch is folded into state (rule 1: callers are I/O).
+
+      C007 — every apply sees the whole ordered batch.
+      C005 — each TAKE_PARTIAL's idempotency key is recorded in the CALLER-OWNED
+             `applied_keys` set (computed before the apply advances the
+             revision). Pass the same set across a session and a replayed
+             reduction — the crash-between-broker-and-persist retry — is
+             refused. Pass None to opt out (a caller with no retry surface).
+      C004 — apply_action itself forwards state.now_et.
+    """
+    from stockfish_constitution import idempotency_key
+    for a in actions:
+        key = idempotency_key(state, a) if a.kind == "TAKE_PARTIAL" else None
+        apply_action(state, a,
+                     applied_keys=frozenset(applied_keys or ()), batch=actions)
+        if key is not None and applied_keys is not None:
+            applied_keys.add(key)
 
 
 # --- [SKETCH] deliberately unfinished, do not build without a planning pass ---
