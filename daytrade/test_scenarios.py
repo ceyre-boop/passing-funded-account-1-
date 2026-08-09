@@ -152,6 +152,19 @@ def test_never_averages_into_unrepresented_policy():
         assert policy in {sc.recommended_policy for sc in s.scenarios}, pairs
 
 
+def test_stale_set_steers_nothing():
+    """Rule 1 of policy_from_scenarios: freshness is checked at the POINT OF
+    USE, and a stale distribution returns the caller's fallback untouched — even
+    a perfectly decisive one. Beyond 019's table (adversarial-review finding:
+    is_fresh() was tested in isolation but its enforcement was not)."""
+    s = scenario_set([("bull_continuation", 0.90, "RIDE"),
+                      ("range_consolidation", 0.10, "DEFEND")], max_age_min=30)
+    past_boundary = T0 + timedelta(minutes=31)
+    policy, why = policy_from_scenarios(s, fallback="STATIC", now=past_boundary)
+    assert policy == "STATIC"
+    assert "STALE" in why
+
+
 def test_unreadable_is_flat_three_way():
     s = unreadable("NVDA", "no directional evidence", source="test", ts=TS)
     probs = [sc.probability for sc in s.scenarios]

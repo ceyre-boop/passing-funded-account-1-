@@ -108,6 +108,41 @@ def test_c007_exit_all_last_is_legal():
     assert s.sl == 200.0
 
 
+# ------------------------------------------- caller threading (WIRED proof)
+
+def test_backtest_replay_threads_one_session_lifetime_key_set(tmp_path, monkeypatch):
+    """backtest.replay_session must fold state through apply_actions with ONE
+    session-lifetime key set — not a fresh set per row (which would silently
+    disable C005's mechanics) and not the bare per-action loop it used before
+    the wiring fix. Added after adversarial review showed the caller-side
+    threading had no test: breaking it left the whole suite green."""
+    import backtest
+
+    plan = {"symbol": "TEST", "direction": 1, "entry": 200.0, "qty": 100,
+            "sl": 199.0, "tp1": 201.0, "tp2": 202.14, "trail_dist": 0.5,
+            "trail_mult": None, "be_arm_frac": 1.0, "hold_past_tp2": True}
+    rows = [{"step": i, "price": p, "urgent": None, **({"plan": plan} if i == 0 else {})}
+            for i, p in enumerate([200.2, 200.6, 201.2, 201.5])]
+    log = tmp_path / "session.jsonl"
+    log.write_text("\n".join(__import__("json").dumps(r) for r in rows) + "\n")
+
+    seen: list = []
+    real = backtest.apply_actions
+
+    def capture(state, actions, applied_keys=None):
+        seen.append(applied_keys)
+        return real(state, actions, applied_keys)
+
+    monkeypatch.setattr(backtest, "apply_actions", capture)
+    out = backtest.replay_session(log, plan)
+
+    assert len(out) == len(rows)                  # every row folded through the funnel
+    assert len(seen) == len(rows)
+    assert all(isinstance(k, set) for k in seen)
+    assert all(k is seen[0] for k in seen), \
+        "applied_keys must be ONE session-lifetime set, not a fresh set per row"
+
+
 # ------------------------------------------------------------- regression
 
 def test_apply_action_defaults_unchanged():

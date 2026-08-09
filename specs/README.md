@@ -16,9 +16,11 @@ the build sequence.
 | 009 | CLAUDE_AS_NEWS | `daytrade/news_claude.py` + launchd | `[SPEC]` | with 006 |
 | 007 | BRIEF (in 006 file) | `daytrade/brief.py` | `[SKETCH]` | last |
 | 010 | LONG_TERM_VISION | backlog and architecture map | `[SKETCH]` | planning only |
-| 011 | STOCKFISH_CONSTITUTION | `daytrade/stockfish_constitution.py` | `[BUILT]` | done 2026-08-06 |
-| 018 | CONTEXT_DIRECTIVE_CONTRACT | `daytrade/context_directive.py` | `[BUILT]` | done 2026-08-06, with 011 |
-| 012–017 | LONG_TERM_CARDS | future Stockfish/AlphaZero contracts | `[PLAN]` | one card at a time, per the handoff |
+| 011 | STOCKFISH_CONSTITUTION | `daytrade/stockfish_constitution.py` | `[BUILT]` — IMPLEMENTED, UNIT VERIFIED (self-test + `test_constitution_wiring.py`), WIRED (all 9 rules live-reachable since the 2026-08-09 wiring fix), not EXERCISED | done 2026-08-06 |
+| 018 | CONTEXT_DIRECTIVE_CONTRACT | `daytrade/context_directive.py` | `[BUILT]` — IMPLEMENTED, self-test only, not WIRED (016 wires production; 020 drafts a test spine) | done 2026-08-06, with 011 |
+| 019 | AZ_INVARIANT_TESTS | `daytrade/test_scenarios.py`, `test_thesis.py`, `test_regime_vector.py` | `[BUILT]` — scenarios/thesis/regime_vector IMPLEMENTED → UNIT VERIFIED, 33/33 mutation rows (`019_MUTATION_LOG.md`), pending Colin review | done 2026-08-09 |
+| 020 | AZ_WIRING (gate-1 spine + gate map) | `daytrade/test_az_spine.py` (planned) | `[DRAFT]` | do not build — awaiting architect promotion |
+| 012–017 | LONG_TERM_CARDS | future Stockfish/AlphaZero contracts | `[PLAN]` | one card at a time, per the handoff; gate map in `020_AZ_WIRING.md` |
 
 ## Status legend
 - `[BUILT]` exists, tested, in the repo
@@ -26,6 +28,12 @@ the build sequence.
 - `[SKETCH]` direction right, details deliberately unfinished. **Do not build
   from a SKETCH without a planning pass** — building it now bakes in a guess
   we'd have to tear out.
+
+`[BUILT]` only means the module exists. For 011 and 018, and every card after
+them, also track where the module sits on `CLAUDE_LONG_TERM_HANDOFF.md`'s
+maturity sequence — `IMPLEMENTED → UNIT VERIFIED → INTEGRATION VERIFIED →
+WIRED → EXERCISED` — since `[BUILT]` alone doesn't say whether it's tested,
+wired to a live caller, or actually run.
 
 ## Already built (not specs — real code)
 `daytrade/stockfish_exit.py` · `daytrade/runner.py` · `daytrade/broker.py` ·

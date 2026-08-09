@@ -340,9 +340,14 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
     print(f"# {mode}. ctrl-c to stop.\n")
 
     step = 0
-    # C005 threading: session-lifetime set of applied reduction keys, so a
-    # replayed TAKE_PARTIAL (retry after a crash between broker-accept and
-    # state-persist) is refused by the constitution instead of double-reducing.
+    # C005 threading — MECHANICAL ONLY for now. The set lives in process memory
+    # and the state is never reloaded mid-session, so the scenario C005 exists
+    # for (crash between broker-accept and state-persist, then a replayed
+    # TAKE_PARTIAL) is NOT yet defended: both the keys and the state die with
+    # the process. The threading is here so the rule executes on the live path
+    # and so card 012 (event-sourced persistence) makes it effective by
+    # persisting exactly this set alongside the state. Do not read this line as
+    # crash-safety. (Adversarial review, 2026-08-09.)
     applied_reduction_keys: set = set()
     while True:
         clock = datetime.now(ET).strftime("%H:%M:%S")

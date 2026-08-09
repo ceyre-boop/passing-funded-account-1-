@@ -21,6 +21,7 @@ alone is not evidence.
 | `test_scenarios.py::test_decisive_picks_top_scenario_policy` | swap top for the second-highest scenario | RED under fault, GREEN after revert |
 | `test_scenarios.py::test_indecisive_picks_most_conservative_represented_policy` | fallback to the LEAST conservative policy | RED under fault, GREEN after revert |
 | `test_scenarios.py::test_never_averages_into_unrepresented_policy` | return an interpolated/middle policy absent from the set | RED under fault, GREEN after revert |
+| `test_scenarios.py::test_stale_set_steers_nothing` | stop checking freshness at the point of use | RED under fault, GREEN after revert |
 | `test_scenarios.py::test_unreadable_is_flat_three_way` | skew one weight in unreadable() | RED under fault, GREEN after revert |
 | `test_thesis.py::test_legal_transitions_only` | remove the weakening precedence branch | RED under fault, GREEN after revert |
 | `test_thesis.py::test_idempotent_on_repeated_observation` | record a transition on every call, including no-ops | RED under fault, GREEN after revert |
@@ -41,4 +42,4 @@ alone is not evidence.
 | `test_regime_vector.py::test_require_raises_on_missing` | remove the missing-name check in require() | RED under fault, GREEN after revert |
 | `test_regime_vector.py::test_require_returns_value_when_computed_or_judged` | break the happy path (return a constant instead of the value) | RED under fault, GREEN after revert |
 
-**32/32 rows verified.**
+**33/33 rows verified.**

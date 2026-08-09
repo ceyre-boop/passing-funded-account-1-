@@ -83,7 +83,11 @@ def replay_session(session_jsonl: Path, plan: dict) -> list[dict]:
 
     st = _state_from_record(rows[0], plan)
     out = []
-    applied_reduction_keys: set = set()          # C005 threading, mirrors the runner
+    # C005 threading, mirrors the runner (mechanical only until card 012
+    # persists keys+state; see the runner's comment). In honest replay a
+    # duplicate cannot occur, so this can never fire here — it exists so the
+    # replay folds state through the identical path the runner uses.
+    applied_reduction_keys: set = set()
     for rec in rows:
         st.price = float(rec["price"])
         st.urgent = rec.get("urgent")

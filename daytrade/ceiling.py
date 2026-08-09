@@ -162,18 +162,24 @@ def simulate(session, e: Entry, cfg: dict) -> float:
             st.price = px
             acts = decide_exit(st)
             for a in acts:
-                if a.kind == "TAKE_PARTIAL":
-                    realized += held * a.fraction * (st.tp2 - e.entry) * e.direction
-                    held -= held * a.fraction
-                elif a.kind == "EXIT_ALL":
-                    realized += held * (_fill(a, st, e, o, c) - e.entry) * e.direction
-                    return (realized - COST_PER_SHARE) / e.risk
+                # Constitution FIRST, accounting second: a refused action must
+                # produce zero effect, including on realized/held. EXIT_ALL also
+                # goes through apply_action (it used to early-return around it —
+                # a bypass of the one funnel, caught in adversarial review).
+                # Behavior-identical: _fill reads only st.sl/action.reason, and
+                # decide_exit emits EXIT_ALL as a single-action batch.
                 # key computed BEFORE the apply advances state_revision (C005)
                 key = idempotency_key(st, a) if a.kind == "TAKE_PARTIAL" else None
                 apply_action(st, a, applied_keys=frozenset(applied_reduction_keys),
                              batch=acts)
                 if key is not None:
                     applied_reduction_keys.add(key)
+                if a.kind == "TAKE_PARTIAL":
+                    realized += held * a.fraction * (st.tp2 - e.entry) * e.direction
+                    held -= held * a.fraction
+                elif a.kind == "EXIT_ALL":
+                    realized += held * (_fill(a, st, e, o, c) - e.entry) * e.direction
+                    return (realized - COST_PER_SHARE) / e.risk
 
     # never resolved — flat at the last print
     realized += held * (float(bars["Close"].iloc[-1]) - e.entry) * e.direction

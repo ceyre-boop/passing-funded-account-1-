@@ -555,8 +555,11 @@ def apply_action(state: TradeState, action: Action, *,
 def apply_actions(state: TradeState, actions: List[Action],
                   applied_keys: Optional[set] = None) -> None:
     """Apply one decide_exit batch in order, threading the constitution's full
-    context — ONE implementation, so the runner and any harness cannot drift
-    on how a batch is folded into state (rule 1: callers are I/O).
+    context — the one batch fold for callers that apply whole batches (runner,
+    backtest). ceiling.py is the documented exception: its per-action P&L
+    accounting interleaves with the fold, so it threads keys/batch in place —
+    same context, hand-rolled loop (rule 1 pressure, revisit if a third
+    interleaved caller ever appears).
 
       C007 — every apply sees the whole ordered batch.
       C005 — each TAKE_PARTIAL's idempotency key is recorded in the CALLER-OWNED
