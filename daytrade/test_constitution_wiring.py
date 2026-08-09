@@ -48,6 +48,17 @@ def test_c004_forward_and_equal_clock_is_legal():
     assert s2.last_now_et == "11:05"
 
 
+def test_c004_midnight_crossing_refused_by_design():
+    """020 architect ruling: the session clock is same-day HH:MM. 23:59 -> 00:00
+    is a session-boundary violation — an overnight position — and must raise
+    C004 with a message that says it is deliberate, not a wraparound bug."""
+    s = make_state(now_et="00:00", last_now_et="23:59")
+    with pytest.raises(ConstitutionError) as e:
+        apply_action(s, Action("HOLD", reason="held past midnight"))
+    assert "C004" in rules_of(e.value)
+    assert "same-day" in str(e.value) and "overnight" in str(e.value)
+
+
 def test_c004_clockless_replay_is_unaffected():
     """Replay supplies no clock (now_et=None) — the rule stays unarmed, never a
     guessed time. This is what keeps historical replays byte-identical."""
@@ -141,6 +152,88 @@ def test_backtest_replay_threads_one_session_lifetime_key_set(tmp_path, monkeypa
     assert all(isinstance(k, set) for k in seen)
     assert all(k is seen[0] for k in seen), \
         "applied_keys must be ONE session-lifetime set, not a fresh set per row"
+
+
+def test_runner_replay_threads_one_session_lifetime_key_set(tmp_path, monkeypatch):
+    """The runner's live loop must fold every cycle through apply_actions with
+    ONE session-lifetime key set. Exercised via the runner's own --replay path
+    (no quotes, no broker); log output redirected to tmp_path so no real
+    session log is touched. Required by the 020 promotion ruling — this was a
+    declared residual until now."""
+    import runner
+
+    seen: list = []
+    real = runner.apply_actions
+
+    def capture(state, actions, applied_keys=None):
+        seen.append(applied_keys)
+        return real(state, actions, applied_keys)
+
+    monkeypatch.setattr(runner, "apply_actions", capture)
+    monkeypatch.setattr(runner, "read_urgency", lambda require: (None, "test"))
+    monkeypatch.setattr(runner, "LOGDIR", tmp_path)
+
+    plan = {"symbol": "TEST", "direction": 1, "entry": 200.0, "qty": 100,
+            "sl": 199.0, "tp1": 201.0, "tp2": 202.14, "trail_dist": 0.5,
+            "trail_mult": None, "be_arm_frac": 1.0, "hold_past_tp2": True}
+    rc = runner.run(plan, interval=0, once=False, replay=[200.2, 200.6, 201.2],
+                    max_stale=180, require_bias=False)
+
+    assert rc == 0
+    assert len(seen) == 3                          # one fold per replayed cycle
+    assert all(isinstance(k, set) for k in seen)
+    assert all(k is seen[0] for k in seen), \
+        "runner must thread ONE session-lifetime key set, not a fresh set per cycle"
+    assert any(tmp_path.iterdir()), "session log must land in the redirected LOGDIR"
+
+
+def test_ceiling_simulate_threads_keys_and_batch(monkeypatch):
+    """ceiling.simulate's hand-rolled fold (the documented apply_actions
+    exception) must still thread the full constitution context: every
+    apply_action call carries the whole decide_exit batch, and once a
+    TAKE_PARTIAL is applied its idempotency key appears in later calls'
+    applied_keys. Required by the 020 promotion ruling."""
+    import pandas as pd
+    import ceiling as ceiling_mod
+    from bars import Session
+
+    closes = [201.0, 202.5, 203.0, 203.2]
+    idx = pd.date_range("2026-08-07 09:40", periods=len(closes), freq="5min")
+    df = pd.DataFrame({"Open": [c - 0.1 for c in closes],
+                       "High": [c + 0.4 for c in closes],
+                       "Low": [c - 0.4 for c in closes],
+                       "Close": closes, "Volume": [1000.0] * len(closes)}, index=idx)
+    session = Session(symbol="TEST", day="2026-08-07", df=df)
+    entry = ceiling_mod.Entry(day="2026-08-07", ts="2026-08-07T09:35",
+                              time_block="OPEN_DRIVE", direction=1, entry=200.0,
+                              stop=199.0, risk=1.0, tp1=201.0, tp2=202.14,
+                              trail_dist=0.5)
+    cfg = {"partial_frac": 0.5, "trail_mult": 1.5, "be_arm_frac": 0.25,
+           "hold_past_tp2": True, "flatten_et": None}
+
+    calls: list = []
+    real = ceiling_mod.apply_action
+
+    def capture(state, action, *, applied_keys=frozenset(), batch=None):
+        calls.append((action.kind, applied_keys, batch))
+        return real(state, action, applied_keys=applied_keys, batch=batch)
+
+    monkeypatch.setattr(ceiling_mod, "apply_action", capture)
+    ceiling_mod.simulate(session, entry, cfg)
+
+    assert calls, "simulate applied nothing — fixture failed to reach the engine"
+    assert all(batch is not None for _, _, batch in calls), \
+        "every apply must see the whole ordered batch (C007 context)"
+    partial_at = next((i for i, (kind, _, _) in enumerate(calls)
+                       if kind == "TAKE_PARTIAL"), None)
+    assert partial_at is not None, "fixture must reach TP2 and take the partial"
+    later_keys = [keys for _, keys, _ in calls[partial_at + 1:]]
+    # len == 1 is a DESIGN PIN, not just a threading check: the current
+    # lifecycle takes exactly one partial (TP2), so exactly one key exists.
+    # If a future card legitimately adds a second partial, update this
+    # deliberately — do not weaken it to make a new feature pass.
+    assert later_keys and all(len(k) == 1 for k in later_keys), \
+        "the applied partial's idempotency key must reach every later call (C005 context)"
 
 
 # ------------------------------------------------------------- regression

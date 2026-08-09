@@ -409,6 +409,55 @@ def urgency_for_thesis(state: str, *, armed: bool = False) -> tuple[Optional[str
     raise ValueError(f"unknown thesis state {state!r}")
 
 
+# The bounded urgency vocabulary, ranked by protectiveness. Module-level so
+# arbitration and its tests share ONE definition.
+URGENCY_RANK = {None: 0, "tighten": 1, "exit": 2}
+
+
+def resolve_channels(*, policy: str, policy_candidate: Optional[str],
+                     urgents: tuple = (), plan: dict | None = None
+                     ) -> tuple[str, Optional[str], str]:
+    """Arbitrate between AlphaZero channels. This is MECHANICS — which policy
+    and which urgency actually RUN — so it lives here, not in the composition
+    that gathers the channels (ruling 1; found by the 020 adversarial review
+    living untested in the spine harness).
+
+    Two rules, both conservative by doctrine:
+
+      URGENCY — the most protective of the supplied urgencies wins
+      (exit > tighten > None). Protection is never averaged down; an unknown
+      urgency value raises rather than ranking as harmless.
+
+      POLICY — an authorized directive candidate may only make the policy MORE
+      conservative (CONSERVATISM), never less: when the candidate and the
+      scenario-derived policy disagree, the tighter of the two runs. A
+      candidate this plan cannot satisfy (e.g. EVENT with no flatten_at_et) is
+      ignored with the reason in `why` — never a crash at 09:31, never a
+      silent loosen.
+    """
+    for u in urgents:
+        if u not in URGENCY_RANK:
+            raise ValueError(f"unknown urgency {u!r}; known: {list(URGENCY_RANK)}")
+    urgent = max(urgents, default=None, key=lambda u: URGENCY_RANK[u])
+
+    why = f"policy {policy}"
+    if policy_candidate is not None:
+        if not _satisfiable(policy_candidate, plan):
+            why += (f"; directive candidate {policy_candidate} ignored — "
+                    "plan cannot satisfy it")
+        else:
+            chosen = min((policy, policy_candidate),
+                         key=lambda p: CONSERVATISM.get(p, 99))
+            if chosen != policy:
+                why = (f"policy {chosen} — directive candidate tightened "
+                       f"{policy} -> {chosen}")
+            else:
+                why += (f"; directive candidate {policy_candidate} would loosen "
+                        "— refused, scenario policy stands")
+            policy = chosen
+    return policy, urgent, why
+
+
 def policy_params(name: str, plan: dict | None = None) -> dict:
     """Expand a named intent into TradeState kwargs.
 

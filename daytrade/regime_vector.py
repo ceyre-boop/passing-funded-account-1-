@@ -170,7 +170,12 @@ def _slope_per_atr(df) -> float:
         return 0.0
     slope = sum((x - mx) * (y - my) for x, y in zip(xs, c)) / denom
     atr = _atr(df)
-    return 0.0 if atr == 0 else (slope * n) / atr
+    if atr == 0:
+        # Same species as the five ruled paths (020 adversarial review): slope
+        # per ATR is 0/0 on a flat tape — undefined, not "no trend". The caller
+        # maps this to `unavailable`.
+        raise RegimeError("zero ATR — slope per ATR is undefined on a flat tape")
+    return (slope * n) / atr
 
 
 def _percentile(x: float, pop: list[float]) -> float:
@@ -194,7 +199,12 @@ def _autocorr1(xs: list[float]) -> float:
     m = st.mean(xs)
     num = sum((xs[i] - m) * (xs[i - 1] - m) for i in range(1, len(xs)))
     den = sum((x - m) ** 2 for x in xs)
-    return 0.0 if den == 0 else _clip(num / den, -1.0, 1.0)
+    if den == 0:
+        # 020 hardening: constant returns have no autocorrelation. Raising (the
+        # caller maps it to `unavailable`) instead of returning a fabricated
+        # 0.0 that reads as "measured: no persistence".
+        raise RegimeError("zero return variance — constant series")
+    return _clip(num / den, -1.0, 1.0)
 
 
 # ------------------------------------------------------------ the computation
@@ -224,23 +234,38 @@ def compute(symbol: str, session, history: list, *, ts: str,
         dims[name] = Dimension(name, value, source, detail)
 
     # --- trend -------------------------------------------------------------
-    slope = _slope_per_atr(df)
-    put("trend_strength", _clip(slope / 4.0, -1, 1), "computed",
-        f"regression slope {slope:+.2f} ATR across {len(df)} bars")
+    try:
+        slope = _slope_per_atr(df)
+        put("trend_strength", _clip(slope / 4.0, -1, 1), "computed",
+            f"regression slope {slope:+.2f} ATR across {len(df)} bars")
+    except RegimeError as e:
+        put("trend_strength", None, "unavailable", f"slope undefined: {e}")
 
     # --- volatility, scored against this symbol's own history ---------------
+    # HARDENED (020 ruling): none of these paths may emit a real 0.0 labeled
+    # "computed" when the quantity is undefined — a downstream require() cannot
+    # repair a fabricated zero. Undefined -> unavailable with the reason;
+    # malformed input -> raise.
     atr_today = _atr(df)
     px = st.mean(_closes(df))
-    atr_pct = atr_today / px if px else 0.0
+    if px <= 0:
+        raise RegimeError(f"{symbol} {session.day}: non-positive mean price {px} — "
+                          "malformed bars, refusing to score a regime on them")
+    atr_pct = atr_today / px
     hist_atr = [_atr(s.df) / st.mean(_closes(s.df)) for s in history if len(s.df) >= 4]
     if hist_atr:
         put("realized_volatility", _percentile(atr_pct, hist_atr), "computed",
             f"ATR {atr_pct:.3%} of price, {_percentile(atr_pct, hist_atr):.0%}ile of "
             f"{len(hist_atr)} prior sessions")
         med = st.median(hist_atr)
-        ratio = math.log(atr_pct / med) if med > 0 and atr_pct > 0 else 0.0
-        put("volatility_expansion", _clip(ratio, -1, 1), "computed",
-            f"log(today/median) = {ratio:+.2f}")
+        if med > 0 and atr_pct > 0:
+            ratio = math.log(atr_pct / med)
+            put("volatility_expansion", _clip(ratio, -1, 1), "computed",
+                f"log(today/median) = {ratio:+.2f}")
+        else:
+            put("volatility_expansion", None, "unavailable",
+                f"expansion undefined: today's ATR% {atr_pct:.4%} / median {med:.4%} — "
+                "a flat tape has no expansion ratio, and 0.0 would claim it does")
     else:
         put("realized_volatility", None, "unavailable", "no prior sessions to score against")
         put("volatility_expansion", None, "unavailable", "no prior sessions to score against")
@@ -274,13 +299,21 @@ def compute(symbol: str, session, history: list, *, ts: str,
 
     # --- momentum vs mean reversion ---------------------------------------
     rets = _returns(df)
-    put("momentum_persistence", _autocorr1(rets), "computed",
-        f"lag-1 autocorrelation of {len(rets)} bar returns")
+    try:
+        put("momentum_persistence", _autocorr1(rets), "computed",
+            f"lag-1 autocorrelation of {len(rets)} bar returns")
+    except RegimeError as e:
+        put("momentum_persistence", None, "unavailable",
+            f"autocorrelation undefined: {e}")
 
     vwap, last = _vwap(df), _closes(df)[-1]
-    stretch = abs(last - vwap) / atr_today if atr_today else 0.0
-    put("mean_reversion_pressure", _clip(stretch / 3.0, 0, 1), "computed",
-        f"{stretch:.1f} ATR from VWAP {vwap:.2f} (1.0 == 3 ATR)")
+    if atr_today > 0:
+        stretch = abs(last - vwap) / atr_today
+        put("mean_reversion_pressure", _clip(stretch / 3.0, 0, 1), "computed",
+            f"{stretch:.1f} ATR from VWAP {vwap:.2f} (1.0 == 3 ATR)")
+    else:
+        put("mean_reversion_pressure", None, "unavailable",
+            "zero ATR — stretch from VWAP is undefined on a flat tape")
 
     # --- the three that need an index -------------------------------------
     if index_session is not None:
@@ -290,11 +323,15 @@ def compute(symbol: str, session, history: list, *, ts: str,
         if n >= 4:
             a, b = a[-n:], b[-n:]
             try:
-                corr = _clip(st.correlation(a, b), -1, 1)
-            except st.StatisticsError:
-                corr = 0.0
-            put("cross_asset_correlation", corr, "computed",
-                f"return correlation with index over {n} bars")
+                put("cross_asset_correlation", _clip(st.correlation(a, b), -1, 1),
+                    "computed", f"return correlation with index over {n} bars")
+            except st.StatisticsError as e:
+                # 020 hardening: a constant series has undefined correlation —
+                # 0.0 would claim "measured: uncorrelated", which is a
+                # different fact. Per-dimension refusal; alignment and relative
+                # strength below are independently well-defined.
+                put("cross_asset_correlation", None, "unavailable",
+                    f"correlation undefined: {e}")
             agree = sum(1 for x, y in zip(a, b) if x * y > 0) / n
             put("index_alignment", _clip(2 * agree - 1, -1, 1), "computed",
                 f"{agree:.0%} of bars moved the same direction as the index")

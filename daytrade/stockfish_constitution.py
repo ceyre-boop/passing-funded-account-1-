@@ -195,8 +195,14 @@ def validate_clock(state, now_et: Optional[str]) -> list[ConstitutionViolation]:
         return []
     from stockfish_exit import _et_minutes
     if _et_minutes(now_et, "now_et") < _et_minutes(prev, "last_now_et"):
+        # Deliberately same-day: HH:MM has no date, so 23:59 -> 00:00 fires this
+        # rule too. That is BY DESIGN, not a wraparound bug (020 architect
+        # ruling): a midnight crossing means an overnight position, and this
+        # day-trade engine refuses those rather than growing a date-aware clock.
         return [ConstitutionViolation("C004", RULES["C004"],
-                f"clock went backwards: {prev} -> {now_et}", _rev(state))]
+                f"clock went backwards: {prev} -> {now_et} — the session clock is "
+                "same-day by design; a midnight crossing means an overnight "
+                "position, which this day-trade engine refuses", _rev(state))]
     return []
 
 

@@ -19,7 +19,7 @@ the build sequence.
 | 011 | STOCKFISH_CONSTITUTION | `daytrade/stockfish_constitution.py` | `[BUILT]` — IMPLEMENTED, UNIT VERIFIED (self-test + `test_constitution_wiring.py`), WIRED (all 9 rules live-reachable since the 2026-08-09 wiring fix), not EXERCISED | done 2026-08-06 |
 | 018 | CONTEXT_DIRECTIVE_CONTRACT | `daytrade/context_directive.py` | `[BUILT]` — IMPLEMENTED, self-test only, not WIRED (016 wires production; 020 specifies the test spine) | done 2026-08-06, with 011 |
 | 019 | AZ_INVARIANT_TESTS | `daytrade/test_scenarios.py`, `test_thesis.py`, `test_regime_vector.py` | `[BUILT]` — scenarios/thesis/regime_vector IMPLEMENTED → UNIT VERIFIED, 33/33 mutation rows (`019_MUTATION_LOG.md`), certified 2026-08-09 | done 2026-08-09 |
-| 020 | AZ_WIRING (gate-1 spine + gate map) | `daytrade/test_az_spine.py` (planned) | `[SPEC]` | promoted 2026-08-09; build after Gate 0 certification |
+| 020 | AZ_WIRING (gate-1 spine + gate map) | `daytrade/test_az_spine.py`, `test_regime_compute.py`, hardened `regime_vector.compute()`, `stockfish_exit.resolve_channels` | `[SPEC]` — IMPLEMENTED 2026-08-09: 58-test suite green, 20/20 mutation rows (`020_MUTATION_LOG.md`), pending architect certification. Note for the certifier: `resolve_channels` (channel arbitration, conservative-wins) was added to `stockfish_exit` on adversarial-review instruction (ruling 1 — arbitration is mechanics) and needs explicit ratification; `trend_strength` hardened beyond the ruled five (same species). | promoted 2026-08-09 |
 | 012–017 | LONG_TERM_CARDS | future Stockfish/AlphaZero contracts | `[PLAN]` | one card at a time, per the handoff; gate map in `020_AZ_WIRING.md` |
 
 ## Status legend
