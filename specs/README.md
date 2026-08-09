@@ -14,6 +14,7 @@ the build sequence.
 | 003 | STOCKFISH_V2 | extend `stockfish_exit.py` | `[SPEC]` | 5th |
 | 006 | ALPHAZERO_V2 | extend `alphazero_bias.py` | `[SPEC]` | 6th |
 | 009 | CLAUDE_AS_NEWS | `daytrade/news_claude.py` + launchd | `[SPEC]` | with 006 |
+| 010 | SHEETS_BRIDGE | `daytrade/sheets_push.py` | `[SPEC]` | anytime (display only) |
 | 007 | BRIEF (in 006 file) | `daytrade/brief.py` | `[SKETCH]` | last |
 | 010 | LONG_TERM_VISION | backlog and architecture map | `[SKETCH]` | planning only |
 | 011 | STOCKFISH_CONSTITUTION | `daytrade/stockfish_constitution.py` | `[BUILT]` — IMPLEMENTED, UNIT VERIFIED (self-test + `test_constitution_wiring.py`), WIRED (all 9 rules live-reachable since the 2026-08-09 wiring fix), not EXERCISED | done 2026-08-06 |
