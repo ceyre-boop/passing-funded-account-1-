@@ -22,8 +22,12 @@ Verdict rule, pre-registered BEFORE seeing results:
   Anything else is NOISE, however good the train number looks.
 """
 import numpy as np, pandas as pd, json, itertools, sys
+from pathlib import Path
 
-BASE = "/home/claude/passing-funded-account-1-"
+# NOTE (2026-08-10, landed by owner decision): this sweep is a ONE-SHOT sealed
+# record. Repo non-negotiable 1 bans new hypothesis generation here — any
+# re-run, variant, or grid extension happens in ~/quant, not this repo.
+BASE = str(Path(__file__).resolve().parents[1])
 PAIRS = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD"]
 TRAIN = ("2014-06-02", "2021-12-31")
 OOS = ("2022-01-01", "2026-07-03")
