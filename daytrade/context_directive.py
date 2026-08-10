@@ -273,6 +273,99 @@ def _to_urgent(interrupt: Optional[str], ctx: ReceiverContext) -> tuple[Optional
     raise DirectiveError(f"unmapped interrupt {interrupt!r}")
 
 
+# ------------------------------------------------ abstention (spec 016)
+
+ABSTENTION_REASONS: frozenset[str] = frozenset({
+    "NO_OPINION", "LOW_CONFIDENCE", "CONFLICTING_EVIDENCE", "STALE_CONTEXT",
+    "DATA_INCOMPLETE"})
+
+
+@dataclass(frozen=True)
+class Abstention:
+    """A VALID model output, not a failure. A model that cannot say something
+    defensible says this — it is auditable, scoreable (017's stale-signal and
+    false-emergency rates need it), and it steers nothing by construction:
+    an Abstention is not a directive and evaluate() never sees it."""
+    model_version: str
+    reason: str
+    detail: str
+    issued_at: str
+
+    def __post_init__(self):
+        if self.reason not in ABSTENTION_REASONS:
+            raise DirectiveError(f"unknown abstention reason {self.reason!r}; "
+                                 f"known: {sorted(ABSTENTION_REASONS)}")
+        if not self.model_version:
+            raise DirectiveError("an abstention still names its model — "
+                                 "anonymous silence cannot be scored")
+        _parse_ts(self.issued_at, "issued_at")
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+# -------------------------------------------- authority registry (spec 016)
+
+UNPROMOTED_CAP = 2      # observe/annotate/recommend. Interrupt authority is
+                        # EARNED through 017's promotion gate, never configured
+                        # into existence.
+
+
+class AuthorityError(RuntimeError):
+    """An authority change the registry refuses. Never downgraded to a log line."""
+
+
+@dataclass(frozen=True)
+class AuthorityGrant:
+    model_version: str
+    level: int
+    action: str                     # GRANT | ROLLBACK
+    granted_by: str
+    reason: str
+    ts: str
+    promotion_ref: Optional[str] = None
+
+
+class AuthorityRegistry:
+    """Append-only audit of who may do what. `granted_level` is DERIVED from
+    the trail on every call — there is no cached level to drift."""
+
+    def __init__(self):
+        self._trail: list[AuthorityGrant] = []
+
+    def grant(self, model_version: str, level: int, *, by: str, reason: str,
+              ts: str, promotion_ref: Optional[str] = None) -> AuthorityGrant:
+        if not (0 <= level <= 4):
+            raise AuthorityError(f"level {level} outside 0..4")
+        if level > UNPROMOTED_CAP and not promotion_ref:
+            raise AuthorityError(
+                f"level {level} for {model_version!r} requires a promotion_ref — "
+                f"an unpromoted model is capped at {UNPROMOTED_CAP} (recommend). "
+                "Interrupt authority is earned through the 017 gate, not granted "
+                "by being asked nicely.")
+        g = AuthorityGrant(model_version, level, "GRANT", by, reason, ts,
+                           promotion_ref)
+        self._trail.append(g)
+        return g
+
+    def rollback(self, model_version: str, *, by: str, reason: str, ts: str
+                 ) -> AuthorityGrant:
+        g = AuthorityGrant(model_version, DEFAULT_GRANTED_LEVEL, "ROLLBACK",
+                           by, reason, ts)
+        self._trail.append(g)
+        return g
+
+    def granted_level(self, model_version: str) -> int:
+        level = DEFAULT_GRANTED_LEVEL
+        for g in self._trail:
+            if g.model_version == model_version:
+                level = g.level
+        return level
+
+    def audit(self) -> tuple:
+        return tuple(self._trail)
+
+
 # ------------------------------------------------------------------ tests
 
 def _self_test() -> int:

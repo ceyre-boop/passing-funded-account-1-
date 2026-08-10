@@ -1,4 +1,4 @@
-# 015 — ALPHAZERO EVIDENCE OBJECTS AND EVENT LIFECYCLE `[PLAN]`
+# 015 — ALPHAZERO EVIDENCE OBJECTS AND EVENT LIFECYCLE `[SPEC]` (promoted 2026-08-09, ratification pending)
 
 Coverage: AlphaZero items 4–5. Depends on 006 and 009; feeds 016 and 017.
 
@@ -28,3 +28,41 @@ Fixtures prove duplicate headlines, rumor/confirmation, stale recaps, scoped
 NVDA news, and market-wide SPY news produce distinct outputs. A replay at the
 same `as_of` time is byte-stable.
 
+
+---
+
+## `[SPEC]` promotion — 2026-08-09, on Colin's direct instruction. Architect
+## ratification post-hoc.
+
+### Planning decisions, answered
+
+1. **Canonicalization / duplicate group:** lowercase, strip punctuation,
+   collapse whitespace; `dup_group = sha256(canonical)[:16]`. Same group =
+   same story.
+2. **Source reliability:** supplied per source from a VERSIONED table
+   (`table_version` recorded on every evidence). An unrated source yields
+   reliability `None` + `unrated` — explicit, never a defaulted 0.5. A human
+   override is an explicit constructor argument recorded as
+   `reliability_overridden_by`.
+3. **Decay:** per-type TTL table (minutes) drives `is_fresh(now)` with the
+   house INCLUSIVE boundary. State decay (MARKET_REACTING → DIGESTED → STALE)
+   is explicit via `advance_state`, monotonic forward-only, idempotent on the
+   same state; time alone never silently mutates a stored state.
+4. **Conflict:** a duplicate group whose members point opposite directions is
+   `conflicted=True` on the group view — surfaced, never averaged to neutral.
+5. **Aggregation precedence:** trade > symbol > sector > market (mirrors 018's
+   `in_scope`); `GroupView.most_specific_scope` reports it.
+
+### The urgency rule (the card's core)
+
+`urgency` is derived from state + severity + novelty. A DUPLICATE arrival
+updates provenance (last_seen, count, reliability sources) and has novelty 0 —
+so adding a duplicate can NEVER raise a group's urgency. Only new evidence
+(new group, or a state advance) can. Named test + fault row.
+
+### DoD
+
+Duplicate headlines, rumor→confirmation, stale recap, NVDA-scoped vs SPY
+market-wide distinct outputs, byte-stable replay at the same `as_of`, and the
+never-raises-urgency duplicate rule — each named and fault-injected
+(`mutation_check_015_016.py` → `specs/015_016_MUTATION_LOG.md`).

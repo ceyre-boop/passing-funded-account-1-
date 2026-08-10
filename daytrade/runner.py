@@ -41,12 +41,13 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # import the engine beside us
 from stockfish_exit import (TradeState, decide_exit, apply_actions,  # noqa: E402
-                            policy_params, effective_stop)
+                            policy_params, effective_stop, resolve_channels)
 import broker as broker_mod  # noqa: E402
 
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
 BIAS = ROOT / "data" / "daytrade" / "bias.json"
+DIRECTIVES = ROOT / "data" / "daytrade" / "directives.json"
 LOGDIR = ROOT / "data" / "daytrade"
 
 REQUIRED = ("symbol", "direction", "entry", "qty", "sl")
@@ -267,6 +268,33 @@ def fetch_quote(symbol: str, max_stale: int, *, source: str,
 
 # ------------------------------------------------------------------- the bias
 
+def read_directive_urgency(symbol: str) -> tuple[str | None, str]:
+    """Spec 016: the runner consumes directive INTERRUPTS only, at the default
+    (unpromoted) authority level — tighten is the ceiling; an EMERGENCY from an
+    unpromoted model is refused by evaluate(), which is the point of the
+    authority table. Recommendations are logged in the note, never in force.
+
+    Absent file = no directives = behavior identical to before this card.
+    Malformed content prints a loud note and steers NOTHING — same convention
+    as the bias channel's MISSING/UNREADABLE: an advisory input must not kill
+    the cockpit, and it must not steer it while broken either.
+    """
+    if not DIRECTIVES.exists():
+        return None, "no directives"
+    from context_directive import (ContextDirective, DirectiveError,
+                                   ReceiverContext, evaluate)
+    try:
+        raw = json.loads(DIRECTIVES.read_text())
+        ds = [ContextDirective.from_dict(d) for d in raw]
+    except (json.JSONDecodeError, DirectiveError, TypeError, KeyError) as e:
+        return None, f"DIRECTIVES UNREADABLE ({e}) — steering nothing"
+    dec = evaluate(ds, ReceiverContext(symbol=symbol))
+    note = dec.why
+    if dec.policy_candidate is not None:
+        note += f" [recommendation {dec.policy_candidate} logged, not in force]"
+    return dec.urgent, note
+
+
 def read_urgency(require: bool) -> tuple[str | None, str]:
     """ONLY the urgency field crosses from ALPHAZERO (ARCHITECTURE.md:53-54).
 
@@ -379,8 +407,20 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
         if bias_note in ("MISSING", "UNREADABLE"):
             print(f"{clock} !! BIAS {bias_note} at {BIAS} — running with no urgent channel")
 
+        # Spec 016: directive interrupts merge with the bias channel through
+        # the engine's ONE arbitration (most protective wins). No directives
+        # file -> None -> byte-identical to the pre-016 runner.
+        directive_urgency, directive_note = read_directive_urgency(symbol)
+        if directive_note.startswith("DIRECTIVES UNREADABLE"):
+            print(f"{clock} !! {directive_note}")
+        _, merged_urgency, _ = resolve_channels(
+            policy=s.exit_policy, policy_candidate=None,
+            urgents=(urgency, directive_urgency))
+        if directive_urgency is not None:
+            bias_note = f"{bias_note}+directive:{directive_urgency}"
+
         s.price = price
-        s.urgent = urgency
+        s.urgent = merged_urgency
         # A real clock arms time-flatten. In replay there is no honest clock, so
         # the rule stays disarmed and the replay stays reproducible.
         s.now_et = datetime.now(ET).strftime("%H:%M") if live else None
@@ -404,7 +444,11 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
             "hwm": s.hwm, "sl": s.sl, "qty": s.qty,
             "stage": s.stage.value, "stop_layer": effective_stop(s).name,
             "tp1_done": s.tp1_done, "tp2_done": s.tp2_done,
-            "urgent": urgency, "bias_note": bias_note,
+            # the MERGED urgency — what actually steered this cycle. The replay
+            # harness feeds rec["urgent"] straight back to the engine, so
+            # logging the pre-merge bias value would break the DoD diff the
+            # moment a directive ever fires.
+            "urgent": merged_urgency, "bias_note": bias_note,
             "actions": [{"kind": a.kind, "sl": a.sl, "fraction": a.fraction,
                          "reason": a.reason} for a in actions],
             "broker_mode": broker.mode if broker else "off",
