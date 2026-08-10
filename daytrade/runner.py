@@ -32,6 +32,7 @@ Usage
 """
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -49,6 +50,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BIAS = ROOT / "data" / "daytrade" / "bias.json"
 DIRECTIVES = ROOT / "data" / "daytrade" / "directives.json"
 LOGDIR = ROOT / "data" / "daytrade"
+EVENTS_DIR = ROOT / "data" / "daytrade"      # spec 012 event logs live beside the session logs
+SOURCE_VERSION = "runner-1"                  # producer identity on every emitted event
 
 REQUIRED = ("symbol", "direction", "entry", "qty", "sl")
 
@@ -356,11 +359,93 @@ def log_cycle(rec: dict) -> None:
 
 def run(plan: dict, *, interval: int, once: bool, replay: list | None,
         max_stale: int, require_bias: bool, broker=None,
-        quote_source: str = "auto", max_spread_pct: float = 0.01) -> int:
-    s = state_from_plan(plan)
+        quote_source: str = "auto", max_spread_pct: float = 0.01,
+        resume: bool = False) -> int:
+    from trade_events import (JsonlEventLog, TornTailError, TradeEvent,
+                              rebuild, to_trade_state, events_from_decision)
     symbol = plan["symbol"]
     live = replay is None
     src = "live" if live else "replay"
+
+    # ---- Gate 2 (spec 012): the event log is the trade's authoritative
+    # memory. Explicit resume only — a surprise reconstruction at 09:31 is
+    # worse than an operator choice, and silently forking an open trade's
+    # history is worse than either.
+    session_date = datetime.now(ET).date()
+    trade_id = f"{symbol}-{session_date}"
+    events_path = EVENTS_DIR / f"events_{session_date}_{symbol}.jsonl"
+    event_log = JsonlEventLog(events_path)
+    try:
+        events = event_log.load()
+    except TornTailError:
+        if not resume:
+            raise                       # non-resume: the message guides the operator
+        # A torn tail IS the crash Gate 2 defends against: the final line never
+        # fully landed, so the decision it described was never durable — same
+        # as crashing before the append. Dropping it is safe and LOUD.
+        events = event_log.load(tolerate_torn_tail=True)
+        removed = event_log.truncate_torn_tail()      # or the next append would
+        print(f"# !! {events_path.name} had a TORN FINAL LINE (crash mid-append) "
+              f"— {removed} byte(s) truncated; resuming from {len(events)} "
+              "durable event(s)")
+    if events and not resume and rebuild(events).closed:
+        # The plan's rule: a CLOSED trade's log rotates aside, it never blocks
+        # a fresh session and it is never overwritten.
+        n = 0
+        while (rotated := events_path.with_name(
+                f"{events_path.stem}.closed-{n}.jsonl")).exists():
+            n += 1
+        events_path.rename(rotated)
+        _dfd = os.open(events_path.parent, os.O_RDONLY)   # same durability
+        try:                                              # obligation as creation
+            os.fsync(_dfd)
+        finally:
+            os.close(_dfd)
+        print(f"# previous CLOSED trade rotated aside -> {rotated.name}")
+        events = []
+    if events and resume:
+        mem = rebuild(events)
+        if mem.closed:
+            raise RuntimeError(f"{events_path} is a CLOSED trade — nothing to "
+                               "resume. Move it aside to start fresh.")
+        if mem.pending_reduction_keys:
+            raise RuntimeError(
+                f"{events_path}: reduction(s) {sorted(mem.pending_reduction_keys)} "
+                "were SUBMITTED but never CONFIRMED — the crash landed between "
+                "the two appends. Reconciling that window is card 013's job and "
+                "it is not wired; refusing to guess whether the broker filled. "
+                "Resolve the log by hand before resuming.")
+        s = to_trade_state(mem)
+        if {k: v for k, v in plan.items() if not k.startswith("_")} != mem.plan:
+            print("# !! RESUME: the CLI plan differs from the trade's recorded "
+                  "plan — the LOG's plan wins (the log knows what was traded); "
+                  "the CLI plan is ignored for this session")
+        plan = dict(mem.plan)      # the trade's OWN recorded plan wins — the log knows
+        applied_reduction_keys: set = set(mem.applied_reduction_keys)
+        print(f"# RESUMED from {events_path.name}: {len(events)} events, "
+              f"stage {s.stage.value}, sl {s.sl:g}, qty {s.qty:g}, "
+              f"revision {s.state_revision}, {len(applied_reduction_keys)} "
+              "applied key(s)")
+    elif events:
+        raise RuntimeError(
+            f"{events_path} already holds {len(events)} event(s) for an open "
+            f"trade and --resume was not given. Refusing to silently fork "
+            "today's history — resume it, or move the file aside deliberately.")
+    else:
+        if resume:
+            raise RuntimeError(f"--resume given but {events_path} holds no durable "
+                               "events (missing, or only a torn line that was "
+                               "truncated) — nothing to reconstruct")
+        s = state_from_plan(plan)
+        applied_reduction_keys = set()
+        events = event_log_open = [TradeEvent(
+            event_id=f"{trade_id}-0", trade_id=trade_id, sequence=0,
+            event_type="POSITION_OPENED",
+            occurred_at=datetime.now(timezone.utc).isoformat(),
+            source_version=SOURCE_VERSION,
+            payload={"plan": {k: v for k, v in plan.items()
+                              if not k.startswith("_")}})]
+        event_log.append(event_log_open[0])
 
     print(f"# runner {src} | {symbol} {'LONG' if s.direction > 0 else 'SHORT'} "
           f"entry {s.entry} qty {s.qty:g} sl {s.sl} tp1 {s.tp1} tp2 {s.tp2:.2f} "
@@ -371,15 +456,10 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
     print(f"# {mode}. ctrl-c to stop.\n")
 
     step = 0
-    # C005 threading — MECHANICAL ONLY for now. The set lives in process memory
-    # and the state is never reloaded mid-session, so the scenario C005 exists
-    # for (crash between broker-accept and state-persist, then a replayed
-    # TAKE_PARTIAL) is NOT yet defended: both the keys and the state die with
-    # the process. The threading is here so the rule executes on the live path
-    # and so card 012 (event-sourced persistence) makes it effective by
-    # persisting exactly this set alongside the state. Do not read this line as
-    # crash-safety. (Adversarial review, 2026-08-09.)
-    applied_reduction_keys: set = set()
+    # C005 is now LIVE-EFFECTIVE (Gate 2): the key set above is either fresh
+    # for a new trade or reconstructed from the event log on --resume, WITH the
+    # state it belongs to — the crash-retry scenario is defended, and the
+    # destroy/resume test proves it through this exact loop.
     while True:
         clock = datetime.now(ET).strftime("%H:%M:%S")
 
@@ -429,6 +509,34 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
         s.now_et = datetime.now(ET).strftime("%H:%M") if live else None
 
         actions = decide_exit(s)
+
+        # ---- Gate 2 ordering: decide -> pre-validate (pure) -> append+fsync
+        # -> apply. A crash after append is safe (the log IS the authority and
+        # rebuild reflects the decision); a crash before append loses only a
+        # decision that never took effect. The constitution runs a PURE dry-run
+        # first so the log can never claim an action it would refuse — enforce
+        # is a predicate (spec 011), so this is dry-run-then-commit, not a
+        # second engine. (Approximation, documented: in a multi-action batch
+        # the later actions pre-validate against the pre-apply state; benign
+        # for the engine's actual batch shapes, and the real enforcement still
+        # runs inside apply_actions.)
+        from stockfish_constitution import enforce as _enforce
+        _enforce(s, actions=actions)
+        for _a in actions:
+            # now_et= included: apply_action forwards it into C004, so the
+            # dry-run must too — omitting it was a demonstrated parity hole
+            # (adversarial review: dry-run passed, apply refused, false events
+            # already durable).
+            _enforce(s, _a, applied_keys=frozenset(applied_reduction_keys),
+                     now_et=s.now_et)
+        n_before = len(events)
+        events = events_from_decision(events, s, actions,
+                                      occurred_at=datetime.now(timezone.utc).isoformat(),
+                                      source_version=SOURCE_VERSION,
+                                      post_apply=False)
+        for ev in events[n_before:]:
+            event_log.append(ev)
+
         apply_actions(s, actions, applied_reduction_keys)
 
         print_cycle(clock, symbol, price, s, bias_note, age_note, actions)
@@ -493,6 +601,10 @@ def main(argv=None) -> int:
                     help="auto: alpaca real-time bid/ask, yfinance 1m bars behind it")
     ap.add_argument("--max-spread", type=float, default=0.01,
                     help="reject an alpaca quote wider than this fraction (default 1%%)")
+    ap.add_argument("--resume", action="store_true",
+                    help="reconstruct today's open trade from its event log "
+                         "(spec 012) instead of starting from the plan. "
+                         "Explicit by design — never automatic.")
     a = ap.parse_args(argv)
 
     plan = load_plan(Path(a.plan))
@@ -508,7 +620,8 @@ def main(argv=None) -> int:
     try:
         return run(plan, interval=a.interval, once=a.once, replay=replay,
                    max_stale=a.max_stale, require_bias=a.require_bias, broker=broker,
-                   quote_source=a.quotes, max_spread_pct=a.max_spread)
+                   quote_source=a.quotes, max_spread_pct=a.max_spread,
+                   resume=a.resume)
     except KeyboardInterrupt:
         print("\n# stopped by hand — position untouched, nothing was ever sent anywhere")
         return 0

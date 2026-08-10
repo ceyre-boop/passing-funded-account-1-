@@ -172,6 +172,7 @@ def test_runner_replay_threads_one_session_lifetime_key_set(tmp_path, monkeypatc
     monkeypatch.setattr(runner, "apply_actions", capture)
     monkeypatch.setattr(runner, "read_urgency", lambda require: (None, "test"))
     monkeypatch.setattr(runner, "LOGDIR", tmp_path)
+    monkeypatch.setattr(runner, "EVENTS_DIR", tmp_path)   # Gate 2: events too
 
     plan = {"symbol": "TEST", "direction": 1, "entry": 200.0, "qty": 100,
             "sl": 199.0, "tp1": 201.0, "tp2": 202.14, "trail_dist": 0.5,

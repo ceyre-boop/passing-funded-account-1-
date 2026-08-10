@@ -85,8 +85,8 @@ MUTATIONS = [
      "if t in _REVISION_ADVANCING:", "if False:",
      "stop advancing state_revision in the reducer"),
     ("test_trade_events.py::test_golden_destroy_state_rebuild_identical_decision", TE,
-     "rev = state.state_revision - sum(1 for a in actions if a.kind in MUTATING)",
-     "rev = state.state_revision",
+     "    if post_apply:\n        rev -= sum(1 for a in actions if a.kind in MUTATING)",
+     "    if False:\n        rev -= sum(1 for a in actions if a.kind in MUTATING)",
      "translator records keys against the wrong (post-apply) revision"),
     ("test_trade_events.py::test_golden_destroy_state_rebuild_identical_decision", TE,
      "        s.stage = Stage.SCALED         # the engine advances SCALED->RUNNER itself",
@@ -97,7 +97,7 @@ MUTATIONS = [
      "adapter forgets the folded stop"),
     # ---- persistence ----
     ("test_trade_events.py::test_jsonl_log_roundtrip_and_torn_tail", TE,
-     "if i == len(lines) - 1:", "if False:",
+     "if i == len(lines) - 1 and not complete:   # torn tail", "if False:   # torn tail",
      "treat a torn tail as ordinary mid-log corruption"),
 ]
 

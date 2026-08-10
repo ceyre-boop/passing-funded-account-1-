@@ -107,3 +107,22 @@ one transactional step, and must add prefix-crash tests at every cycle index.
 Also: JsonlEventLog fsyncs the file, not the directory — the first append of a
 brand-new log can vanish on power loss; the wiring card should fsync the parent
 directory on file creation.
+
+### Gate-2 wiring: known limitations (adversarial review, 2026-08-10 — LOWs, recorded not dropped)
+
+- **Same-day trade identity:** after a CLOSED log rotates aside, a second
+  same-day trade reuses `trade_id = f"{symbol}-{date}"` and restarts event ids
+  at `…-0`. Audit joins across the two same-day logs need the filename (the
+  rotated log carries `.closed-N`); a future card should widen trade identity
+  (e.g. an open-timestamp component) before multi-trade days are routine.
+- **No cross-midnight resume:** the events filename embeds the session date, so
+  a trade cannot be resumed after midnight. Deliberate — consistent with the
+  same-day session-clock doctrine (C004 refuses midnight crossings by design).
+- **Unreconciled-submission recovery is manual:** resume refuses when a
+  PARTIAL_ORDER_SUBMITTED has no CONFIRMED (the crash landed between the two
+  appends). Procedure until card 013 wires reconciliation: check the broker's
+  fills page by hand; if the order filled, append the PARTIAL_FILL_CONFIRMED
+  event with the recorded key and the real fill price; if it never reached the
+  broker (paper/advice mode: it never does), delete the trailing SUBMITTED
+  line and resume. Either edit is a deliberate operator act on the log, not
+  something the runner will ever guess at.

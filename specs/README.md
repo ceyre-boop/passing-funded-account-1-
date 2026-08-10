@@ -21,7 +21,7 @@ the build sequence.
 | 018 | CONTEXT_DIRECTIVE_CONTRACT | `daytrade/context_directive.py` | `[BUILT]` — IMPLEMENTED, self-test only, not WIRED (016 wires production; 020 specifies the test spine) | done 2026-08-06, with 011 |
 | 019 | AZ_INVARIANT_TESTS | `daytrade/test_scenarios.py`, `test_thesis.py`, `test_regime_vector.py` | `[BUILT]` — scenarios/thesis/regime_vector IMPLEMENTED → UNIT VERIFIED, 33/33 mutation rows (`019_MUTATION_LOG.md`), certified 2026-08-09 | done 2026-08-09 |
 | 020 | AZ_WIRING (gate-1 spine + gate map) | `daytrade/test_az_spine.py`, `test_regime_compute.py`, hardened `regime_vector.compute()`, `stockfish_exit.resolve_channels` | `[SPEC]` — IMPLEMENTED 2026-08-09: 20/20 mutation rows (`020_MUTATION_LOG.md`); audited 2026-08-10 (architect: implemented and mutation-verified at unit level; suite 154, 156/156 rows repo-wide). Note for the certifier: `resolve_channels` (channel arbitration, conservative-wins) was added to `stockfish_exit` on adversarial-review instruction (ruling 1 — arbitration is mechanics) and needs explicit ratification; `trend_strength` hardened beyond the ruled five (same species). | promoted 2026-08-09 |
-| 012 | STOCKFISH_EVENT_MEMORY | `daytrade/trade_events.py` | `[SPEC]`+built 2026-08-09 on Colin's instruction — IMPLEMENTED → UNIT VERIFIED (21/21, `012_MUTATION_LOG.md`); C005 keys now persist WITH state; not WIRED (runner does not emit events yet); pending certification | Gate 2 |
+| 012 | STOCKFISH_EVENT_MEMORY | `daytrade/trade_events.py` + runner emission/`--resume` | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED (21/21, `012_MUTATION_LOG.md`) → **WIRED 2026-08-10** (runner emits every cycle, append-before-apply with a clocked pure pre-validation gate) → **EXERCISED against the real loop** (destroy-state → `--resume` → identical continuation at four kill points incl. the TP2 partial; `test_runner_event_wiring.py`, 15/15 `GATE2_WIRING_MUTATION_LOG.md`). Adversarial-reviewed 2026-08-10: 1 HIGH (C004 dry-run parity) + 2 surviving mutants fixed same day; LOW limitations recorded in the spec. Not yet exercised by a LIVE session (replay-path evidence only); day-later fresh-eyes reread still owed before the week closes. Pending certification. | Gate 2 |
 | 013 | STOCKFISH_EXECUTION_AND_FILLS | `daytrade/execution_policy.py` | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED (17/17, `013_MUTATION_LOG.md`); broker.py untouched; not WIRED; pending certification | Gate 3 |
 | 014 | SHADOW_REGRET_PORTFOLIO | `daytrade/shadow.py`, `regret.py`, `portfolio_guard.py` | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED (14/14 + 11/11, `014_MUTATION_LOG.md`, `014_GUARDS_MUTATION_LOG.md`); type-level shadow containment; guards not WIRED to any pre-trade path; pending certification | Gates 4+7 |
 | 015 | AZ_EVIDENCE_LIFECYCLE | `daytrade/evidence.py` | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED (with 016: 18/18, `015_016_MUTATION_LOG.md`); not WIRED (news_claude.py still emits headline-shaped output); pending certification | Gate 5 |
@@ -49,8 +49,9 @@ All seven gates are implemented and mutation-verified at module/unit level
 wiring, and it is the same list card by card — each item is a future wiring
 card, none is silent debt:
 
-- **Gate 2:** the runner does not emit 012 events (spec 012 carries the
-  append-before-apply ordering obligation for that card)
+- **Gate 2: CLOSED 2026-08-10** — the runner emits 012 events
+  (append-before-apply honored; destroy/resume proven through the real loop;
+  see the 012 row above). Remaining sliver: live-session (non-replay) evidence.
 - **Gate 3:** execution policy is not wired to the broker transport
 - **Gate 4:** shadow/regret is isolated, not operationally integrated
 - **Gate 5:** evidence/directive PRODUCTION wiring is partial (the runner's

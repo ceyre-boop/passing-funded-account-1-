@@ -321,12 +321,22 @@ def to_trade_state(mem: TradeMemory):
 # --------------------------------------------------------------- translator
 
 def events_from_decision(events: List[TradeEvent], state, actions, *,
-                         occurred_at: str, source_version: str
-                         ) -> List[TradeEvent]:
-    """The ONE translator from an applied engine cycle to events. Called AFTER
-    apply_actions with the post-apply state; reconstructs each reduction's
-    pre-apply revision so the recorded idempotency keys match what the caller
-    threaded (key = kind:fraction:revision-computed-against)."""
+                         occurred_at: str, source_version: str,
+                         post_apply: bool = True) -> List[TradeEvent]:
+    """The ONE translator from an engine cycle to events. Two documented call
+    points, one implementation:
+
+      post_apply=True (default, the 012 fixtures): called AFTER apply_actions;
+      reconstructs each reduction's pre-apply revision by subtracting the
+      batch's mutating count.
+
+      post_apply=False (the Gate-2 runner, append-BEFORE-apply): called after
+      decide_exit but before apply_actions — decide_exit has already performed
+      the semantic transitions (hwm, stage), so everything needed exists, and
+      the revision base is simply the CURRENT revision, no subtraction.
+
+    Either way the recorded idempotency keys match what the caller threads
+    (key = kind:fraction:revision-computed-against)."""
     from stockfish_constitution import MUTATING
     if not events:
         raise EventError("events_from_decision needs an opened log — emit "
@@ -352,9 +362,11 @@ def events_from_decision(events: List[TradeEvent], state, actions, *,
     if hwm_improved:
         emit("HWM_UPDATED", {"hwm": state.hwm})
 
-    # pre-apply revision reconstruction: the post-apply revision minus one per
-    # mutating action, walked forward in emission order
-    rev = state.state_revision - sum(1 for a in actions if a.kind in MUTATING)
+    # revision base: post-apply calls reconstruct pre-apply by subtracting one
+    # per mutating action; pre-apply calls are already AT the base
+    rev = state.state_revision
+    if post_apply:
+        rev -= sum(1 for a in actions if a.kind in MUTATING)
     for a in actions:
         if a.kind == "MOVE_SL":
             emit("STOP_ADVANCED", {"sl": a.sl, "reason": a.reason})
@@ -387,15 +399,52 @@ class JsonlEventLog:
 
     def append(self, event: TradeEvent) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        created = not self.path.exists()
         with self.path.open("a") as fh:
             fh.write(json.dumps(event.to_dict(), sort_keys=True) + "\n")
             fh.flush()
             os.fsync(fh.fileno())
+        if created:
+            # Spec 012 wiring obligation: fsync the PARENT DIRECTORY when the
+            # file is first created — a file fsync makes the bytes durable, but
+            # the directory entry itself can vanish on power loss, taking the
+            # whole brand-new log with it.
+            dfd = os.open(self.path.parent, os.O_RDONLY)
+            try:
+                os.fsync(dfd)
+            finally:
+                os.close(dfd)
+
+    def truncate_torn_tail(self) -> int:
+        """Physically remove a torn final line (crash mid-append) so a future
+        append cannot CONCATENATE onto the fragment and corrupt the log
+        mid-line. The torn line was never durable, so this is recovery, not
+        history editing. Returns bytes removed. fsyncs the truncation."""
+        data = self.path.read_bytes()
+        if not data:
+            return 0
+        if data.endswith(b"\n"):
+            # A newline-terminated final line was a COMPLETE write. If it does
+            # not parse, that is mid-log corruption, not a tear — and corruption
+            # is never repaired by guessing (adversarial review finding 4: the
+            # last line must not get a repair exemption the middle doesn't).
+            return 0
+        cut = data.rfind(b"\n") + 1                   # drop the open fragment
+        with self.path.open("rb+") as fh:
+            fh.truncate(cut)
+            fh.flush()
+            os.fsync(fh.fileno())
+        return len(data) - cut
 
     def load(self, *, tolerate_torn_tail: bool = False) -> List[TradeEvent]:
         if not self.path.exists():
             return []
-        lines = self.path.read_text().splitlines()
+        text = self.path.read_text()
+        # Only an UNTERMINATED final fragment is a tear (crash mid-write). A
+        # newline-terminated line that fails to parse was a complete write and
+        # is mid-log corruption wherever it sits — never repairable by guessing.
+        complete = text.endswith("\n") or not text
+        lines = text.splitlines()
         events: List[TradeEvent] = []
         for i, line in enumerate(lines):
             if not line.strip():
@@ -403,7 +452,7 @@ class JsonlEventLog:
             try:
                 d = json.loads(line)
             except json.JSONDecodeError as err:
-                if i == len(lines) - 1:               # torn tail: crash mid-write
+                if i == len(lines) - 1 and not complete:   # torn tail
                     if tolerate_torn_tail:
                         break
                     raise TornTailError(

@@ -156,6 +156,7 @@ def wall_clock_directive(*, interrupt: str, authority: int = 1) -> dict:
 def _run_replay(tmp_path, monkeypatch, directives_content):
     import runner
     monkeypatch.setattr(runner, "LOGDIR", tmp_path)
+    monkeypatch.setattr(runner, "EVENTS_DIR", tmp_path)   # Gate 2: events too
     monkeypatch.setattr(runner, "read_urgency", lambda require: (None, "test"))
     monkeypatch.setattr(runner, "DIRECTIVES", tmp_path / "directives.json")
     if directives_content is not None:
