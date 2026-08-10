@@ -1,3 +1,4 @@
+# SUPERSEDED by scripts/carry_buy_gate.py (spec 021) — kept for archaeology, do not run.
 # COLIN_V2 campaign simulator: calendar-clock, immediate rebuy on bust/expiry.
 # Question answered: P(funded within H calendar days of starting the campaign)?
 import csv

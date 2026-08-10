@@ -1,4 +1,7 @@
-"""Step 2 of the OOS test: trade-level stats + V2 eval-campaign pass rate on 2025-2026,
+"""CAMPAIGN SECTION SUPERSEDED by scripts/carry_buy_gate.py (spec 021).
+The offline rig (get_trades / yf.download monkeypatch) remains in use by diagnose_repro_gap.py.
+
+Step 2 of the OOS test: trade-level stats + V2 eval-campaign pass rate on 2025-2026,
 run with the SAME offline rig on both periods so the comparison is apples-to-apples."""
 import sys, warnings, statistics
 from pathlib import Path
@@ -75,10 +78,11 @@ def camp_sweep(trades,H,risk,label):
         ok,a,_=campaign(trades,t,H,risk); wins+=ok;atts.append(a);n+=1;t+=timedelta(days=3)
     print(f"{label} V2-campaign H={H}d risk={risk:.0%}: P={wins/n:.1%} (n={n} starts) E[evals]={statistics.mean(atts):.2f}")
 
-ins=get_trades('2015-01-01','2024-12-31')
-oos=get_trades('2025-01-01','2026-07-03')
-Ri=stats(ins,"RIG in-sample 2015-24 ")
-Ro=stats(oos,"RIG OOS 2025-26      ")
-camp_sweep(ins,90,0.05,"RIG in-sample")
-camp_sweep(oos,90,0.05,"RIG OOS      ")
-camp_sweep(oos,30,0.05,"RIG OOS      ")
+if __name__=="__main__":  # guarded so diagnose_repro_gap.py can import get_trades
+    ins=get_trades('2015-01-01','2024-12-31')
+    oos=get_trades('2025-01-01','2026-07-03')
+    Ri=stats(ins,"RIG in-sample 2015-24 ")
+    Ro=stats(oos,"RIG OOS 2025-26      ")
+    camp_sweep(ins,90,0.05,"RIG in-sample")
+    camp_sweep(oos,90,0.05,"RIG OOS      ")
+    camp_sweep(oos,30,0.05,"RIG OOS      ")

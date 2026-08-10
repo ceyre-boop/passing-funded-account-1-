@@ -1,4 +1,8 @@
 """
+FUTURES-LANE ONLY — dead for carry (FIRM_FIT.md: Lucid/MFF force daily close against
+a 6-day-median hold). Carry firm contracts live in data/propfirm/firm_contracts.yaml
+via sovereign/propfirm/firm_contracts.py (spec 021).
+
 Prop firm rules engine — exact simulation of EOD trailing drawdown structure.
 
 Supports Lucid LucidFlex and MyFundedFutures Flex (same mechanics, different

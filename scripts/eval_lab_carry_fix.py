@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Corrections to eval_lab.py family-D (carry) cells, per protocol honesty rules:
+"""SUPERSEDED by scripts/carry_buy_gate.py (spec 021) — kept for archaeology, do not run.
+Corrections to eval_lab.py family-D (carry) cells, per protocol honesty rules:
 1. Sealed-CSV haircut was accidentally applied twice -> single -0.004R/day swap haircut.
 2. Carry TRUE OOS = 2025-01..2026-07 rig trades (data/oos_trades_2025_2026.json),
    NOT 2022-24 (inside carry's original development window). Starts 2025-01..2025-07.

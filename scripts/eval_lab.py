@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""EVAL LAB — strategy search optimized purely for passing the Instant Pro $10k.
+"""SUPERSEDED by scripts/carry_buy_gate.py (spec 021) — kept for archaeology, do not run.
+EVAL LAB — strategy search optimized purely for passing the Instant Pro $10k.
 
 PRE-REGISTERED PROTOCOL (fixed before first run; see EVAL_LAB.md):
   Rules: $10k, 3% daily loss (intraday, vs day-start equity), 6% max loss

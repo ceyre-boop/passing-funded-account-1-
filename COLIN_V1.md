@@ -1,4 +1,16 @@
 # COLIN v1 — The Diagnosis and the Plan
+
+> **⚠️ SUPERSEDED (2026-08-10, spec 021).** The "92.4% pass at 0.50%" table below is
+> unsourced (no generating script exists in this repo) and is conditioned on Lucid /
+> MyFundedFutures — firms that force-close positions daily and therefore cannot host
+> a 6-day-median-hold carry strategy at all (`FIRM_FIT.md`). It also predates the
+> zero-edge baseline rule (`SANITY_AUDIT.md`): with no deadline and unlimited
+> retries, even a zero-edge strategy passes most campaigns, so a no-deadline P(pass)
+> without its noise control measures retry structure, not edge. The live numbers
+> come from `scripts/carry_buy_gate.py` (spec `specs/021_CARRY_BUY_GATE.md`), which
+> prints every probability next to its zero-edge control. The risk/return table and
+> the edge diagnosis below remain valid; the eval-pass claims do not.
+
 **Alta Investments | 2026-07-30**
 *Not a new strategy. A correct reading of the one you already have.*
 

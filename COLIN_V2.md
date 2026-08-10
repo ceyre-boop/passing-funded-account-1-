@@ -1,4 +1,13 @@
 # COLIN v2 — The Eval Sprint
+
+> **⚠️ SUPERSEDED (2026-08-10, spec 021).** The 5% eval sizing and its pass tables
+> were calibrated to an 8%/8% *trailing*-DD contract with a 90-day clock — the
+> futures lane `FIRM_FIT.md` later ruled dead for carry. The swing-lane firms
+> actually available (CTI 1-Step, Alpha Swing, FTMO Swing) have **static** drawdown
+> and **no deadline**, which removes this document's premise. Sizing doctrine is now
+> re-derived under the real contracts by `scripts/carry_buy_gate.py`
+> (spec `specs/021_CARRY_BUY_GATE.md`) and ratified before any purchase.
+
 **Alta Investments | 2026-08-01**
 *V1 proved the edge and sized it for a lifetime. V2 sizes it for a deadline.*
 

@@ -1,4 +1,10 @@
 # EVAL LAB — Instant Pro $10k, honest pass-probability search
+
+> **⚠️ SUPERSEDED (2026-08-10, spec 021).** The three lab scripts are broken on this
+> machine (hard-coded `/home/claude/...` paths) and model firms/rules the carry lane
+> doesn't use. The methodology this lab pioneered — zero-edge control + block
+> bootstrap — is preserved and enforced structurally in `scripts/carry_buy_gate.py`.
+
 2026-08-02 · scripts: `eval_lab.py` (full 60-combo search), `eval_lab_carry_fix.py` (family-D corrections) · protocol pre-registered in script docstrings before first run
 
 ## Rules modeled

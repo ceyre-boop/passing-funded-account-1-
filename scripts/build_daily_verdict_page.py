@@ -25,45 +25,70 @@ def load(path, default=None):
     except Exception:
         return default
 
+STALE_DAYS = 7
+
 def main():
-    prop = load('data/agent/prop_challenge_state.json', {})
+    # Spec 021: the ONLY gate source is the carry buy gate state. The old
+    # data/agent/prop_challenge_state.json is ICT-lane legacy and is never read
+    # again — it once rendered a misleading "4 of 6 green" from a stale snapshot.
+    state = load('data/agent/carry_buy_gate_state.json')
     health = load('data/agent/system_health_verdict.json', {})
     numbers = load('data/research/colin_v1_window_backtest.json', {})
     paper = load('data/agent/carry_paper_account.json', {})
 
-    gates = prop.get('gates', [])
-    overall = prop.get('overall', 'UNKNOWN')
-
-    # Plain-language translation of each gate
+    # Plain-language translation of each gate (spec 021 P6)
     gate_plain = {
-        'G1': 'Would this pass a funded account, if we ran it 5,000 times?',
-        'G2a': 'Are the trade signals actually correct, checked against real data?',
-        'G2b': 'Did the orders actually place correctly when tested?',
-        'G3': 'Does our real win rate match what the backtest predicted?',
-        'G4': 'Is there a big danger warning flashing anywhere in the markets?',
-        'G5': 'Have we survived enough real days without blowing up?',
+        'G1': 'Does our evaluator exactly reproduce the sealed 411-trade record?',
+        'G2': 'Do we understand why the offline replay differs from the sealed record?',
+        'G3': 'Does the strategy beat pure luck on data it has never seen?',
+        'G4': 'Does the firm we want to buy actually allow every trade we make?',
+        'G5': 'Have we proven it with 80+ practice trades at the same rules?',
     }
 
+    # Red-by-default: missing file, missing keys, or stale state ⇒ NOT READY.
+    stale_why = None
+    gates = []
+    verdict_word = None
+    if state is None:
+        stale_why = "No carry buy-gate state exists yet. Run scripts/carry_buy_gate.py --update-state."
+    else:
+        try:
+            ts = datetime.fromisoformat(state['timestamp'])
+        except (KeyError, ValueError):
+            ts = None
+        if ts is None:
+            stale_why = "The gate state file has no readable timestamp — treating it as untrusted."
+        elif (datetime.now() - ts).days >= STALE_DAYS:
+            stale_why = (f"The gate state is {(datetime.now() - ts).days} days old "
+                         f"(limit {STALE_DAYS}). Stale green is not green.")
+        elif not isinstance(state.get('gates'), dict) or \
+                set(state['gates']) != {'G1', 'G2', 'G3', 'G4', 'G5'}:
+            stale_why = "The gate state is missing gate entries — treating it as untrusted."
+        else:
+            gates = [dict(id=k, status=v.get('status', 'RED'),
+                          value=str(v.get('why', v.get('report', ''))or '')[:60])
+                     for k, v in sorted(state['gates'].items())]
+            verdict_word = state.get('verdict')
+
     green = sum(1 for g in gates if g.get('status') == 'GREEN')
-    yellow = sum(1 for g in gates if g.get('status') == 'YELLOW')
     red = sum(1 for g in gates if g.get('status') == 'RED')
 
-    # The one big verdict, in words a 10-year-old would understand
-    if overall == 'GO':
-        verdict = "YES — TRADE LIVE TODAY"
-        verdict_color = "#0F6E56"
-        verdict_bg = "#E1F5EE"
-        verdict_why = "Every single check passed. Nothing is missing, nothing is broken."
-    elif red > 0:
-        verdict = "NO — DO NOT TRADE LIVE TODAY"
+    if stale_why is not None:
+        verdict = "NOT READY — NO TRUSTWORTHY GATE STATE"
         verdict_color = "#A32D2D"
         verdict_bg = "#FCEBEB"
-        verdict_why = f"{red} check(s) failed outright. Trading live now would be ignoring a real red flag."
+        verdict_why = stale_why
+    elif verdict_word == 'BUY' and red == 0 and green == 5:
+        verdict = "READY — THE BUY GATE IS FULLY GREEN"
+        verdict_color = "#0F6E56"
+        verdict_bg = "#E1F5EE"
+        verdict_why = "All five checks passed on fresh data. The purchase decision is unlocked."
     else:
-        verdict = "NOT YET — WE ARE STILL COLLECTING PROOF"
-        verdict_color = "#854F0B"
-        verdict_bg = "#FAEEDA"
-        verdict_why = f"{green} of {len(gates)} checks are green. The rest aren't broken — they just don't have enough real data yet to say yes."
+        verdict = "NOT READY — DO NOT BUY AN EVALUATION YET"
+        verdict_color = "#A32D2D"
+        verdict_bg = "#FCEBEB"
+        verdict_why = (f"{green} of 5 checks are green. Every check must pass before "
+                       "any money goes to a prop firm.")
 
     strategies = health.get('strategies', {})
     strat_rows = ""
@@ -149,7 +174,7 @@ def main():
   <div class="verdict-why">{verdict_why}</div>
 </div>
 
-<h2>The 5 questions we ask every single day</h2>
+<h2>The 5 questions we ask before buying an evaluation</h2>
 {gate_rows if gate_rows else '<p>No gate data found yet.</p>'}
 
 <h2>Each strategy, one line each</h2>
@@ -168,10 +193,11 @@ def main():
 </div>
 
 <div class="footer">
-  Auto-generated from real files in the repo — data/agent/prop_challenge_state.json,
-  data/agent/system_health_verdict.json, data/research/colin_v1_window_backtest.json,
-  data/agent/carry_paper_account.json. Nothing on this page is invented. A missing
-  number means the underlying data doesn't exist yet, not that everything is fine.
+  Auto-generated from real files in the repo — data/agent/carry_buy_gate_state.json
+  (spec 021), data/agent/system_health_verdict.json,
+  data/research/colin_v1_window_backtest.json, data/agent/carry_paper_account.json.
+  Nothing on this page is invented. A missing number means the underlying data
+  doesn't exist yet, not that everything is fine.
 </div>
 
 </body>

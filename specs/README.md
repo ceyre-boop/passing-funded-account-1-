@@ -26,6 +26,7 @@ the build sequence.
 | 015 | AZ_EVIDENCE_LIFECYCLE | `daytrade/evidence.py` | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED (with 016: 18/18, `015_016_MUTATION_LOG.md`); not WIRED (news_claude.py still emits headline-shaped output); pending certification | Gate 5 |
 | 016 | AZ_DIRECTIVES_AUTHORITY | `context_directive.py` additions + runner wiring | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED; **018 is now WIRED** (runner directive channel, tighten-ceiling authority, tested byte-parity without the file); not EXERCISED (no live session has carried a directive); pending certification | Gate 5 |
 | 017 | AZ_FORECAST_PROMOTION | `daytrade/forecast.py` | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED (17/17, `017_MUTATION_LOG.md`); promotion_ref interlocks with 016's registry; no producer wired; pending certification | Gate 6 |
+| 021 | CARRY_BUY_GATE | `sovereign/propfirm/firm_contracts.py`, `scripts/carry_buy_gate.py`, `diagnose_repro_gap.py`, `paper_carry_log.py`, repointed verdict page | `[SPEC]` — pre-registered 2026-08-10 (plan: `Plans/soft-churning-pelican.md`); carry lane, not daytrade; supersedes eval_lab*/instant_pro_sim/colin_v2_campaign_sim/oos_campaign_test campaigns | independent of daytrade gates |
 
 ## Status legend
 - `[BUILT]` exists, tested, in the repo

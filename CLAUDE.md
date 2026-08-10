@@ -28,9 +28,13 @@ research, provenance, and history stays in the general repo — see
 `data/proof/carry_hypothesis_lineage.json` (HYP-045, HYP-059, HYP-108 — the
 three hypotheses this specific edge's history actually rests on).
 
-**The strategy:** `COLIN_V1.md`. Read it before touching sizing. Short version:
-0.50% risk/trade for the funded eval (92% pass probability, no deadline,
-~11-month median), 1.00% risk/trade once trading own capital.
+**The strategy:** the v015 carry edge, evaluated by `scripts/carry_buy_gate.py`
+per `specs/021_CARRY_BUY_GATE.md`. Eval sizing is being re-derived under the real
+firm contracts (`data/propfirm/firm_contracts.yaml`) and is NOT ratified yet —
+`FIRM_FIT.md`'s 2% static-DD is the prior. `COLIN_V1.md`'s "92% pass at 0.5%" is
+superseded (unsourced, Lucid-conditioned; see its banner). No P(pass) number is
+quotable without the zero-edge control printed beside it (`SANITY_AUDIT.md`).
+Own-capital sizing (1.00%) from COLIN_V1 still stands.
 
 **The method:** `ALTA_METHOD.md`. Five steps, in order, every trade: pre-trade
 gate check, two confirmations, size, hold, exit and log. Templates for all
@@ -58,10 +62,14 @@ four in `data/trade_logs/`.
 
 ## Daily operation
 
+`python3 scripts/carry_buy_gate.py --series sealed --update-state` refreshes the
+buy-gate state (G1–G5), then
 `python3 scripts/build_daily_verdict_page.py` regenerates `daily_verdict.html`
 — one page, plain language, answers "should we trade live today and why"
-from the real gate state in `data/agent/prop_challenge_state.json` and
-`sovereign/propfirm/deployment_checklist.py`. Check it before every session.
+from the real gate state in `data/agent/carry_buy_gate_state.json`. The page is
+red-by-default: missing or >7-day-old state renders NOT READY. Check it before
+every session. (`data/agent/prop_challenge_state.json` and
+`sovereign/propfirm/deployment_checklist.py` are ICT-lane legacy — never read.)
 
 ## What's deliberately not here
 
@@ -71,3 +79,52 @@ research factory, the hypothesis generator, the full 973-file general repo.
 This repo is small on purpose. If something feels missing, that's very
 possibly correct — check the general repo's manifest before assuming it
 should be copied over.
+
+## Daytrade cockpit (STOCKFISH + ALPHAZERO) — architectural boundary
+
+This restates `specs/000_RULINGS_AND_ORDER.md`'s Ruling 1 in enforceable form.
+Read that file before touching `daytrade/`. It is not new policy — it is the
+same boundary made explicit enough that a violation is a checklist item, not
+a judgment call.
+
+AlphaZero communicates meaning. Stockfish controls mechanics.
+
+AlphaZero MUST NOT:
+- place orders
+- calculate executable exit quantities
+- move stops directly
+- bypass Stockfish constitution rules
+
+Stockfish MUST NOT:
+- infer semantic meaning from news
+- silently invent unavailable context
+- accept stale directives
+
+### Definition of VERIFIED
+
+A component is VERIFIED only when every stated invariant has a named
+automated test and deliberate violation of that invariant makes the suite
+fail. Passing today does not stay VERIFIED tomorrow if a later edit removes
+the invariant's test — re-run fault injection, don't assume.
+
+This is stricter than, and supersedes, the plain `[BUILT]` label wherever the
+two conflict. `specs/CLAUDE_LONG_TERM_HANDOFF.md`'s "Maturity sequence"
+section is the full definition — VERIFIED here splits into that doc's UNIT
+VERIFIED and INTEGRATION VERIFIED stages, sitting between a module existing
+(IMPLEMENTED) and a module actually being on the live path (WIRED,
+EXERCISED). That same doc's "Roles" section also governs who is allowed to
+declare a stage cleared: the seat that wrote a card's `[SPEC]` does not also
+get to certify its own tests pass.
+
+### Development rules
+
+1. Read the relevant spec before editing code.
+2. Do not alter approved tests to make implementation pass.
+3. Never silently default unavailable values to numeric zero.
+4. Make invalid states unrepresentable where practical.
+5. Prefer explicit failure over fallback for correctness-critical inputs.
+6. Run unit + integration + replay suites before claiming completion.
+7. Never claim WIRED based solely on imports.
+8. Never claim EXERCISED without evidence from the real execution path.
+9. No live brokerage credentials or live-order access in agent environments.
+10. Do not modify sealed evaluation data.

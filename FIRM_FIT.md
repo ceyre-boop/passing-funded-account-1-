@@ -1,6 +1,11 @@
 # FIRM FIT — the check that should have been step one
 **2026-08-02 · The result that matters: the plan as modeled was unexecutable. Caught before a dollar burned.**
 
+> **Now encoded (2026-08-10):** the firm rules this document identified are machine-
+> readable in `data/propfirm/firm_contracts.yaml` and evaluated by
+> `scripts/carry_buy_gate.py` (spec `specs/021_CARRY_BUY_GATE.md`). The 2%
+> recommendation below is the PRIOR for the sizing sweep, not ratified doctrine.
+
 ## THE KILL
 `sovereign/propfirm/rules_engine.py` models Lucid/MFF futures rules. COLIN_V2's 67.5%@90d, the 36-day median, the whole eval-sprint — all assumed you can hold positions for carry's real durations. **You can't. Lucid's own FAQ: "Overnight holding is not permitted on sim accounts (Pro/Flex/Direct)... positions must be closed by 4:45 PM EST."**
 

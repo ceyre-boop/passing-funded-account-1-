@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Instant Pro $10k rules sim — 3% daily loss, 6% max loss, sweep risk/trade.
+"""SUPERSEDED by scripts/carry_buy_gate.py (spec 021) — kept for archaeology, do not run.
+Instant Pro $10k rules sim — 3% daily loss, 6% max loss, sweep risk/trade.
 
 Runs the sealed 411-trade carry series (2015-2024, true historical order,
 every possible start index) through the exact Instant Pro limits, under BOTH

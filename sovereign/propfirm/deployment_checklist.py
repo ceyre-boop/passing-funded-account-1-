@@ -1,4 +1,9 @@
 """
+ICT-LANE LEGACY (Lucid futures) — NOT the carry gate. See specs/021_CARRY_BUY_GATE.md.
+Lucid force-closes positions daily and cannot host the carry strategy (FIRM_FIT.md);
+this checklist's gates assume London-session ICT trades and read files that no longer
+exist. The live buy gate is scripts/carry_buy_gate.py. Kept for git archaeology only.
+
 Prop Firm Deployment Checklist — Layer 5 of the Sovereign Intelligence Architecture.
 
 Five gates must all be GREEN before buying the real Lucid LucidFlex $100k challenge.
@@ -211,6 +216,8 @@ STATUS_ICON = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴", "UNKNOWN": "⚪
 
 
 def run_checklist(verbose: bool = False) -> dict:
+    print("⚠️  ICT-LANE LEGACY (Lucid futures) — not the carry gate. "
+          "The live buy gate is scripts/carry_buy_gate.py (spec 021).")
     gates = [
         gate_mc_pass_rate(),
         gate_live_trades(),

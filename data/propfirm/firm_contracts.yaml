@@ -1,0 +1,62 @@
+# Firm contracts for the carry buy gate — spec 021, section P2.
+# Parameters transcribed from official rules pages on rules_asof date.
+# RE-VERIFY against the live page on the day of any purchase — firms change rules.
+# Schema is pre-registered in specs/021_CARRY_BUY_GATE.md; changing a value after
+# evaluator output exists requires a logged decision.
+
+cti_1step:
+  display_name: "City Traders Imperium 1-Step"
+  account_size: 100000.0
+  phases:
+    - target_pct: 0.08
+      min_trading_days: 0
+      max_days: null          # no deadline
+  max_dd: {type: static, pct: 0.05, basis: balance, mark: close}
+  daily_dd: null              # CTI 1-Step has NO daily loss limit
+  permissions: {weekend_hold: true, overnight_hold: true, news_hold: true}
+  costs:
+    fee_usd: 382.0
+    refund_on_pass: 0.0
+    swap_haircut_r_per_day: 0.004
+  rules_asof: "2026-08-10"
+  source_url: "https://citytradersimperium.com/1-step-challenge/"
+
+alpha_swing:
+  display_name: "Alpha Capital Group — Alpha Swing"
+  account_size: 100000.0
+  phases:
+    - target_pct: 0.10
+      min_trading_days: 0
+      max_days: null
+    - target_pct: 0.05
+      min_trading_days: 0
+      max_days: null
+  max_dd: {type: static, pct: 0.10, basis: balance, mark: close}
+  daily_dd: {pct: 0.05, basis: balance, mark: close}
+  permissions: {weekend_hold: true, overnight_hold: true, news_hold: true}
+  costs:
+    fee_usd: 490.0
+    refund_on_pass: 0.0
+    swap_haircut_r_per_day: 0.004
+  rules_asof: "2026-08-10"
+  source_url: "https://help.alphacapitalgroup.uk/en/articles/9789907-alpha-swing"
+
+ftmo_swing:
+  display_name: "FTMO Swing (reference)"
+  account_size: 100000.0
+  phases:
+    - target_pct: 0.10
+      min_trading_days: 4
+      max_days: null
+    - target_pct: 0.05
+      min_trading_days: 4
+      max_days: null
+  max_dd: {type: static, pct: 0.10, basis: balance, mark: close}
+  daily_dd: {pct: 0.05, basis: balance, mark: close}
+  permissions: {weekend_hold: true, overnight_hold: true, news_hold: true}
+  costs:
+    fee_usd: 501.0
+    refund_on_pass: 1.0       # FTMO refunds the fee with the first payout
+    swap_haircut_r_per_day: 0.004
+  rules_asof: "2026-08-10"
+  source_url: "https://ftmo.com/en/faq/"
