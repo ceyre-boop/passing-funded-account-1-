@@ -73,7 +73,14 @@ Kovner's rule: set the stop BEFORE entry. Know the loss before you know if you'r
 
 **Target:**
 - Time exit: 60 days default (Oracle-measured drift period)
-- No trailing stop on macro carries — this is the Type1 TS finding (HYP-108 research)
+- Trailing stop stays ON, per-pair ATR multiples as configured (v015 incumbent).
+  The earlier "no trailing stop on macro carries" line here came from HYP-108,
+  which the general repo has since refuted twice: the real price-path re-sim
+  (RQ-REST-013 → DONE, FIND-REST-034-a) ranks trail-off BELOW the incumbent
+  (widening to 2.0×ATR ranked best), and `research/HYP-108_method_falsification.md`
+  shows the 3.41-Sharpe claim was a statistical artifact (a placebo replacing the
+  118 worst trades regardless of exit reason scores even higher). Do not turn the
+  trail off on the strength of HYP-108.
 - Exit at day 60 at market, or at close of CB decision window, whichever comes first
 
 ---
