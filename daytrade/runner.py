@@ -286,7 +286,10 @@ def read_directive_urgency(symbol: str) -> tuple[str | None, str]:
     try:
         raw = json.loads(DIRECTIVES.read_text())
         ds = [ContextDirective.from_dict(d) for d in raw]
-    except (json.JSONDecodeError, DirectiveError, TypeError, KeyError) as e:
+    except (json.JSONDecodeError, DirectiveError, TypeError, KeyError,
+            ValueError, OSError) as e:
+        # OSError: the file can vanish between exists() and read (review
+        # finding 11) — an advisory input must not kill the cockpit.
         return None, f"DIRECTIVES UNREADABLE ({e}) — steering nothing"
     dec = evaluate(ds, ReceiverContext(symbol=symbol))
     note = dec.why

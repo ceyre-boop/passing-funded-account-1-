@@ -2,6 +2,7 @@
 """Card 014 portfolio-guards fault injection (Gate 7). Break each guard and the
 no-discovery rule; confirm RED, restore, GREEN.
 -> specs/014_GUARDS_MUTATION_LOG.md."""
+import os
 import shutil
 import subprocess
 import sys
@@ -16,8 +17,15 @@ MUTATIONS = [
      "if self.emergency_flatten_r <= self.daily_loss_lock_r:", "if False:",
      "allow a breaker that makes the daily lock unreachable"),
     ("test_portfolio_guard.py::test_limits_validate_and_breaker_ordering_is_enforced", PG,
-     "if self.open_risk_r < 0:", "if False:",
+     "if not math.isfinite(self.open_risk_r) or self.open_risk_r < 0:",
+     "if False:",
      "accept negative open risk as a fact"),
+    ("test_portfolio_guard.py::test_nan_never_disarms_the_guards", PG,
+     "if not math.isfinite(v) or v <= 0:", "if v <= 0:",
+     "let a NaN limit silently disarm the backstop (review finding 3)"),
+    ("test_portfolio_guard.py::test_nan_never_disarms_the_guards", PG,
+     "if not math.isfinite(realized_today_r):", "if False:",
+     "let a NaN day sail past both breakers (review finding 3)"),
     ("test_portfolio_guard.py::test_g001_total_open_risk", PG,
      "if total > limits.max_total_open_risk_r:", "if False:",
      "stop enforcing total open risk"),
@@ -50,7 +58,8 @@ def run_test(test_id: str) -> bool:
         shutil.rmtree(pyc, ignore_errors=True)
     r = subprocess.run([sys.executable, "-B", "-m", "pytest", f"daytrade/{test_id}", "-q",
                         "--no-header", "-p", "no:cacheprovider"],
-                       cwd=ROOT, capture_output=True, text=True)
+                       cwd=ROOT, capture_output=True, text=True,
+                       env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
     return r.returncode == 0
 
 
@@ -87,6 +96,14 @@ def main() -> int:
            "| test | fault applied | result |", "|---|---|---|"]
     out += [f"| `{t}` | {d} | {res} |" for t, d, res in rows]
     out += ["", f"**{len(rows) - fails}/{len(rows)} rows verified.**"]
+    if fails:
+        # Adversarial review finding 5: a failing or concurrent run must
+        # never clobber committed evidence. Fix, then re-run. Also never
+        # run two drivers concurrently — they mutate the same modules.
+        print(f"\n{fails} row(s) FAILED — log NOT written; committed "
+              "evidence preserved")
+        return 1
+
     (ROOT / "specs" / "014_GUARDS_MUTATION_LOG.md").write_text("\n".join(out) + "\n")
     print(f"\n{len(rows) - fails}/{len(rows)} rows verified -> specs/014_GUARDS_MUTATION_LOG.md")
     return 1 if fails else 0

@@ -10,6 +10,8 @@ does not touch.
 |---|---|---|
 | `test_portfolio_guard.py::test_limits_validate_and_breaker_ordering_is_enforced` | allow a breaker that makes the daily lock unreachable | RED under fault, GREEN after revert |
 | `test_portfolio_guard.py::test_limits_validate_and_breaker_ordering_is_enforced` | accept negative open risk as a fact | RED under fault, GREEN after revert |
+| `test_portfolio_guard.py::test_nan_never_disarms_the_guards` | let a NaN limit silently disarm the backstop (review finding 3) | RED under fault, GREEN after revert |
+| `test_portfolio_guard.py::test_nan_never_disarms_the_guards` | let a NaN day sail past both breakers (review finding 3) | RED under fault, GREEN after revert |
 | `test_portfolio_guard.py::test_g001_total_open_risk` | stop enforcing total open risk | RED under fault, GREEN after revert |
 | `test_portfolio_guard.py::test_g002_per_symbol_exposure` | stop enforcing per-symbol exposure | RED under fault, GREEN after revert |
 | `test_portfolio_guard.py::test_g003_correlated_exposure_only_for_supplied_groups` | invent a correlation group the caller never supplied | RED under fault, GREEN after revert |
@@ -18,4 +20,4 @@ does not touch.
 | `test_portfolio_guard.py::test_g005_daily_loss_lock_at_boundary` | flip the inclusive lock boundary | RED under fault, GREEN after revert |
 | `test_portfolio_guard.py::test_g006_emergency_flatten_outranks_lockout` | let LOCKOUT outrank the emergency flatten | RED under fault, GREEN after revert |
 
-**9/9 rows verified.**
+**11/11 rows verified.**

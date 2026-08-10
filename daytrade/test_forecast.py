@@ -115,6 +115,10 @@ def test_brier_and_baseline_on_identical_case():
     # a surprise outcome outside the forecast's vocabulary costs full marks
     r2 = resolution(outcome="risk_event", direction="down")
     assert brier(f, r2) == pytest.approx(0.7 ** 2 + 0.3 ** 2 + 1.0)
+    # the baseline on the 3-name surprise case is uniform over THREE names —
+    # (1/3)^2 * 2 + (2/3)^2. Pinned numerically because a constant-0.5 baseline
+    # is indistinguishable from uniform on 2-name cases (review finding 7).
+    assert baseline_brier(f, r2) == pytest.approx(2 / 9 + 4 / 9)
 
 
 def test_grade_scores_baseline_on_identical_cases_and_counts_open():
@@ -215,6 +219,19 @@ def test_regime_instability_and_missing_bucket_reject():
     assert "REGIME_MISSING:chop" in d.failed_gates
 
 
+def test_gates_with_no_data_fail_not_pass():
+    """Adversarial-review finding 6: a gate whose arming data is absent must
+    FAIL by name — the regime and tail gates cannot be bypassed by omission."""
+    inc, ch = reports()
+    no_regret = replace(ch, worst_policy_regret=None)
+    d = promotion_decision(inc, no_regret, PromotionThresholds(),
+                           per_regime_incumbent={}, per_regime_challenger={},
+                           ref="p")
+    assert not d.promoted
+    assert "REGIME_DATA_MISSING" in d.failed_gates
+    assert "REGRET_DATA_MISSING" in d.failed_gates
+
+
 def test_promotion_mutates_no_history():
     led = graded_ledger("ch", 60, hit_rate=0.8)
     before = led.grade("ch", oos=True)
@@ -231,7 +248,8 @@ def test_promotion_ref_feeds_the_authority_registry():
     from context_directive import AuthorityError, AuthorityRegistry
     inc, ch = reports()
     d = promotion_decision(inc, ch, PromotionThresholds(),
-                           per_regime_incumbent={}, per_regime_challenger={},
+                           per_regime_incumbent={"trend": 0.5},
+                           per_regime_challenger={"trend": 0.4},
                            ref="promo-005")
     assert d.promoted
     reg = AuthorityRegistry()

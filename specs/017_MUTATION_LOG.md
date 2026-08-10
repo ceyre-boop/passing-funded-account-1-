@@ -23,5 +23,8 @@ unrepresentable by signature.
 | `test_forecast.py::test_failed_gate_list_is_complete_not_first_only` | report only the first failed gate | RED under fault, GREEN after revert |
 | `test_forecast.py::test_regime_instability_and_missing_bucket_reject` | ignore regime instability | RED under fault, GREEN after revert |
 | `test_forecast.py::test_regime_instability_and_missing_bucket_reject` | ignore a missing regime bucket | RED under fault, GREEN after revert |
+| `test_forecast.py::test_gates_with_no_data_fail_not_pass` | regime gate passes vacuously with no data (review finding 6) | RED under fault, GREEN after revert |
+| `test_forecast.py::test_gates_with_no_data_fail_not_pass` | tail gate passes vacuously with no regret data (review finding 6) | RED under fault, GREEN after revert |
+| `test_forecast.py::test_brier_and_baseline_on_identical_case` | constant-0.5 baseline masquerading as uniform — indistinguishable on 2-name cases, caught by the 3-name numeric pin (review finding 7) | RED under fault, GREEN after revert |
 
-**14/14 rows verified.**
+**17/17 rows verified.**

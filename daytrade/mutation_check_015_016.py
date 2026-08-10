@@ -3,6 +3,7 @@
 the authority registry, and the runner's directive wiring; confirm the named
 test goes RED, restore byte-identical, confirm GREEN.
 -> specs/015_016_MUTATION_LOG.md."""
+import os
 import shutil
 import subprocess
 import sys
@@ -55,6 +56,10 @@ MUTATIONS = [
     ("test_directive_authority.py::test_unpromoted_grants_cap_at_recommend", CD,
      "if level > UNPROMOTED_CAP and not promotion_ref:", "if False:",
      "grant interrupt authority without a promotion_ref"),
+    ("test_directive_authority.py::test_rollback_never_escalates_a_revoked_model", CD,
+     "target = min(self.granted_level(model_version), DEFAULT_GRANTED_LEVEL)",
+     "target = DEFAULT_GRANTED_LEVEL",
+     "rollback escalates a revoked model back to the default (review finding 4)"),
     ("test_directive_authority.py::test_rollback_is_explicit_and_audited", CD,
      "for g in self._trail:", "for g in self._trail[:1]:",
      "derive granted_level from the first grant instead of the whole trail"),
@@ -82,7 +87,8 @@ def run_test(test_id: str) -> bool:
         shutil.rmtree(pyc, ignore_errors=True)
     r = subprocess.run([sys.executable, "-B", "-m", "pytest", f"daytrade/{test_id}", "-q",
                         "--no-header", "-p", "no:cacheprovider"],
-                       cwd=ROOT, capture_output=True, text=True)
+                       cwd=ROOT, capture_output=True, text=True,
+                       env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
     return r.returncode == 0
 
 
@@ -122,6 +128,14 @@ def main() -> int:
            "| test | fault applied | result |", "|---|---|---|"]
     out += [f"| `{t}` | {d} | {res} |" for t, d, res in rows]
     out += ["", f"**{len(rows) - fails}/{len(rows)} rows verified.**"]
+    if fails:
+        # Adversarial review finding 5: a failing or concurrent run must
+        # never clobber committed evidence. Fix, then re-run. Also never
+        # run two drivers concurrently — they mutate the same modules.
+        print(f"\n{fails} row(s) FAILED — log NOT written; committed "
+              "evidence preserved")
+        return 1
+
     (ROOT / "specs" / "015_016_MUTATION_LOG.md").write_text("\n".join(out) + "\n")
     print(f"\n{len(rows) - fails}/{len(rows)} rows verified -> specs/015_016_MUTATION_LOG.md")
     return 1 if fails else 0

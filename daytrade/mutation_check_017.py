@@ -2,6 +2,7 @@
 """Card 017 fault injection (Gate 6). Break the ledger's record-before-outcome
 structure, the grading, and each promotion gate; confirm RED, restore, GREEN.
 -> specs/017_MUTATION_LOG.md."""
+import os
 import shutil
 import subprocess
 import sys
@@ -66,6 +67,16 @@ MUTATIONS = [
     ("test_forecast.py::test_regime_instability_and_missing_bucket_reject", FC,
      "if c is None:", "if False:",
      "ignore a missing regime bucket"),
+    ("test_forecast.py::test_gates_with_no_data_fail_not_pass", FC,
+     "if not per_regime_incumbent or not per_regime_challenger:", "if False:",
+     "regime gate passes vacuously with no data (review finding 6)"),
+    ("test_forecast.py::test_gates_with_no_data_fail_not_pass", FC,
+     "if challenger.worst_policy_regret is None:", "if False:",
+     "tail gate passes vacuously with no regret data (review finding 6)"),
+    ("test_forecast.py::test_brier_and_baseline_on_identical_case", FC,
+     "    p = 1.0 / len(names)", "    p = 0.5",
+     "constant-0.5 baseline masquerading as uniform — indistinguishable on "
+     "2-name cases, caught by the 3-name numeric pin (review finding 7)"),
 ]
 
 
@@ -74,7 +85,8 @@ def run_test(test_id: str) -> bool:
         shutil.rmtree(pyc, ignore_errors=True)
     r = subprocess.run([sys.executable, "-B", "-m", "pytest", f"daytrade/{test_id}", "-q",
                         "--no-header", "-p", "no:cacheprovider"],
-                       cwd=ROOT, capture_output=True, text=True)
+                       cwd=ROOT, capture_output=True, text=True,
+                       env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
     return r.returncode == 0
 
 
@@ -114,6 +126,14 @@ def main() -> int:
            "| test | fault applied | result |", "|---|---|---|"]
     out += [f"| `{t}` | {d} | {res} |" for t, d, res in rows]
     out += ["", f"**{len(rows) - fails}/{len(rows)} rows verified.**"]
+    if fails:
+        # Adversarial review finding 5: a failing or concurrent run must
+        # never clobber committed evidence. Fix, then re-run. Also never
+        # run two drivers concurrently — they mutate the same modules.
+        print(f"\n{fails} row(s) FAILED — log NOT written; committed "
+              "evidence preserved")
+        return 1
+
     (ROOT / "specs" / "017_MUTATION_LOG.md").write_text("\n".join(out) + "\n")
     print(f"\n{len(rows) - fails}/{len(rows)} rows verified -> specs/017_MUTATION_LOG.md")
     return 1 if fails else 0

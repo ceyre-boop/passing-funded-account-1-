@@ -43,6 +43,23 @@ def test_limits_validate_and_breaker_ordering_is_enforced():
         pos("NVDA", -0.5)                                    # negative risk
 
 
+def test_nan_never_disarms_the_guards():
+    """Adversarial-review finding 3: every guard comparison against NaN is
+    False, so a single NaN limit/position/realized value silently neutralized
+    the entire backstop — including both breakers. Now each raises."""
+    nan = float("nan")
+    with pytest.raises(GuardError):
+        PortfolioLimits(nan, 1.5, 2.0, 1, 2.0, 3.0)
+    with pytest.raises(GuardError):
+        PortfolioLimits(3.0, 1.5, 2.0, 1, nan, 3.0)      # NaN lock
+    with pytest.raises(GuardError):
+        pos("NVDA", nan)
+    with pytest.raises(GuardError):
+        check(LIMITS, [pos("NVDA", 0.5)], realized_today_r=nan)
+    with pytest.raises(GuardError):
+        PortfolioLimits(float("inf"), 1.5, 2.0, 1, 2.0, 3.0)
+
+
 # ------------------------------------------------------------------ guards
 
 def test_clear_book_is_clear():

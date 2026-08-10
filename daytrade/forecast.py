@@ -260,14 +260,20 @@ def promotion_decision(incumbent: ScoreReport, challenger: ScoreReport,
         failed.append("BRIER_NOT_STRICTLY_BETTER")
     if challenger.calibration_error > thresholds.calibration_max:
         failed.append("CALIBRATION")
+    # A gate with no data is a FAILED gate, not a passed one — otherwise the
+    # regime and tail gates are bypassable by simply not supplying the inputs
+    # that arm them (adversarial review finding 6).
+    if not per_regime_incumbent or not per_regime_challenger:
+        failed.append("REGIME_DATA_MISSING")
     for regime in per_regime_incumbent:
         c = per_regime_challenger.get(regime)
         if c is None:
             failed.append(f"REGIME_MISSING:{regime}")
         elif c > per_regime_incumbent[regime] + thresholds.regime_stability_tolerance:
             failed.append(f"REGIME_UNSTABLE:{regime}")
-    if (challenger.worst_policy_regret is not None
-            and challenger.worst_policy_regret < thresholds.worst_regret_floor_r):
+    if challenger.worst_policy_regret is None:
+        failed.append("REGRET_DATA_MISSING")
+    elif challenger.worst_policy_regret < thresholds.worst_regret_floor_r:
         failed.append("TAIL_REGRET")
     if challenger.stale_rate > thresholds.stale_rate_max:
         failed.append("STALE_RATE")

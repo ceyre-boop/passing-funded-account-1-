@@ -17,6 +17,8 @@ of 200-step random legal sequences.
 | `test_execution_policy.py::test_unknown_order_and_unknown_event_raise` | accept the same broker order id twice | RED under fault, GREEN after revert |
 | `test_execution_policy.py::test_unknown_order_and_unknown_event_raise` | accept an unidentifiable fill | RED under fault, GREEN after revert |
 | `test_execution_policy.py::test_oversubmission_beyond_remaining_raises` | submit more than the intent's remaining quantity | RED under fault, GREEN after revert |
+| `test_execution_policy.py::test_oversubmission_counts_live_open_orders` | remaining ignores live open orders (review finding 1) | RED under fault, GREEN after revert |
+| `test_execution_policy.py::test_cross_order_overfill_raises_never_reopens` | absorb a cross-order intent over-fill (review finding 2) | RED under fault, GREEN after revert |
 | `test_execution_policy.py::test_overfill_is_reconciliation_failure_not_absorbed` | absorb an over-fill | RED under fault, GREEN after revert |
 | `test_execution_policy.py::test_duplicate_fill_id_identical_is_retry_different_is_corruption` | treat a conflicting duplicate fill as a harmless retry | RED under fault, GREEN after revert |
 | `test_execution_policy.py::test_late_fill_racing_cancel_is_honored_within_submitted` | stop shrinking canceled qty on a late fill (books go negative) | RED under fault, GREEN after revert |
@@ -24,4 +26,4 @@ of 200-step random legal sequences.
 | `test_execution_policy.py::test_cancel_releases_exposure_and_retry_resubmits_remainder` | report zero pending exposure while quantity is still owed | RED under fault, GREEN after revert |
 | `test_execution_policy.py::test_reduction_payloads_submission_alone_completes_nothing` | emit the FILL payload for a merely-submitted reduction | RED under fault, GREEN after revert |
 
-**15/15 rows verified.**
+**17/17 rows verified.**

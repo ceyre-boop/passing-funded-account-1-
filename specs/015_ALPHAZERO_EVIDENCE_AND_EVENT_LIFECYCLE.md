@@ -66,3 +66,18 @@ Duplicate headlines, rumor→confirmation, stale recap, NVDA-scoped vs SPY
 market-wide distinct outputs, byte-stable replay at the same `as_of`, and the
 never-raises-urgency duplicate rule — each named and fault-injected
 (`mutation_check_015_016.py` → `specs/015_016_MUTATION_LOG.md`).
+
+### Implementation notes (adversarial review, 2026-08-09 — finding 8)
+
+- `novelty` is implemented as BEHAVIOR (a duplicate cannot raise urgency; only
+  the lead member's severity counts), not as a carried numeric field. If a
+  future consumer needs the number, add it then — do not infer it exists.
+- Consequence, deliberate but worth knowing: a group's urgency is anchored to
+  its FIRST member's severity. A low-severity rumor later CONFIRMED at high
+  severity keeps the low anchor; representing upgraded severity needs an
+  explicit severity-revision path (candidate for the next AZ card, architect
+  call — an implicit upgrade would reopen the exact recap-inflation hole this
+  card closes).
+- `canonical_group` dedups normalized-verbatim text: literal reprints are one
+  fact; differently-worded tellings of one story are separate groups until a
+  semantic grouper (with its own scorecard) earns its way in.

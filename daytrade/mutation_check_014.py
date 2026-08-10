@@ -2,6 +2,7 @@
 """Card 014 (shadow/regret) fault injection. Break containment, the no-future
 fold, the version identity, and each regret metric; confirm the named test goes
 RED, restore byte-identical, confirm GREEN. -> specs/014_MUTATION_LOG.md."""
+import os
 import shutil
 import subprocess
 import sys
@@ -87,7 +88,8 @@ def run_test(test_id: str) -> bool:
         shutil.rmtree(pyc, ignore_errors=True)
     r = subprocess.run([sys.executable, "-B", "-m", "pytest", f"daytrade/{test_id}", "-q",
                         "--no-header", "-p", "no:cacheprovider"],
-                       cwd=ROOT, capture_output=True, text=True)
+                       cwd=ROOT, capture_output=True, text=True,
+                       env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"})
     return r.returncode == 0
 
 
@@ -126,6 +128,14 @@ def main() -> int:
            "| test | fault applied | result |", "|---|---|---|"]
     out += [f"| `{t}` | {d} | {res} |" for t, d, res in rows]
     out += ["", f"**{len(rows) - fails}/{len(rows)} rows verified.**"]
+    if fails:
+        # Adversarial review finding 5: a failing or concurrent run must
+        # never clobber committed evidence. Fix, then re-run. Also never
+        # run two drivers concurrently — they mutate the same modules.
+        print(f"\n{fails} row(s) FAILED — log NOT written; committed "
+              "evidence preserved")
+        return 1
+
     (ROOT / "specs" / "014_MUTATION_LOG.md").write_text("\n".join(out) + "\n")
     print(f"\n{len(rows) - fails}/{len(rows)} rows verified -> specs/014_MUTATION_LOG.md")
     return 1 if fails else 0

@@ -165,7 +165,13 @@ class FillLedger:
             if e.order_id in self._orders:
                 raise ReconciliationError(f"order {e.order_id!r} submitted twice")
             rec = self._intents.setdefault(e.intent.intent_id, _Intent(e.intent))
-            remaining = rec.intent.qty - self.filled(e.intent.intent_id)
+            # remaining counts LIVE open orders too, not just fills — otherwise
+            # two 100-share submissions against a 100-share intent both pass
+            # and the books carry 2x the decided reduction (adversarial review
+            # finding 1: the exact failure this module's own error text warns
+            # about).
+            remaining = (rec.intent.qty - self.filled(e.intent.intent_id)
+                         - self.open_submitted(e.intent.intent_id))
             if e.qty > remaining + 1e-9:
                 raise ReconciliationError(
                     f"over-submission: {e.qty:g} against {remaining:g} remaining on "
@@ -195,6 +201,18 @@ class FillLedger:
                 raise ReconciliationError(
                     f"over-fill on {e.order_id!r}: {o.filled:g}+{e.qty:g} > "
                     f"submitted {o.submitted:g} — refusing to absorb it")
+            # intent-level guard: fills ACROSS orders may never exceed what the
+            # engine decided. Without this, a second order's fill flips a
+            # FILLED intent back to "OPEN" with negative pending exposure —
+            # a doubly-executed reduction reading as still-owed (review
+            # finding 2).
+            iid = o.intent_id
+            if self.filled(iid) + e.qty > self._intents[iid].intent.qty + 1e-9:
+                raise ReconciliationError(
+                    f"intent {iid!r} over-fill across orders: "
+                    f"{self.filled(iid):g}+{e.qty:g} > intended "
+                    f"{self._intents[iid].intent.qty:g} — a reduction executed "
+                    "twice is an accidental position, not a rounding error")
             o.fills[e.fill_id] = (e.qty, e.price)
             o.filled += e.qty
             if o.status == "CANCELED":

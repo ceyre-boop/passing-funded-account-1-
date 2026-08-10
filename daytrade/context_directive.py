@@ -335,6 +335,9 @@ class AuthorityRegistry:
 
     def grant(self, model_version: str, level: int, *, by: str, reason: str,
               ts: str, promotion_ref: Optional[str] = None) -> AuthorityGrant:
+        if not by or not reason:
+            raise AuthorityError("a grant names who and why — anonymous "
+                                 "authority changes cannot be audited")
         if not (0 <= level <= 4):
             raise AuthorityError(f"level {level} outside 0..4")
         if level > UNPROMOTED_CAP and not promotion_ref:
@@ -350,8 +353,14 @@ class AuthorityRegistry:
 
     def rollback(self, model_version: str, *, by: str, reason: str, ts: str
                  ) -> AuthorityGrant:
-        g = AuthorityGrant(model_version, DEFAULT_GRANTED_LEVEL, "ROLLBACK",
-                           by, reason, ts)
+        if not by or not reason:
+            raise AuthorityError("a rollback names who and why — anonymous "
+                                 "authority changes cannot be audited")
+        # A rollback may only REDUCE authority. Unconditionally writing the
+        # default would ESCALATE a fully-revoked model back to level 1 without
+        # a promotion_ref (adversarial review finding 4).
+        target = min(self.granted_level(model_version), DEFAULT_GRANTED_LEVEL)
+        g = AuthorityGrant(model_version, target, "ROLLBACK", by, reason, ts)
         self._trail.append(g)
         return g
 

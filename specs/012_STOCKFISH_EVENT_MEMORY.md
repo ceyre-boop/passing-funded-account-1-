@@ -96,3 +96,14 @@ stays the ONLY decision input; no second exit engine), `events_from_decision`
 - Every reducer invariant above: fault applied → named test red → revert →
   green (`mutation_check_012.py` → `specs/012_MUTATION_LOG.md`).
 - Torn-tail and corrupt-line behavior covered by tests.
+
+### Wiring-card obligation (adversarial review, 2026-08-09 — finding 10)
+
+The golden test covers a crash at a bar boundary AFTER the event append. The
+apply→append window (crash after apply_actions, before events_from_decision
+persists) is the real risk once a live producer exists, and the mitigation is
+ordering: the wiring card must append-and-fsync BEFORE apply, or emit both in
+one transactional step, and must add prefix-crash tests at every cycle index.
+Also: JsonlEventLog fsyncs the file, not the directory — the first append of a
+brand-new log can vanish on power loss; the wiring card should fsync the parent
+directory on file creation.

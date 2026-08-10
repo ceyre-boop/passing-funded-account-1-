@@ -107,7 +107,10 @@ def test_overfill_is_reconciliation_failure_not_absorbed():
     it = intent(qty=100.0)
     oid = submit(led, it, 100.0)
     led.apply(ExecEvent("FILL", order_id=oid, qty=100.0, price=200.0, fill_id="f1"))
-    with pytest.raises(ReconciliationError):
+    # match pins the PER-ORDER check: the intent-level cross-order guard also
+    # catches this shape, which would mask this check's deletion (same
+    # defense-in-depth lesson as 012's fill-path pins)
+    with pytest.raises(ReconciliationError, match="refusing to absorb"):
         led.apply(ExecEvent("FILL", order_id=oid, qty=1.0, price=200.0,
                             fill_id="f2"))
 
@@ -145,6 +148,38 @@ def test_oversubmission_beyond_remaining_raises():
     led.apply(ExecEvent("FILL", order_id=o0, qty=100.0, price=200.0, fill_id="f1"))
     with pytest.raises(ReconciliationError):
         submit(led, it, 1.0, attempt=1)                  # nothing remains
+
+
+def test_oversubmission_counts_live_open_orders():
+    """Adversarial-review finding 1: remaining must subtract LIVE submissions,
+    not just fills — otherwise two full-size orders against one intent both
+    pass and the books carry twice the decided reduction."""
+    led = FillLedger()
+    it = intent(qty=100.0)
+    submit(led, it, 100.0)                               # live, unfilled
+    with pytest.raises(ReconciliationError):
+        submit(led, it, 100.0, attempt=1)                # nothing actually remains
+    with pytest.raises(ReconciliationError):
+        submit(led, it, 1.0, attempt=2)                  # not even one share
+
+
+def test_cross_order_overfill_raises_never_reopens():
+    """Adversarial-review finding 2: a fill on a second order that pushes the
+    INTENT past intended must raise — not flip status FILLED->OPEN with
+    negative pending exposure (a doubly-executed reduction reading as owed)."""
+    led = FillLedger()
+    it = intent(qty=100.0)
+    o0 = submit(led, it, 100.0)
+    led.apply(ExecEvent("CANCEL", order_id=o0))          # frees the submission
+    o1 = submit(led, it, 100.0, attempt=1)
+    led.apply(ExecEvent("FILL", order_id=o1, qty=100.0, price=200.0, fill_id="f1"))
+    assert led.status(it.intent_id) == "FILLED"
+    # the canceled order's late fill would double the reduction: refuse loudly
+    with pytest.raises(ReconciliationError):
+        led.apply(ExecEvent("FILL", order_id=o0, qty=50.0, price=200.0,
+                            fill_id="f2"))
+    assert led.status(it.intent_id) == "FILLED"          # never reopened
+    assert led.pending_exposure(it.intent_id) == pytest.approx(0.0)
 
 
 def test_late_fill_racing_cancel_is_honored_within_submitted():

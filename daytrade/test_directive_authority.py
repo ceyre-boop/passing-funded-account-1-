@@ -72,6 +72,21 @@ def test_unpromoted_grants_cap_at_recommend():
     assert UNPROMOTED_CAP == 2
 
 
+def test_rollback_never_escalates_a_revoked_model():
+    """Adversarial-review finding 4: a rollback that unconditionally writes the
+    default level would GRANT authority to a fully-revoked model. It may only
+    reduce — and anonymous authority changes are refused."""
+    reg = AuthorityRegistry()
+    reg.grant("az-1", 0, by="colin", reason="full revoke after incident",
+              ts=NOW.isoformat())
+    reg.rollback("az-1", by="colin", reason="routine sweep", ts=NOW.isoformat())
+    assert reg.granted_level("az-1") == 0                # still revoked
+    with pytest.raises(AuthorityError):
+        reg.rollback("az-1", by="", reason="x", ts=NOW.isoformat())
+    with pytest.raises(AuthorityError):
+        reg.grant("az-2", 1, by="", reason="x", ts=NOW.isoformat())
+
+
 def test_rollback_is_explicit_and_audited():
     reg = AuthorityRegistry()
     reg.grant("az-1", 3, by="colin", reason="promoted", ts=NOW.isoformat(),

@@ -17,6 +17,7 @@ about a malformed limit is a guard in name only.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, asdict
 from typing import Optional
 
@@ -48,8 +49,12 @@ class PortfolioLimits:
         for f_ in ("max_total_open_risk_r", "max_per_symbol_exposure_r",
                    "max_correlated_exposure_r", "daily_loss_lock_r",
                    "emergency_flatten_r"):
-            if getattr(self, f_) <= 0:
-                raise GuardError(f"{f_} must be positive, got {getattr(self, f_)}")
+            v = getattr(self, f_)
+            # isfinite FIRST: every guard comparison against NaN is False, so a
+            # single NaN limit silently disarms the entire risk backstop
+            # (adversarial review finding 3).
+            if not math.isfinite(v) or v <= 0:
+                raise GuardError(f"{f_} must be a positive finite number, got {v}")
         if self.max_unprotected_count < 0:
             raise GuardError("max_unprotected_count must be >= 0")
         if self.emergency_flatten_r <= self.daily_loss_lock_r:
@@ -68,9 +73,9 @@ class PositionSnapshot:
     def __post_init__(self):
         if not self.symbol:
             raise GuardError("a position needs a symbol")
-        if self.open_risk_r < 0:
-            raise GuardError(f"{self.symbol}: negative open risk "
-                             f"{self.open_risk_r} is not a fact")
+        if not math.isfinite(self.open_risk_r) or self.open_risk_r < 0:
+            raise GuardError(f"{self.symbol}: open risk {self.open_risk_r} is "
+                             "not a fact — it must be finite and non-negative")
 
 
 @dataclass(frozen=True)
@@ -98,6 +103,9 @@ def check(limits: PortfolioLimits, positions: list, *,
     obvious the correlation might look to a human. Discovering it is the
     research factory's job, with evidence; enforcing it is ours."""
     correlated_groups = correlated_groups or {}
+    if not math.isfinite(realized_today_r):
+        raise GuardError(f"realized_today_r={realized_today_r} is not a fact — "
+                         "a NaN day would sail past both breakers unnoticed")
     v: list[Violation] = []
 
     total = sum(p.open_risk_r for p in positions)

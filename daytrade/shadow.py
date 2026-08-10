@@ -13,7 +13,11 @@ is `ShadowAction`, a type that physically cannot travel the execution path:
     log line can never be mistaken for an authoritative action
 
 Counterfactual fills happen at the recorded cycle price — the identical
-convention the live runner experienced. Each policy folds the stream strictly
+convention the live runner experienced. NOTE (review finding 9): this is a
+DIFFERENT basis than ceiling.py's bench (which banks partials at tp2 and
+charges COST_PER_SHARE) — shadow realized_r is comparable with live fills,
+NOT with the ceiling's R numbers; never mix them in one table. Open policies
+are marked to the last cycle (basis says so). Each policy folds the stream strictly
 forward; the prefix property is tested, which is what "no future data" means.
 """
 from __future__ import annotations
@@ -59,6 +63,11 @@ class ShadowResult:
     closed: bool
     final_sl: float
     final_stage: str
+    # Accounting basis, carried on every result so a number can never travel
+    # without its convention (review finding 9): cycle-price fills, cost-free,
+    # open positions marked to the last cycle. NOT comparable with ceiling.py's
+    # tp2-banked, cost-charged bench numbers.
+    basis: str = "cycle-price/cost-free/mark-to-last-if-open"
 
 
 def _state_for(plan: dict, policy: str) -> TradeState:
