@@ -49,7 +49,10 @@ def _recs(tmp_path) -> list:
 
 
 def _events(tmp_path) -> list:
-    path = next(tmp_path.glob("events_*.jsonl"))
+    # Load the CURRENT (non-rotated) events file: events_DATE_SYMBOL.jsonl
+    # (closed trades are rotated to events_DATE_SYMBOL.closed-N.jsonl)
+    path = next(p for p in tmp_path.glob("events_*.jsonl")
+                if ".closed-" not in p.name)
     return JsonlEventLog(path).load()
 
 

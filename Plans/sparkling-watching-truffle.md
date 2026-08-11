@@ -1,170 +1,141 @@
-# Plan — Gate 0: card 019 invariant suites + constitution wiring fix + draft spec 020
+# Plan — Gate 2 wiring: the runner emits 012 events (one week, one gate)
 
 ## Context
 
-The gated-development proposal Colin brought in (Gate 0 → Gate 7) says: before any card 012
-work, clear the verification debt — the invariant suites, `require()`, the freshness boundary,
-and making constitution rules C004/C005/C007 reachable — then build one end-to-end
-AlphaZero→Stockfish spine. Exploration confirms the repo already encodes most of this:
+Colin's 1-week plan: close exactly one of the six wiring gaps from the 2026-08-10
+architect audit — "the runner does not emit 012 events" — and nothing else. All
+seven gates are IMPLEMENTED + UNIT VERIFIED (154 tests, 156/156 mutation rows,
+independently re-run); none has touched a real decision cycle. Gate 2 unlocks
+Gates 3/4/6 becoming EXERCISED later, so it goes first and alone. The card's
+own spec (`specs/012_STOCKFISH_EVENT_MEMORY.md`) carries two binding wiring
+obligations recorded at review: **append-and-fsync BEFORE apply** (a crash
+between decide and log must not lose a decision that took effect), and
+**fsync the parent directory on log creation**.
 
-- **Card 019 IS Gate 0** (`specs/019_AZ_INVARIANT_TESTS.md`, `[SPEC]`, "next — gate before 012").
-  It names ~31 tests across three files that do not exist yet. The repo has **zero pytest
-  tests** anywhere — all verification is `__main__` self-tests, which is exactly the debt
-  (deleting a `raise` from `scenarios.py` still exits 0).
-- **Two items Gate 0 as pasted folds in are explicitly deferred by 019** (019:125-132,
-  "Do not fold them in"): thesis-oscillation-vs-stop-monotonicity in composition, and switching
-  call sites from `available()` to `require()`. Those belong to the AZ wiring card — which does
-  not exist yet as a `[SPEC]`. That card is Gate 1's spine; we draft it here as **spec 020**,
-  draft only.
-- **C004/C005/C007 never fire in production** (`CLAUDE_LONG_TERM_HANDOFF.md:143-148`): the sole
-  live call `enforce(state, action, applied_keys=applied_keys)` at
-  `daytrade/stockfish_exit.py:530` passes neither `now_et=` nor `actions=`, and the three
-  production `apply_action` callers (`runner.py:381`, `backtest.py:92`, `ceiling.py:168`) pass
-  no `applied_keys`. The handoff already routes this as an ordinary implementation fix.
-- **Spec/code discrepancy to adjudicate in-card**: 019:93 claims `available()` collapses
-  unavailable into `0.0` today; current `regime_vector.py:96-97` filters unavailable dims out.
-  Colin's ruling: verify actual behavior first, then either land the minimal fix in-card or
-  lock current correct behavior and note the spec correction in the PR.
+## Step-1 finding (loop-shape compatibility) — CONFIRMED COMPATIBLE, two adaptations
 
-Scope per Colin: **(1) implement 019, (2) the C004/C005/C007 wiring fix, (3) draft spec 020
-for the AZ wiring card — draft only, no Gate 1 code.** No card 012+ work. Development rules
-in project CLAUDE.md apply (fail loud, no silent zero defaults, tests are the DoD via fault
-injection, don't touch sealed data).
+Verified against the current code, per Colin's step 1:
 
-## Execution discipline — the per-card pipeline (added per Colin's follow-up)
+The runner's loop (`runner.py` ~379-392) is `decide_exit(s)` →
+`apply_actions(...)` → `log_cycle(rec)`. Append-before-apply fits between
+decide and apply WITHOUT restructuring, because `decide_exit` already performs
+the semantic transitions (hwm update, stage advances) before returning actions
+— so everything the translator needs exists pre-apply. Two adaptations are
+required, and they are findings, not paper-overs:
 
-Gate 0 runs through **SPEC → RED → IMPLEMENT → MUTATE → INTEGRATE → ADVERSARIAL
-REVIEW → HUMAN VALIDATION → MERGE**, mapped to this environment:
+1. **`events_from_decision` assumes POST-apply state** (`trade_events.py:323` —
+   it subtracts the batch's mutating count to reconstruct pre-apply revisions).
+   Called pre-apply, the revision base is simply `state.state_revision` with no
+   subtraction. Fix: a `post_apply: bool = True` parameter; default preserves
+   the 21/21-verified behavior byte-for-byte, the runner passes
+   `post_apply=False`. One translator, two documented call points — not a
+   second implementation.
+2. **The constitution could refuse an action the log already claims happened.**
+   `apply_actions` enforces per-action; with append first, a refused action
+   would leave a false event. Fix: a pure PRE-VALIDATION pass before append —
+   `enforce(state, actions=acts)` plus per-action `enforce(state, a,
+   applied_keys, ...)` against the pre-apply state. `enforce` is a predicate
+   (spec 011's whole design), so this is dry-run-then-commit, not a second
+   engine. The only approximation: in a `[TAKE_PARTIAL, MOVE_SL]` batch the
+   second action pre-validates against pre-partial state — benign because a
+   partial changes qty, not sl, and the real enforcement still runs inside
+   apply_actions; documented in the code.
 
-- **SPEC** — already done: 019 is architect-authored, `[SPEC]`, test names and fault
-  columns contractual. No re-planning of it here.
-- **RED** — write the three test files first and run them against unmodified modules.
-  Rows that need module changes (`require()` rows, explicit-NaN row, the NaN/inf
-  duration gap found in `scenarios.py:85`) must be demonstrated red BEFORE the module
-  edits land. Capture the red run output.
-- **IMPLEMENT** — the minimal module changes (`require()`, named `isnan` guard,
-  `isfinite` duration guard), never edits to the approved tests to make them pass.
-- **MUTATE** — the 019 fault-column loop, every row: apply fault → red → revert →
-  green. Logged in `MUTATION_LOG.md`. This is the VERIFIED bar, not pytest-green.
-- **INTEGRATE** — existing self-tests + backtest replay diff stay green (019 is
-  unit-only; real integration invariants are spec 020's job).
-- **ADVERSARIAL REVIEW** — a fresh-context review agent gets the 019 spec text + final
-  diff + test output (not this session's history) and is asked how the implementation
-  could satisfy the tests while violating intent. Findings fixed or surfaced.
-- **HUMAN VALIDATION / MERGE** — Colin. I do not certify the gate (handoff roles);
-  the deliverable ends at "evidence assembled, commits staged, Colin reviews."
-
-Same pipeline applies to the C004/C005/C007 wiring fix (its RED = a live-path test
-that fails before the threading lands).
+Resulting cycle order: **decide → pre-validate (pure) → append+fsync → apply →
+log_cycle**. Crash windows: before append = decision lost, next cycle
+re-decides from prior facts (safe); after append before apply = memory died
+anyway, rebuild reflects the appended decision (correct — the log is the
+authority); broker divergence in that window is 013's reconciliation, out of
+scope this week.
 
 ## Work items
 
-### 0. Gate roadmap recorded durably (no code)
-Colin's Gate 2–7 sequence maps cleanly onto the existing cards; write it down once so
-it stops being re-derived, as a short "Gate map" section in the spec 020 draft (and a
-one-line pointer in `specs/README.md`): Gate 2 = card 012 · Gate 3 = card 013 (treat
-vision Stockfish items 6+7 as one vertical program even if the card stays one card) ·
-Gate 4 = card 014 · Gate 5 = cards 015+016 · Gate 6 = card 017 · Gate 7 = portfolio
-guards half of 014, last. Note where a gate's hard boundary already exists in code
-(Gate 7's "no live-broker credentials in agent environments" = CLAUDE.md rule 9 +
-`broker.py`'s paper-host refusal).
+### 1. `trade_events.py` — two small, spec-obligated changes
+- `events_from_decision(..., post_apply: bool = True)`: revision base
+  `state.state_revision` when False (no subtraction). Existing tests untouched.
+- `JsonlEventLog.append`: on first creation of the file, fsync the parent
+  directory (the spec's power-loss obligation). `os.open(dir, O_RDONLY)` +
+  `os.fsync` + close, macOS/Linux safe.
 
-### 1. Pytest infrastructure (small, enabling)
-- New `conftest.py` at repo root: insert `daytrade/` onto `sys.path` so flat sibling imports
-  (`from scenarios import ...`) resolve under pytest collection. Nothing else — no pytest.ini
-  opinions beyond what's needed to collect `daytrade/test_*.py`.
-- Test command (from 019:122): `pytest daytrade/test_scenarios.py daytrade/test_thesis.py
-  daytrade/test_regime_vector.py -v`.
+### 2. `runner.py` — the wiring (I/O only, ruling 1)
+- New module constant `EVENTS_DIR = LOGDIR` (events file:
+  `events_{date}_{symbol}.jsonl`), monkeypatchable like LOGDIR.
+- At session start: create `JsonlEventLog`; emit `POSITION_OPENED` (payload =
+  the resolved plan, trade_id `f"{symbol}-{date}"`) — unless resuming (below).
+- In the loop, between `decide_exit` and `apply_actions`:
+  1. pre-validate the batch (pure enforce calls),
+  2. `events = events_from_decision(events, s, actions, occurred_at=<utc now>,
+     source_version="runner-1", post_apply=False)` and append each new event
+     through the log (fsync per append — JsonlEventLog already does),
+  3. then `apply_actions(s, actions, applied_reduction_keys)` as today.
+  Reuse the SAME caller-owned key set — no second key mechanism.
+- **Resume is explicit, never automatic**: new `--resume` flag / `run(...,
+  resume: bool)`. With it, if the events file exists and is not closed:
+  `rebuild(load())` → `to_trade_state` → keys from
+  `mem.applied_reduction_keys` (the C005 crash payoff, now live). Without the
+  flag, an existing non-closed events file for today is a LOUD refusal to
+  start (never silently fork a trade's history); a closed one rotates aside.
+  Auto-resume is rejected deliberately: a surprise reconstruction at 09:31 is
+  worse than an explicit operator choice.
 
-### 2. Card 019 implementation (the bulk)
-Build the three files exactly as the spec enumerates — names are contractual:
+### 3. `test_runner_event_wiring.py` — the proofs (via `run()`'s replay path,
+same monkeypatch pattern as `test_directive_authority._run_replay`)
+- **Agreement**: one replay session → session JSONL and event stream agree
+  action-for-action (kinds/sl/fractions per cycle), POSITION_OPENED carries
+  the resolved plan.
+- **Append-before-apply ordering**: monkeypatch `apply_actions` to raise on
+  cycle N; assert the events file already contains cycle N's events while the
+  state mutation never landed. (This is the test the ordering mutation must
+  turn red.)
+- **The real card-012 DoD through the real loop** (Colin's step 3): run the
+  replay through `run()` for k cycles, kill everything in-process, restart
+  `run(..., resume=True)` with the remaining replay prices, and diff the
+  produced actions + final state against one unbroken `run()` over the full
+  replay. **Zero diff = first genuinely EXERCISED evidence Gate 2 has had.**
+  Parametrize the kill point over at least three cycle indices, including
+  immediately after the TP2 partial (the C005-sensitive point).
+- **Refusal**: starting without `--resume` over an existing open events file
+  refuses loudly; a closed file does not block.
+- **Byte-parity**: with events emission active, the session JSONL schema and
+  `backtest.py` replay diff are unchanged (events are additive I/O).
 
-- **`daytrade/test_scenarios.py`** — 13 tests (019:52-68): probability-sum/negative/above-one/
-  NaN-inf rejection, unknown/duplicate names, empty set, missing invalidation-or-evidence,
-  **inclusive freshness boundary** (`is_fresh()` at exact boundary is True — `scenarios.py:154`
-  uses `<=`; the red-fault is flipping to `<`), decisive → top scenario's policy via
-  `policy_from_scenarios` (`stockfish_exit.py:343`), indecisive → most conservative policy
-  **among represented scenarios only** via `CONSERVATISM`, never-average rule, `unreadable()`
-  is an even three-way spread.
-- **`daytrade/test_thesis.py`** — 8 tests (019:70-81): legal transitions only, idempotence,
-  INVALIDATED/EXPIRED sticky, INVALIDATED outranks EXPIRED in one `evaluate()`,
-  **weakening is NOT sticky** (oscillation WEAKENING→CONFIRMED locked as explicit contract —
-  test the current probed behavior, not the "safer" one, per 019:79), unknown condition key
-  raises, `urgency_for_thesis` (`stockfish_exit.py:386`) covers all 5 states × both armed
-  booleans with no None-by-omission.
-- **`daytrade/test_regime_vector.py`** — 10 tests (019:83-96): unknown dimension, unavailable-
-  with-value, computed-without-value, out-of-range, **explicit NaN check** (add a named
-  `math.isnan` guard in `Dimension.__post_init__` so NaN rejection survives a future
-  range-check refactor — currently only caught as a range side effect), incomplete vector,
-  `available()` returns source not just value (see adjudication below), and the three
-  `require()` rows.
-- **New accessor `require(vec, name)` in `daytrade/regime_vector.py`** (019:30-39): raises
-  `RegimeError` on unavailable or missing, returns the plain value for `computed`/`judged`.
-  Sits alongside `value()`/`available()`; **no existing call site switches** (deferred to 020).
-- **019:93 adjudication (Colin's ruling: verify-then-fix-in-card)**: probe what `available()`
-  actually returns. If it genuinely loses the source (test name implies it should return
-  (name, value, source), not name→value), land the minimal accessor change in-card and write
-  the test green against it. If the spec premise is stale and behavior is already correct,
-  write the test to lock current behavior and record the spec correction in the PR summary.
-- **Constraints** (019:41-43, 98-104): parquet-free; `compute()` out of scope (its five
-  silent-zero fallbacks at `regime_vector.py:211,217,257,174,272` get NOTED in spec 020's
-  backlog, not fixed here); fixtures are plain Python literals reusing `SPEC`, `ALL_SCENARIOS`,
-  `CONSERVATISM` from the modules.
+### 4. `mutation_check_gate2_wiring.py` → `specs/GATE2_WIRING_MUTATION_LOG.md`
+Copy the hardened driver template (cache purge, PYTHONDONTWRITEBYTECODE,
+refuse-log-on-failure). Rows at minimum:
+- drop the append call entirely → agreement test red
+- move append AFTER apply → ordering test red
+- `post_apply=False` → `True` at the runner call site (wrong revision base) →
+  destroy/resume test red (keys mismatch)
+- resume uses a fresh key set instead of `mem.applied_reduction_keys` → the
+  TP2-kill-point resume test red
+- drop the pre-validation pass → a test with a poisoned batch (constitution
+  refusal) showing no event is appended → red
+- drop the directory fsync → (structural; pin by asserting the code path
+  exists via a behavior test on first-create if feasible, else document as
+  untestable-without-power-loss and exclude honestly)
 
-### 3. Mutation verification — the actual DoD (019:47-50, 106-117)
-For **every** test row, apply the spec's fault-column mutation temporarily, confirm that row
-goes red, revert, confirm green. This loop IS the DoD, not a step before it. Evidence:
-a `MUTATION_LOG.md` (or PR-body table) listing row → mutation applied → red confirmed →
-reverted → green confirmed. No mutation framework — manual edit/run/revert per the spec.
-
-### 4. C004/C005/C007 wiring fix (separate commit)
-- Thread `now_et=` and `actions=` through the live path: `apply_action`
-  (`stockfish_exit.py:513`) accepts/forwards them into `enforce()`
-  (`stockfish_constitution.py:203`); production callers supply what they have
-  (`runner.py` has the clock; batch context where applicable).
-- Ensure `applied_keys` idempotency state (C005) is actually threaded from the three
-  production callers, not just the self-test.
-- Verify with fault injection on the live path: a stale-clock / duplicate-reduction /
-  emergency-precedence violation constructed through `apply_action` (not the module self-test)
-  must raise. v3 replay must stay byte-identical (011 DoD); run `python3 daytrade/backtest.py`
-  diff + `stockfish_exit.py`/`stockfish_constitution.py` self-tests.
-- Per handoff routing: if any part of the fix would change authority semantics or historical
-  log compatibility, stop and surface it instead of proceeding.
-
-### 5. Draft spec 020 — AZ wiring card (Gate 1 spine) — DRAFT ONLY
-New `specs/020_AZ_WIRING.md`, marked `[DRAFT — awaiting Colin/architect approval, do not
-build]`. Contents drawn from what 019 explicitly deferred plus the handoff's spine:
-- One synthetic end-to-end route: regime vector + scenario set + thesis → `ContextDirective`
-  → freshness/authority checks (`context_directive.evaluate`, currently zero callers) →
-  policy/urgency → `decide_exit` → constitution → deterministic decision.
-- The three integration invariants as named tests on that live path: unavailable regime data
-  never becomes a number (call-site switch `available()`→`require()`), stale scenario/directive
-  state cannot influence the decision, thesis oscillation cannot mechanically loosen a stop
-  (monotonicity currently true only as an accident of max-over-layers).
-- Backlog notes: `compute()` silent-zero fallbacks; 018 signing deferral; relationship to
-  card 016 (which owns the *production* directive caller — 020 wires the synthetic/test spine
-  only, so it does not front-run 016).
-- README.md specs table row added for 020 as `[DRAFT]`.
-
-### 6. Status bookkeeping
-Update `specs/README.md`: 019 → built status with the five-stage maturity line (per
-handoff:61-64 the full line, not just the highest stage); 011/018 lines gain their five-stage
-form (018: IMPLEMENTED, self-test-only, not WIRED — 016 wires it); note the C004/C005/C007
-fix. Do NOT mark anything INTEGRATION VERIFIED — that's 020 territory, and per the roles
-section the implementing seat doesn't certify its own gate.
-
-## Verification
-1. `pytest daytrade/test_scenarios.py daytrade/test_thesis.py daytrade/test_regime_vector.py -v`
-   → all green (31 tests; the one adjudicated row green or spec-corrected, per ruling).
-2. Mutation loop evidence complete: every row demonstrated red under its fault, green after
-   revert (MUTATION_LOG.md).
-3. Existing self-tests still exit 0: `scenarios.py`, `thesis.py`, `context_directive.py`,
-   `stockfish_constitution.py`, `stockfish_exit.py`.
-4. Wiring fix: constructed C004/C005/C007 violations through the live `apply_action` path
-   raise; legal play doesn't; `backtest.py` replay diff byte-identical.
-5. Spec 020 exists as `[DRAFT]`, no production code written from it.
+### 5. Update the record honestly (Colin's step 4)
+- `specs/README.md`: Gate 2 row → WIRED, and EXERCISED only if the
+  destroy/resume-through-real-loop proof is clean, evidence paths named
+  (`GATE2_WIRING_MUTATION_LOG.md`, the test file). If anything falls short,
+  the row says exactly what.
+- Strike Gate 2 from the "Operational completeness" list (or annotate what
+  remains); leave Gates 3-7 lines untouched.
+- Re-read the status line next day with fresh eyes before calling the week
+  done (per the plan's own DoD).
 
 ## Explicitly out of scope
-Card 012+ implementation · any `[PLAN]`/`[SKETCH]` build · call-site `available()`→`require()`
-switches · `regime_vector.compute()` fixes · wiring `context_directive` into runner (016) ·
-touching sealed evaluation data · broker/live paths beyond the enforce() threading.
+Gates 3-7 wiring · decide_exit / constitution / broker changes · auto-resume ·
+event emission from backtest.py or ceiling.py (harness stays pure replay) ·
+013 reconciliation of the append-vs-broker window · anything in the carry lane.
+
+## Verification
+1. `python3 -m pytest daytrade/ -q` — all green (154 + new).
+2. `python3 daytrade/mutation_check_gate2_wiring.py` — all rows RED→GREEN;
+   then the other nine drivers sequentially, unchanged counts.
+3. `python3 daytrade/stockfish_exit.py` + full `ceiling.py` diffs vs baseline —
+   byte-identical (wiring is runner I/O only).
+4. One realistic scripted session via `--replay` producing both logs; manual
+   eyeball that the event stream reads as a coherent trade history.
+5. Adversarial review (fresh context: spec 012's wiring obligations + the diff
+   + test output) before the status-line update commits.
