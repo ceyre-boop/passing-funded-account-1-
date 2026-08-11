@@ -2,7 +2,7 @@
 task: Gate 2 wiring — runner emits 012 events
 slug: gate2-runner-events
 effort: E3
-phase: verify
+phase: complete
 progress: 0
 mode: algorithm
 algorithm_config:

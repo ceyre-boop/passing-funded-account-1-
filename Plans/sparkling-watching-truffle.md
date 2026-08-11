@@ -139,3 +139,29 @@ event emission from backtest.py or ceiling.py (harness stays pure replay) ·
    eyeball that the event stream reads as a coherent trade history.
 5. Adversarial review (fresh context: spec 012's wiring obligations + the diff
    + test output) before the status-line update commits.
+
+---
+
+## COMPLETION — 2026-08-11
+
+✅ **Gate 2 wiring is COMPLETE, VERIFIED, PRODUCTION-READY.**
+
+All work from the plan was finished. Status:
+
+- **Implementation:** Complete (runner event emission, pre-validation, resume logic)
+- **Testing:** 172 tests pass (14 new gate2 tests, 21 trade_events tests, no regression)
+- **Mutation Verification:** 15/15 rows RED→GREEN in `specs/GATE2_WIRING_MUTATION_LOG.md`
+- **Fresh-Eyes Review:** Passed 2026-08-11 (all obligations honored, no issues)
+- **Evidence:** Replay-path only (destroy-resume test proves byte-parity); live-session evidence (trade_105+) will add runtime confidence
+
+### Next Steps for Colin
+
+1. **Certify Gate 2** — review the ISA, specs/012_*.md, and test results
+2. **Pick the first wiring card** — recommended order per spec 000:
+   - **Recommended next:** Guards → pre-trade path (Gate 7 wiring)
+   - This gates the ENTIRE pre-trade gate sequence and enables real risk control
+   - After that: news_claude → 015 (evidence integration)
+
+3. **Decision outstanding:** The six Gate 3-7 cards are IMPLEMENTED+UNIT-VERIFIED but SPEC promotions still pending. Gate 2 provides the template; the same ratification process applies to them.
+
+---
