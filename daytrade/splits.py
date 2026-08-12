@@ -110,8 +110,9 @@ def _log_unseal(reason: str, rule_version: str, forced: bool) -> None:
     from datetime import datetime, timezone
     SEAL_LOG.parent.mkdir(parents=True, exist_ok=True)
     with SEAL_LOG.open("a") as fh:
+        tag = "FORCED\t" if forced else ""
         fh.write(f"{datetime.now(timezone.utc).isoformat()}\t{rule_version}\t"
-                 f"{'FORCED\t' if forced else ''}{reason}\n")
+                 f"{tag}{reason}\n")
     n = sum(1 for _ in SEAL_LOG.open())
     if n > 1:
         print(f"  !! HOLDOUT READ #{n}. It was designed to be read once. Every "
