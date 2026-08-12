@@ -11,14 +11,14 @@ cti_1step:
     - target_pct: 0.08
       min_trading_days: 0
       max_days: null          # no deadline
-  max_dd: {type: static, pct: 0.05, basis: balance, mark: close}
+  max_dd: {type: trailing, pct: 0.05, basis: balance, mark: close}
   daily_dd: null              # CTI 1-Step has NO daily loss limit
   permissions: {weekend_hold: true, overnight_hold: true, news_hold: true}
   costs:
     fee_usd: 382.0
     refund_on_pass: 0.0
     swap_haircut_r_per_day: 0.004
-  rules_asof: "2026-08-10"
+  rules_asof: "2026-08-12"
   source_url: "https://citytradersimperium.com/1-step-challenge/"
 
 alpha_swing:

@@ -33,10 +33,12 @@ def _ceiling(contract, state, phase_index=0):
 def test_contracts_load_and_validate():
     contracts = load_contracts()
     assert {"cti_1step", "alpha_swing", "ftmo_swing"} <= set(contracts)
+    # CTI 1-Step uses trailing; alpha_swing and ftmo_swing use static (verified 2026-08-12).
     for c in contracts.values():
-        assert c.max_dd.type == "static", (
-            f"{c.key}: the carry lane is static-DD; trailing here is a transcription fault"
-        )
+        if c.key == "cti_1step":
+            assert c.max_dd.type == "trailing", f"{c.key}: live rules use trailing DD"
+        else:
+            assert c.max_dd.type == "static", f"{c.key}: static DD per rules"
         assert not c.has_deadline, f"{c.key}: no-deadline lane; max_days must be null"
 
 
@@ -47,13 +49,13 @@ def test_unknown_firm_raises():
 
 def test_static_vs_trailing_floor_moves():
     """Fault: flipping static->trailing must change the ceiling once peak > start."""
-    cti = load_contract("cti_1step")
+    cti = load_contract("cti_1step")  # Now uses trailing (verified 2026-08-12)
     # Account ran up to 110k then back to 104k. Static floor: 95k. Trailing floor: 104.5k.
     state = _state(equity=104_000.0, peak=110_000.0, start=100_000.0)
-    static_ceiling = _ceiling(cti, state)
-    trailing = replace(cti, max_dd=DrawdownRule(pct=0.05, basis="balance", mark="close",
-                                                type="trailing"))
-    trailing_ceiling = _ceiling(trailing, state)
+    trailing_ceiling = _ceiling(cti, state)  # CTI is trailing; floor 104.5k above equity -> 0
+    static = replace(cti, max_dd=DrawdownRule(pct=0.05, basis="balance", mark="close",
+                                              type="static"))
+    static_ceiling = _ceiling(static, state)
     # static: (104k - 95k)/104k ≈ 8.65% ; trailing: floor 104.5k above equity -> 0
     assert static_ceiling == pytest.approx((104_000 - 95_000) / 104_000)
     assert trailing_ceiling == 0.0
@@ -61,21 +63,20 @@ def test_static_vs_trailing_floor_moves():
 
 
 def test_no_daily_limit_means_daily_floor_never_binds():
-    """Fault: giving CTI a daily budget. With none, a deep intraday day still
-    leaves the max-DD floor as the only constraint."""
+    """Fault: giving CTI a daily budget. With none, the trailing-DD floor
+    is the only constraint (CTI uses trailing, verified 2026-08-12)."""
     cti = load_contract("cti_1step")
     assert cti.daily_dd is None
     assert cti.to_prop_cfg()["daily_loss_limit_pct"] == NO_DAILY_LIMIT_PCT
-    # Down 4k today intraday; static 5% floor at 95k is the binding one.
-    state = _state(equity=96_000.0, daily_realized=-4_000.0)
+    # Account at 96k with peak 100k. Trailing 5% floor: 100k - 5% = 95k.
+    state = _state(equity=96_000.0, daily_realized=-4_000.0, peak=100_000.0)
     assert _ceiling(cti, state) == pytest.approx((96_000 - 95_000) / 96_000)
-    # Mutate in an FTMO-style 5% daily budget: day start 100k -> daily floor 95k,
-    # same binding floor here, so push the day deeper to separate them.
-    state2 = _state(equity=93_000.0, daily_realized=-7_000.0, start=90_000.0)
-    # static floor: 90k*(1-0.05)=85.5k ; no daily -> budget (93-85.5)/93
-    assert _ceiling(cti, state2) == pytest.approx((93_000 - 85_500) / 93_000)
+    # Deeper scenario: equity 93k, peak 100k. Trailing floor 95k > equity 93k -> 0
+    state2 = _state(equity=93_000.0, daily_realized=-7_000.0, peak=100_000.0)
+    assert _ceiling(cti, state2) == 0.0
+    # Compare: if CTI had a daily budget like FTMO, the daily floor would also bind.
     daily = replace(cti, daily_dd=DrawdownRule(pct=0.05, basis="balance", mark="close"))
-    # daily floor: 100k - 5k = 95k > equity 93k -> zero risk permitted
+    # daily floor: start 100k - 5% = 95k > equity 93k -> zero risk permitted
     assert _ceiling(daily, state2) == 0.0
 
 
