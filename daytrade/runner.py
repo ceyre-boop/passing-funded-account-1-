@@ -41,6 +41,7 @@ from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # import the engine beside us
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # repo root, for sovereign.*
 from stockfish_exit import (TradeState, decide_exit, apply_actions,  # noqa: E402
                             policy_params, effective_stop, resolve_channels)
 import broker as broker_mod  # noqa: E402
@@ -301,6 +302,85 @@ def read_directive_urgency(symbol: str) -> tuple[str | None, str]:
     return dec.urgent, note
 
 
+def alphazero_snapshot(symbol: str) -> dict:
+    """The AlphaZero context as it stood BEFORE the entry, for the execution ledger.
+
+    This is provenance, not authority: it is written to a log, never handed to
+    `decide_exit`. AlphaZero's only mechanical reach remains the urgency channel
+    the runner already reads (ARCHITECTURE.md:53-54).
+
+    EVERY BRANCH PRODUCES AN EXPLICIT `available` FLAG AND A REASON. A missing or
+    unreadable bias.json yields `{"available": False, "reason": ...}` — never an
+    empty dict, and never a defaulted zero bias. An empty snapshot and "AlphaZero
+    had no opinion" are different facts, and conflating them is the failure mode
+    `regime_vector.py` exists to prevent; the ledger inherits that discipline.
+
+    Never raises: the snapshot is context for a record, and losing the context is
+    not a reason to refuse a trade the operator already took. But it always SAYS
+    what it could not get.
+    """
+    snap: dict = {"symbol": symbol, "captured_at": datetime.now(timezone.utc).isoformat()}
+
+    if not BIAS.exists():
+        snap["bias"] = {"available": False, "reason": f"{BIAS.name} does not exist"}
+    else:
+        try:
+            raw = json.loads(BIAS.read_text())
+        except (OSError, json.JSONDecodeError) as e:
+            snap["bias"] = {"available": False,
+                            "reason": f"{BIAS.name} unreadable: {type(e).__name__}: {e}"}
+        else:
+            # Source/version/timestamp are the audit triple: without them a row
+            # cannot be attributed to the model that produced it months later.
+            snap["bias"] = {
+                "available": True,
+                "source": str(BIAS),
+                "model_version": raw.get("model"),
+                "produced_at": raw.get("ts"),
+                "bias": raw.get("bias"),
+                "urgency": raw.get("urgency"),
+                "n_headlines": raw.get("n_headlines"),
+                # Present-but-null is preserved as null; the KEY is always here,
+                # so "absent" and "explicitly none" stay distinguishable.
+                "suggested_urgency": raw.get("suggested_urgency"),
+                "urgency_armed": raw.get("urgency_armed"),
+            }
+
+    if not DIRECTIVES.exists():
+        snap["directives"] = {"available": False,
+                              "reason": f"{DIRECTIVES.name} does not exist"}
+    else:
+        try:
+            draw = json.loads(DIRECTIVES.read_text())
+        except (OSError, json.JSONDecodeError) as e:
+            snap["directives"] = {"available": False,
+                                  "reason": f"{DIRECTIVES.name} unreadable: "
+                                            f"{type(e).__name__}: {e}"}
+        else:
+            items = draw if isinstance(draw, list) else draw.get("directives", [])
+            # Ids and provenance only. Directive bodies stay in their own file —
+            # the ledger references evidence by id (same rule as trade_events).
+            snap["directives"] = {
+                "available": True,
+                "source": str(DIRECTIVES),
+                "count": len(items),
+                "directive_ids": [str(d.get("directive_id")) for d in items
+                                  if isinstance(d, dict)][:20],
+                "model_versions": sorted({str(d.get("model_version")) for d in items
+                                          if isinstance(d, dict) and d.get("model_version")}),
+            }
+
+    # The regime vector is NOT computed here. `regime_vector.compute()` needs
+    # (symbol, session, history, ts=...) — bar data this loop does not hold — and
+    # `daytrade/regime.py` raises NotImplementedError by design. Saying so is the
+    # honest record; calling compute() with the wrong arity and swallowing the
+    # TypeError would write a snapshot that merely LOOKS complete.
+    snap["regime"] = {"available": False,
+                      "reason": "regime.py is not built (spec 001, blocked on the "
+                                "ceiling re-registration); no classifier output exists"}
+    return snap
+
+
 def read_urgency(require: bool) -> tuple[str | None, str]:
     """ONLY the urgency field crosses from ALPHAZERO (ARCHITECTURE.md:53-54).
 
@@ -357,10 +437,53 @@ def log_cycle(rec: dict) -> None:
 
 # ---------------------------------------------------------------------- loop
 
+#: The rules that produced this session's exits. Bumped whenever decide_exit's
+#: behaviour changes, so a ledger row can be attributed to the engine version
+#: that made it rather than to whatever the file says today.
+STRATEGY_VERSION = "stockfish-v3"
+
+
+def ledger_mode_for(*, live: bool, broker) -> str | None:
+    """Which ledger lane this run writes to, or None for 'do not write'.
+
+    Starts at the safest setting every run, exactly like `--broker off` and
+    news_claude's disarmed urgency: a REPLAY is unambiguously a simulation and
+    is recorded as `sim`. A live-quote session is NOT auto-recorded, because
+    labelling a live-tape run is a decision with real consequences for every
+    aggregate downstream — the operator states it with --ledger-mode.
+    """
+    if not live:
+        return "sim"
+    return None
+
+
+def _sim_fill(price: float, qty: float, plan: dict, *, when: str, what: str):
+    """Build the simulated fill for the ledger from the plan's declared costs.
+
+    Costs default to zero, and the BASIS STRING SAYS SO. A zero-cost fill is a
+    legitimate modelling choice; a zero-cost fill that looks like a measured one
+    is not. `sim_costs` in plan.json overrides:
+        "sim_costs": {"commission_per_share": 0.005, "slippage_per_share": 0.01}
+    """
+    from sovereign.intelligence.execution_ledger import SimulatedFill
+    costs = plan.get("sim_costs") or {}
+    declared = bool(costs)
+    cps = float(costs.get("commission_per_share", 0.0))
+    sps = float(costs.get("slippage_per_share", 0.0))
+    return SimulatedFill(
+        price=price, qty=qty, filled_at=when,
+        basis=f"sim:{what};costs={'declared' if declared else 'none-declared'}",
+        intended_price=price,
+        slippage_per_share=sps,
+        commission=abs(cps) * abs(qty),
+        venue="simulated",
+    )
+
+
 def run(plan: dict, *, interval: int, once: bool, replay: list | None,
         max_stale: int, require_bias: bool, broker=None,
         quote_source: str = "auto", max_spread_pct: float = 0.01,
-        resume: bool = False) -> int:
+        resume: bool = False, ledger_mode: str | None = None) -> int:
     from trade_events import (JsonlEventLog, TornTailError, TradeEvent,
                               rebuild, to_trade_state, events_from_decision)
     symbol = plan["symbol"]
@@ -446,6 +569,66 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
             payload={"plan": {k: v for k, v in plan.items()
                               if not k.startswith("_")}})]
         event_log.append(event_log_open[0])
+
+        # ---- the execution ledger's ENTRY boundary (card item 4).
+        # Same `trade_id` as the event log above — that identity IS the join,
+        # and it is asserted in test_execution_ledger.py rather than assumed.
+        # This records; it decides nothing. Written only once the position is
+        # open, and idempotent on trade_id, so a re-run or a resume cannot
+        # produce a second entry row for one trade.
+        if ledger_mode is not None:
+            from sovereign.intelligence.execution_ledger import (
+                find_executed_trade, log_executed_trade)
+            # KNOWN LIMITATION, made loud rather than left to surface as a
+            # traceback three cycles in. `trade_id` is SESSION-level
+            # (symbol-date) because that is the key Stockfish's event log
+            # already uses, and matching it is the whole point. But the event
+            # log rotates a CLOSED trade aside and lets a second trade run the
+            # same day (the doctrine's bet-2), while the ledger has one row per
+            # trade_id and no rotation. So a second same-day trade in the same
+            # symbol has nowhere to go. Refuse at the boundary, with the fix.
+            prior = find_executed_trade(trade_id, ledger_mode)
+            if prior is not None and prior.get("outcome") not in (None, "OPEN"):
+                raise RuntimeError(
+                    f"the {ledger_mode} ledger already holds a CLOSED trade for "
+                    f"{trade_id!r} ({prior.get('outcome')} at "
+                    f"R={prior.get('r_realized'):+.3f}). trade_id is session-level, so a "
+                    "second same-day trade in this symbol would need its own id — which "
+                    "would also have to change the Stockfish event log's key, and that is "
+                    "a Gate-2 change, not a runner change. Either run with "
+                    "--ledger-mode off, or move the ledger row aside deliberately.")
+            opened_at = datetime.now(timezone.utc).isoformat()
+            log_executed_trade(
+                trade_id=trade_id,
+                mode=ledger_mode,
+                system="DAYTRADE",
+                pair=symbol,
+                direction=s.direction,
+                entry_fill=_sim_fill(s.entry, s.qty, plan,
+                                     when=opened_at, what="plan-entry"),
+                initial_stop=s.sl,
+                strategy_version=STRATEGY_VERSION,
+                entry_timestamp=opened_at,
+                tp1=s.tp1, tp2=s.tp2,
+                exit_policy=s.exit_policy,
+                stockfish_plan={
+                    "entry": s.entry, "sl": s.sl, "tp1": s.tp1, "tp2": s.tp2,
+                    "qty": s.qty, "trail_dist": s.trail_dist,
+                    "trail_mult": s.trail_mult, "be_arm_frac": s.be_arm_frac,
+                    "hold_past_tp2": s.hold_past_tp2,
+                    "goal_fraction": s.goal_fraction,
+                    "flatten_at_et": s.flatten_at_et,
+                    "risk_per_share": abs(s.entry - s.sl),
+                    "catastrophic_sl": s.catastrophic_sl,
+                    "events_log": events_path.name,
+                },
+                alphazero_snapshot=alphazero_snapshot(symbol),
+                why_this_trade=str(plan.get("thesis") or "")[:500],
+                why_this_size=f"qty {s.qty:g} × risk/share "
+                              f"{abs(s.entry - s.sl):.4f} = "
+                              f"${abs(s.entry - s.sl) * s.qty:.2f}",
+            )
+            print(f"# ledger[{ledger_mode}] entry recorded  trade_id={trade_id}")
 
     print(f"# runner {src} | {symbol} {'LONG' if s.direction > 0 else 'SHORT'} "
           f"entry {s.entry} qty {s.qty:g} sl {s.sl} tp1 {s.tp1} tp2 {s.tp2:.2f} "
@@ -537,7 +720,32 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
         for ev in events[n_before:]:
             event_log.append(ev)
 
+        # ---- ledger: capture each scale-out leg BEFORE apply reduces qty.
+        # Stockfish's ladder banks a partial at TP2, so most closed trades have
+        # two legs. Scoring only the final one — and against the REMAINING
+        # risk — reports a trade that took profit off the table and then
+        # stopped its runner as a full -2R loss. The leg key is the
+        # constitution's own C005 idempotency key, so a crash-retry cannot book
+        # one partial twice.
+        pending_legs = []
+        if ledger_mode is not None:
+            from stockfish_constitution import idempotency_key
+            for a in actions:
+                if a.kind == "TAKE_PARTIAL":
+                    pending_legs.append((idempotency_key(s, a),
+                                         s.qty * a.fraction, a.reason))
+
         apply_actions(s, actions, applied_reduction_keys)
+
+        if pending_legs:
+            from sovereign.intelligence.execution_ledger import record_partial_exit
+            leg_at = datetime.now(timezone.utc).isoformat()
+            for key, leg_qty, reason in pending_legs:
+                record_partial_exit(
+                    trade_id=trade_id, mode=ledger_mode,
+                    fill=_sim_fill(price, leg_qty, plan,
+                                   when=leg_at, what="partial-cycle-price"),
+                    reason=reason, leg_key=key)
 
         print_cycle(clock, symbol, price, s, bias_note, age_note, actions)
 
@@ -575,8 +783,26 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
         log_cycle(rec)
 
         if any(a.kind == "EXIT_ALL" for a in actions):
-            print_flatten(symbol, price,
-                          next(a.reason for a in actions if a.kind == "EXIT_ALL"))
+            exit_reason = next(a.reason for a in actions if a.kind == "EXIT_ALL")
+            # ---- the execution ledger's EXIT boundary (card item 5).
+            # Closes the SAME record by exact trade_id. Realized R is computed
+            # inside the ledger from the stored entry FILL and the ORIGINAL plan
+            # stop — not from the stop as it stands now, which the breakeven and
+            # trail layers have already moved.
+            if ledger_mode is not None:
+                from sovereign.intelligence.execution_ledger import close_executed_trade
+                closed_at = datetime.now(timezone.utc).isoformat()
+                rec = close_executed_trade(
+                    trade_id=trade_id,
+                    mode=ledger_mode,
+                    exit_fill=_sim_fill(price, s.qty, plan,
+                                        when=closed_at, what="exit-cycle-price"),
+                    exit_reason=exit_reason,
+                    exit_timestamp=closed_at,
+                )
+                print(f"# ledger[{ledger_mode}] closed  trade_id={trade_id}  "
+                      f"{rec['outcome']}  R={rec['r_realized']:+.3f}")
+            print_flatten(symbol, price, exit_reason)
             return 0
 
         step += 1
@@ -605,6 +831,13 @@ def main(argv=None) -> int:
                     help="reconstruct today's open trade from its event log "
                          "(spec 012) instead of starting from the plan. "
                          "Explicit by design — never automatic.")
+    ap.add_argument("--ledger-mode", choices=("auto", "off", "sim", "shadow", "paper", "live"),
+                    default="auto",
+                    help="execution-ledger lane. auto: 'sim' for --replay, OFF for a "
+                         "live-tape run (labelling live results is the operator's "
+                         "call, not a default). Each mode writes to its own "
+                         "directory so sim can never be blended into a real-money "
+                         "aggregate.")
     a = ap.parse_args(argv)
 
     plan = load_plan(Path(a.plan))
@@ -618,10 +851,13 @@ def main(argv=None) -> int:
     broker = None if a.broker == "off" else broker_mod.Broker(mode=a.broker, assume_yes=a.yes)
 
     try:
+        ledger_mode = (ledger_mode_for(live=replay is None, broker=broker)
+                       if a.ledger_mode == "auto"
+                       else (None if a.ledger_mode == "off" else a.ledger_mode))
         return run(plan, interval=a.interval, once=a.once, replay=replay,
                    max_stale=a.max_stale, require_bias=a.require_bias, broker=broker,
                    quote_source=a.quotes, max_spread_pct=a.max_spread,
-                   resume=a.resume)
+                   resume=a.resume, ledger_mode=ledger_mode)
     except KeyboardInterrupt:
         print("\n# stopped by hand — position untouched, nothing was ever sent anywhere")
         return 0
