@@ -99,12 +99,18 @@ def test_trailing_on_cti_flips_verdict():
     """Fault: static->trailing on CTI. Run up then a pullback that only busts trailing."""
     import dataclasses
     cti = load_contract("cti_1step")
+    # CTI itself is trailing as of 2026-08-12, so BOTH fixtures are built
+    # explicitly. Sourcing either arm from the live contract makes this test a
+    # no-op the day that contract's type changes — which is exactly what
+    # happened when the DD type was corrected.
+    static = dataclasses.replace(
+        cti, max_dd=dataclasses.replace(cti.max_dd, type="static"))
     trailing = dataclasses.replace(
         cti, max_dd=dataclasses.replace(cti.max_dd, type="trailing"))
     # +4R then -5R at 1%: peak 1.04, close 1.04*0.95=0.988 <= trailing floor
     # 1.04*0.95=0.988 but above static floor 0.95.
     vi, vw, vo = _flat_series(10, r_on=[(1, 4.0), (3, -5.0)])
-    out_static, _, _ = cbg.run_phase(vi, vw, vo, 0, cti, 0, 0.01, 10)
+    out_static, _, _ = cbg.run_phase(vi, vw, vo, 0, static, 0, 0.01, 10)
     out_trail, _, _ = cbg.run_phase(vi, vw, vo, 0, trailing, 0, 0.01, 10)
     assert out_static == "UNRESOLVED" and out_trail == "BUST"
 

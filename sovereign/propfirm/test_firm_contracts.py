@@ -67,7 +67,10 @@ def test_no_daily_limit_means_daily_floor_never_binds():
     is the only constraint (CTI uses trailing, verified 2026-08-12)."""
     cti = load_contract("cti_1step")
     assert cti.daily_dd is None
-    assert cti.to_prop_cfg()["daily_loss_limit_pct"] == NO_DAILY_LIMIT_PCT
+    # Literal, not NO_DAILY_LIMIT_PCT: comparing the module constant against
+    # itself is a tautology that survives any mutation of the constant.
+    assert cti.to_prop_cfg()["daily_loss_limit_pct"] == 1.0
+    assert NO_DAILY_LIMIT_PCT == 1.0, "sentinel must mean '100%, never binds'"
     # Account at 96k with peak 100k. Trailing 5% floor: 100k - 5% = 95k.
     state = _state(equity=96_000.0, daily_realized=-4_000.0, peak=100_000.0)
     assert _ceiling(cti, state) == pytest.approx((96_000 - 95_000) / 96_000)
