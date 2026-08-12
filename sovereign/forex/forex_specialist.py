@@ -112,49 +112,54 @@ class ForexSpecialist:
                 report.skipped.append(sig)
                 continue
 
+            # A SCAN CANDIDATE IS NOT AN EXECUTED TRADE.
+            #
+            # This block used to call `log_forex_decision(...)`, which appends to
+            # the executed-trade decision log — for every setup the scanner merely
+            # SAW. Nothing here confirms an entry fill: `run()` ranks candidates
+            # and returns them, and the human or the execution path decides
+            # whether any of them is taken. The result was a decision log whose
+            # rows were mostly trades nobody entered, which makes every win rate,
+            # every R aggregate and every Oracle inference computed from it wrong
+            # in the same direction.
+            #
+            # Candidates are still worth keeping — they are the forecast half of
+            # the record, and scoring "what did the scanner rank highly" against
+            # "what actually happened" is a real question. So they are recorded,
+            # in their own directory, carrying `record_kind: "candidate"`, where
+            # no executed-trade reader can pick them up.
+            #
+            # The executed-trade record is now written at the point an entry fill
+            # is CONFIRMED — `execution_ledger.log_executed_trade()`, which is
+            # idempotent on trade_id — not here.
             try:
-                from sovereign.intelligence.decision_logger import log_forex_decision
+                from sovereign.intelligence.execution_ledger import log_scan_candidate
                 _macro = sig.macro_signal
-                log_forex_decision(
+                log_scan_candidate(
+                    system="FOREX",
                     pair=sig.pair,
                     direction=sig.direction,
                     entry_level=sig.entry_price,
                     stop_loss=sig.stop_price,
-                    hold_days=getattr(_macro, "hold_period_estimate", 60),
-                    risk_pct=pos.risk_pct,
-                    signal_layers=sig.rationale[:6],
-                    rate_diff_z=getattr(_macro, "irp_z", None),
-                    vix_at_entry=None,   # not available at scan time; wire when VIX gate is live
-                    cot_percentile=None,  # COT engine returns z-score not percentile; TODO
-                    library_match=None,   # not yet wired into ForexEntrySignal
-                    commitment_score=None,
-                    freshness_mult=None,
-                    kelly_fraction=None,
-                    size_mult=sig.size_modifier,
+                    rationale=list(sig.rationale[:6]),
                     extra={
-                        "macro_conviction": sig.macro_conviction,
-                        "score": sig.score,
-                        "rate_differential": getattr(_macro, "rate_differential", None),
-                        "ppp_z": getattr(_macro, "ppp_z", None),
-                        "primary_driver": getattr(_macro, "primary_driver", None),
-                        "below_proven_bar": bool(sig.macro_conviction < 0.35),
-                    },
-                    # Loop 2: forex entry-time snapshot (this path has no equity
-                    # PresentState object; assemble the equivalent from the macro signal).
-                    present_state_snapshot={
                         "score": sig.score,
                         "macro_conviction": sig.macro_conviction,
+                        "risk_pct": pos.risk_pct,
+                        "size_modifier": sig.size_modifier,
                         "rate_diff_z": getattr(_macro, "irp_z", None),
                         "rate_differential": getattr(_macro, "rate_differential", None),
                         "ppp_z": getattr(_macro, "ppp_z", None),
                         "primary_driver": getattr(_macro, "primary_driver", None),
-                        "size_modifier": sig.size_modifier,
                         "hold_days_est": getattr(_macro, "hold_period_estimate", 60),
+                        "below_proven_bar": bool(sig.macro_conviction < 0.35),
                     },
-                    active_lessons=[],
                 )
             except Exception as e:
-                logger.debug(f"decision_logger failed for {sig.pair}: {type(e).__name__}: {e}")
+                # Scan-time telemetry must not break a scan. This is the research
+                # lane, not the execution lane — the executed-trade ledger is
+                # fail-loud precisely because it is the one that must not miss.
+                logger.debug(f"candidate log failed for {sig.pair}: {type(e).__name__}: {e}")
 
             report.tradeable.append(ForexTradeCandidate(
                 entry_signal=sig,
