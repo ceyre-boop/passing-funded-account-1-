@@ -72,37 +72,45 @@ def test_double_close_rejected(tmp_path, monkeypatch, capsys):
         pcl.cmd_close(A)
 
 
-def test_position_size_reconciliation_accepts_consistent_qty(tmp_path, monkeypatch):
-    """Qty matches stated risk: accept and log the trade."""
+@pytest.fixture
+def isolated_open(tmp_path, monkeypatch):
+    """cmd_open writes to two sinks: the paper ledger AND the real decision log.
+    A test that redirects only the first silently appends synthetic trades to
+    data/decision_logs/ — which already happened once (2026-08-12, two rows
+    removed). Both sinks must be captured."""
     log = tmp_path / "paper.jsonl"
     monkeypatch.setattr(pcl, "LOG_PATH", log)
-    # Account 100k, risk 1%, entry 1.1000, stop 1.0900, qty 100k
-    # stated_risk = 0.01 * 100000 = 1000
-    # implied_risk = 100000 * (1.1000 - 1.0900) = 100000 * 0.01 = 1000 ✓
-    class Args:
-        pair = "EURUSD=X"; direction = "LONG"; entry = 1.1000; stop = 1.0900
-        risk = 0.01; qty = 100000; date = "2026-08-12"
-    args = Args()
-    pcl.cmd_open(args)
+    logged = []
+    import sovereign.intelligence.decision_logger as dl
+    monkeypatch.setattr(dl, "log_forex_decision",
+                        lambda **kw: logged.append(kw) or "test-decision-id")
+    return logged
+
+
+def _args(**over):
+    base = dict(pair="EURUSD=X", direction="LONG", entry=1.1000, stop=1.0900,
+                risk=0.01, qty=100_000, date="2026-08-12")
+    base.update(over)
+    return type("Args", (), base)()
+
+
+def test_position_size_reconciliation_accepts_consistent_qty(isolated_open):
+    """Qty matches stated risk: accept and log the trade.
+    100k account x 1% = $1000 stated; 100k units x 0.0100 stop = $1000 implied."""
+    pcl.cmd_open(_args())
     records = pcl._read()
     assert len(records) == 1
-    assert records[0]["qty"] == 100000
+    assert records[0]["qty"] == 100_000
+    assert len(isolated_open) == 1, "cmd_open must log the decision exactly once"
 
 
-def test_position_size_reconciliation_rejects_divergent_qty(monkeypatch):
-    """Qty diverges from stated risk by > 1%: refuse with loud error."""
-    log = Path(pcl.ROOT) / "data" / "trade_logs" / "test_no_write.jsonl"
-    monkeypatch.setattr(pcl, "LOG_PATH", log)
-    # account 100k, risk 1%, entry 1.1000, stop 1.0900
-    # stated_risk = 0.01 * 100000 = 1000
-    # qty 90000 -> implied_risk = 90000 * 0.01 = 900
-    # divergence = (900 - 1000) / 1000 = 10% > 1% ✗
-    class Args:
-        pair = "EURUSD=X"; direction = "LONG"; entry = 1.1000; stop = 1.0900
-        risk = 0.01; qty = 90000; date = "2026-08-12"
-    args = Args()
+def test_position_size_reconciliation_rejects_divergent_qty(isolated_open):
+    """Qty diverges from stated risk by >1%: refuse, and write nothing anywhere.
+    90k units x 0.0100 = $900 implied vs $1000 stated -> 10% divergence."""
     with pytest.raises(SystemExit) as exc:
-        pcl.cmd_open(args)
-    assert "position size mismatch" in str(exc.value)
-    assert "stated risk" in str(exc.value)
-    assert "implied" in str(exc.value)
+        pcl.cmd_open(_args(qty=90_000))
+    msg = str(exc.value)
+    assert "position size mismatch" in msg
+    assert "stated risk" in msg and "implied" in msg
+    assert pcl._read() == [], "refused trade must not reach the paper ledger"
+    assert isolated_open == [], "refused trade must not reach the decision log"
