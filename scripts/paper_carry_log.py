@@ -60,9 +60,21 @@ def compute_r(direction: str, entry: float, stop: float, exit_: float,
 def cmd_open(args):
     if args.direction not in ("LONG", "SHORT"):
         raise SystemExit("direction must be LONG or SHORT")
+    # Reconcile position size against stated risk
+    account_size = load_contract("cti_1step").account_size
+    stated_dollar_risk = args.risk * account_size
+    implied_dollar_risk = args.qty * abs(args.entry - args.stop)
+    rel_diff = abs(implied_dollar_risk - stated_dollar_risk) / stated_dollar_risk
+    if rel_diff > 0.01:
+        raise SystemExit(
+            f"position size mismatch: stated risk ${stated_dollar_risk:,.0f} "
+            f"({args.risk:.2%} of ${account_size:,.0f}), implied ${implied_dollar_risk:,.0f} "
+            f"({args.qty} units × {abs(args.entry - args.stop):.5f} risk/pip). "
+            f"Difference {rel_diff:.1%} exceeds 1% tolerance. Check --qty."
+        )
     trade_id = uuid.uuid4().hex[:10]
     rec = dict(id=trade_id, status="open", pair=args.pair, direction=args.direction,
-               entry=args.entry, stop=args.stop, risk_pct=args.risk,
+               entry=args.entry, stop=args.stop, risk_pct=args.risk, qty=args.qty,
                entry_date=args.date, R=None)
     records = _read()
     records.append(rec)
@@ -72,9 +84,9 @@ def cmd_open(args):
                        entry_level=args.entry, stop_loss=args.stop,
                        hold_days=0, risk_pct=args.risk,
                        signal_layers=["paper_carry_sprint_021"],
-                       extra=dict(paper_trade_id=trade_id))
+                       extra=dict(paper_trade_id=trade_id, qty=args.qty))
     print(f"opened {trade_id}: {args.pair} {args.direction} @ {args.entry} "
-          f"stop {args.stop} risk {args.risk:.2%} on {args.date}")
+          f"stop {args.stop} qty {args.qty} risk {args.risk:.2%} on {args.date}")
 
 
 def cmd_close(args):
@@ -123,6 +135,7 @@ def main():
     o.add_argument("--entry", type=float, required=True)
     o.add_argument("--stop", type=float, required=True)
     o.add_argument("--risk", type=float, required=True)
+    o.add_argument("--qty", type=float, required=True, help="position size (units/contracts)")
     o.add_argument("--date", default=date.today().isoformat())
     o.set_defaults(fn=cmd_open)
     c = sub.add_parser("close")

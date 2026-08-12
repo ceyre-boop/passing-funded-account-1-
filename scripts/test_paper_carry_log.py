@@ -70,3 +70,39 @@ def test_double_close_rejected(tmp_path, monkeypatch, capsys):
         id = "t1"; exit = 1.01; date = "2026-08-05"; reason = "x"
     with pytest.raises(SystemExit):
         pcl.cmd_close(A)
+
+
+def test_position_size_reconciliation_accepts_consistent_qty(tmp_path, monkeypatch):
+    """Qty matches stated risk: accept and log the trade."""
+    log = tmp_path / "paper.jsonl"
+    monkeypatch.setattr(pcl, "LOG_PATH", log)
+    # Account 100k, risk 1%, entry 1.1000, stop 1.0900, qty 100k
+    # stated_risk = 0.01 * 100000 = 1000
+    # implied_risk = 100000 * (1.1000 - 1.0900) = 100000 * 0.01 = 1000 ✓
+    class Args:
+        pair = "EURUSD=X"; direction = "LONG"; entry = 1.1000; stop = 1.0900
+        risk = 0.01; qty = 100000; date = "2026-08-12"
+    args = Args()
+    pcl.cmd_open(args)
+    records = pcl._read()
+    assert len(records) == 1
+    assert records[0]["qty"] == 100000
+
+
+def test_position_size_reconciliation_rejects_divergent_qty(monkeypatch):
+    """Qty diverges from stated risk by > 1%: refuse with loud error."""
+    log = Path(pcl.ROOT) / "data" / "trade_logs" / "test_no_write.jsonl"
+    monkeypatch.setattr(pcl, "LOG_PATH", log)
+    # account 100k, risk 1%, entry 1.1000, stop 1.0900
+    # stated_risk = 0.01 * 100000 = 1000
+    # qty 90000 -> implied_risk = 90000 * 0.01 = 900
+    # divergence = (900 - 1000) / 1000 = 10% > 1% ✗
+    class Args:
+        pair = "EURUSD=X"; direction = "LONG"; entry = 1.1000; stop = 1.0900
+        risk = 0.01; qty = 90000; date = "2026-08-12"
+    args = Args()
+    with pytest.raises(SystemExit) as exc:
+        pcl.cmd_open(args)
+    assert "position size mismatch" in str(exc.value)
+    assert "stated risk" in str(exc.value)
+    assert "implied" in str(exc.value)
