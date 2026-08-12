@@ -50,6 +50,7 @@ def _log_path() -> Path:
 class DecisionRecord:
     # Identity
     entry_timestamp:        str
+    trade_id:               str           # REQUIRED join key — see note below
     system:                 str           # ICT | FOREX
     pair:                   str
 
@@ -92,14 +93,56 @@ class DecisionRecord:
     present_state_snapshot: dict[str, Any]   = field(default_factory=dict)
     active_lessons:         list[str]        = field(default_factory=list)
 
+    # Execution lifecycle (see sovereign/intelligence/execution_ledger.py).
+    #
+    # `trade_id` above is REQUIRED and is the correlation key this schema was
+    # missing: `find_recorded_outcome()` below has always read `obj["trade_id"]`,
+    # but no builder ever wrote one, so the exact-match path it documents could
+    # never fire. It is the SAME id daytrade/trade_events.py keys its Stockfish
+    # decision events on, which is what lets the two datasets be joined.
+    #
+    # `mode` keeps simulated results out of any real-money aggregate. The
+    # execution ledger additionally segregates modes by DIRECTORY, because a
+    # field alone is a convention a reader can forget.
+    strategy_version:       Optional[str]    = None   # rules that produced this
+    mode:                   Optional[str]    = None   # sim|shadow|paper|live|replay
+    entry_fill:             Optional[dict]   = None   # actual fill: price, qty, costs
+    exit_fill:              Optional[dict]   = None
+    costs:                  dict[str, Any]   = field(default_factory=dict)
+    exit_reason:            Optional[str]    = None
+
     # Outcome (filled in later by forensic engine on close)
     outcome:                Optional[str]    = None   # WIN | LOSS | OPEN
     r_realized:             Optional[float]  = None
     exit_timestamp:         Optional[str]    = None
 
+    def __post_init__(self):
+        if not self.trade_id or not str(self.trade_id).strip():
+            raise ValueError(
+                "DecisionRecord.trade_id is required — an unidentifiable record cannot "
+                "be correlated to its Stockfish decision history or closed by exact id. "
+                "Use execution_ledger.mint_trade_id().")
+        if self.mode is not None:
+            from sovereign.intelligence.execution_ledger import MODES
+            if self.mode not in MODES:
+                raise ValueError(f"unknown mode {self.mode!r}; known: {list(MODES)}")
+
 
 import logging as _logging
 _dlog = _logging.getLogger("decision_logger")
+
+
+def _derive_trade_id(system: str, pair: str, entry_timestamp: str) -> str:
+    """Fallback join key for the legacy ICT/forex lane, which has no session-level
+    trade id of its own.
+
+    Deliberately DETERMINISTIC (no uuid, no clock read): the same signal replayed
+    must produce the same id, or a re-run creates a second record for one trade.
+    The daytrade lane does NOT use this — it passes the runner's own
+    `f"{symbol}-{session_date}"` so the ledger and the Stockfish event log share
+    one key exactly.
+    """
+    return f"{system}-{_norm_pair(pair) or 'UNKNOWN'}-{str(entry_timestamp).strip()}"
 
 
 def _append(record: DecisionRecord) -> None:
@@ -148,6 +191,9 @@ def log_ict_decision(
     rate_diff_z: Optional[float] = None,
     present_state_snapshot: Optional[dict] = None,
     active_lessons: Optional[list[str]] = None,
+    trade_id: Optional[str] = None,
+    mode: Optional[str] = None,
+    strategy_version: Optional[str] = None,
 ) -> DecisionRecord:
     """
     Build and persist a decision record from an approved ICTSignal.
@@ -195,8 +241,13 @@ def log_ict_decision(
     tp1 = getattr(sz, "tp1", None)
     tp2 = getattr(sz, "tp2", None)
 
+    entry_ts = (signal.timestamp.isoformat() if hasattr(signal.timestamp, "isoformat")
+                else str(signal.timestamp))
     record = DecisionRecord(
-        entry_timestamp=signal.timestamp.isoformat() if hasattr(signal.timestamp, "isoformat") else str(signal.timestamp),
+        entry_timestamp=entry_ts,
+        trade_id=trade_id or _derive_trade_id("ICT", signal.symbol, entry_ts),
+        mode=mode,
+        strategy_version=strategy_version,
         system="ICT",
         pair=signal.symbol,
         direction=signal.direction,
@@ -252,10 +303,18 @@ def log_forex_decision(
     extra: Optional[dict] = None,
     present_state_snapshot: Optional[dict] = None,
     active_lessons: Optional[list[str]] = None,
+    trade_id: Optional[str] = None,
+    mode: Optional[str] = None,
+    strategy_version: Optional[str] = None,
 ) -> DecisionRecord:
     """
     Build and persist a decision record for an approved forex macro signal.
-    Call from the live scan or paper trading execution path.
+
+    CALL THIS FROM AN EXECUTION PATH ONLY — a confirmed entry, paper or live.
+    It is NOT for scanner output: `ForexSpecialist.run()` used to call it for
+    every tradeable candidate it merely *saw*, which filled the decision log
+    with trades nobody took and made every downstream win-rate wrong. Scan
+    candidates now go to `execution_ledger.log_scan_candidate()`.
 
     present_state_snapshot / active_lessons (Loop 2): entry-time context. The
     sovereign/forex path MAY pass the full PresentState snapshot here.
@@ -285,8 +344,12 @@ def log_forex_decision(
     final_risk = f"= {risk_pct:.2%} risk"
     why_size = " × ".join(size_parts) + " " + final_risk if size_parts else final_risk
 
+    entry_ts = _now_iso()
     record = DecisionRecord(
-        entry_timestamp=_now_iso(),
+        entry_timestamp=entry_ts,
+        trade_id=trade_id or _derive_trade_id("FOREX", pair, entry_ts),
+        mode=mode,
+        strategy_version=strategy_version,
         system="FOREX",
         pair=pair,
         direction=direction,
