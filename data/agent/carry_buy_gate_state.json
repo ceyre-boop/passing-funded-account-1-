@@ -1,6 +1,6 @@
 {
- "timestamp": "2026-08-12T13:19:32",
- "evaluator_rev": "53fd9f4",
+ "timestamp": "2026-08-12T14:26:01",
+ "evaluator_rev": "1d712f7",
  "spec": "021",
  "firm": "cti_1step",
  "series": "sealed 2015-2024",
@@ -25,7 +25,7 @@
   "G2": {
    "status": "GREEN",
    "report": "ATTRIBUTED",
-   "asof": "2026-08-10T12:53:16"
+   "asof": "2026-08-12T13:25:55"
   },
   "G3": {
    "status": "RED",
@@ -40,7 +40,7 @@
    "status": "RED",
    "n": 0,
    "need": 80,
-   "why": "paper log not started"
+   "why": "paper sprint incomplete (n=0/80)"
   }
  },
  "verdict": "NOT READY",
