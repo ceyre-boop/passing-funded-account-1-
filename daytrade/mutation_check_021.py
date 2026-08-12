@@ -5,12 +5,13 @@ Every row below is a real fault injected into a real source line, bound to a
 named test that must go RED under it and GREEN again after revert. Same
 red-then-green protocol as mutation_check_012.py.
 
-SCOPE — read this before quoting a count. This is a PARTIAL set: 10 rows
+SCOPE — read this before quoting a count. This is a PARTIAL set: 14 rows
 covering the invariants the spec-021 remediation week actually touched
-(contract schema, DD type, campaign mechanics, verdict staleness, position
-sizing). It is NOT the full 27-row set described in specs/021_CARRY_BUY_GATE.md.
-The uncovered rows are listed in UNCOVERED below so the gap is visible rather
-than implied-away by a green run.
+(contract schema, DD type, daily-floor binding, campaign mechanics, verdict
+staleness, position sizing and its FX currency conversion). It is NOT the full
+27-row set described in specs/021_CARRY_BUY_GATE.md. The uncovered invariants
+are listed in UNCOVERED below and printed on every green run, so a pass cannot
+be misread as full coverage.
 
 Phase 3 (diagnose_repro_gap.py) is deliberately absent: it is a runtime
 assert invariant, not a fault-injection target, and the log records it as prose.
@@ -53,6 +54,12 @@ MUTATIONS = [
      "    - target_pct: 0.10\n      min_trading_days: 0\n      max_days: null\n  max_dd: {type: static, pct: 0.10, basis: balance, mark: close}\n  daily_dd: {pct: 0.05, basis: balance, mark: close}\n  permissions: {weekend_hold: true, overnight_hold: true, news_hold: true}\n  costs:\n    fee_usd: 490.0",
      "M4: alpha_swing phase-2 target transcribed as 10% not 5%"),
 
+    ("sovereign/propfirm/test_firm_contracts.py::test_no_daily_limit_means_daily_floor_never_binds",
+     ROOT / "sovereign" / "risk" / "layers" / "prop.py",
+     "binding_floor = max(daily_floor, dd_floor) + buffer_abs",
+     "binding_floor = dd_floor + buffer_abs",
+     "M5: daily floor dropped from the binding-floor calculation"),
+
     # ---- Phase 2: evaluator / campaign mechanics --------------------------
     ("scripts/test_carry_buy_gate.py::test_trailing_on_cti_flips_verdict",
      SCRIPTS / "carry_buy_gate.py",
@@ -78,6 +85,13 @@ MUTATIONS = [
      "G5_R_BAND = 99.0",
      "E4: paper-vs-golden R band widened to accept anything"),
 
+    # ---- Journal projection (shared decision-log schema) -------------------
+    ("experience/test_journal_sync.py::test_non_trade_records_are_not_projected_as_entries",
+     ROOT / "experience" / "journal_sync.py",
+     'if r.get("direction") not in ("LONG", "SHORT"):\n                continue',
+     'if False:\n                continue',
+     "J1: waiver/correction rows leak into the journal as phantom ENTERs"),
+
     # ---- Phase 4: daily verdict page --------------------------------------
     ("scripts/test_daily_verdict_page.py::test_eight_day_old_green_is_not_ready",
      SCRIPTS / "build_daily_verdict_page.py",
@@ -97,17 +111,30 @@ MUTATIONS = [
      "if rel_diff > 0.01:",
      "if False:",
      "P2: position-size reconciliation check disabled"),
+
+    ("scripts/test_paper_carry_log.py::test_usd_base_pair_converts_quote_currency_to_usd",
+     SCRIPTS / "paper_carry_log.py",
+     "    if sym.startswith(\"USD\"):\n        return d / entry",
+     "    if sym.startswith(\"USD\"):\n        return d",
+     "P3: USDJPY quote-currency conversion dropped (~150x risk overstatement)"),
+
+    ("scripts/test_paper_carry_log.py::test_unconvertible_pair_refuses_rather_than_guessing",
+     SCRIPTS / "paper_carry_log.py",
+     "    raise SystemExit(\n        f\"cannot reconcile dollar risk for {pair!r}: neither leg is USD. \"\n        f\"Add an explicit conversion for this pair rather than assuming.\")",
+     "    return d",
+     "P4: unconvertible pair silently falls back instead of refusing"),
 ]
 
 # Invariants from specs/021_CARRY_BUY_GATE.md with NO row above. Stated so a
 # green run cannot be read as full coverage.
 UNCOVERED = [
-    "M5-M7: phase_index bounds, mark/basis preservation, open-position budget",
-    "E5-E10: deadline handling, min_trading_days, two-phase campaign, bust/restart, "
-    "G4 weekend violations, formatter control-pairing",
-    "V2-V5: missing gate key, wrong gate names, one-red-gate, verdict-word-alone",
-    "P3-P6: haircut import (no local literal), zero-risk rejection, double-close, "
-    "G5 closed-only counting",
+    "contract: phase_index bounds, mark/basis preservation, open-position budget",
+    "evaluator: deadline handling, min_trading_days, two-phase campaign, "
+    "bust/restart, G4 weekend violations, formatter control-pairing",
+    "verdict page: missing gate key, wrong gate names, one-red-gate, "
+    "verdict-word-alone",
+    "paper log: haircut imported not re-declared, zero-risk rejection, "
+    "double-close, G5 counts closed trades only",
 ]
 
 

@@ -57,19 +57,46 @@ def compute_r(direction: str, entry: float, stop: float, exit_: float,
     return pnl_frac / risk_frac - swap_haircut_r_per_day * max(hold_days, 1)
 
 
+def usd_risk_per_unit(pair: str, entry: float, stop: float) -> float:
+    """USD risk per unit of base currency.
+
+    compute_r() is deliberately currency-neutral (risk_frac = |entry-stop|/entry),
+    but a DOLLAR reconciliation is not: entry-stop is denominated in the QUOTE
+    currency, so it is only already-USD when the quote leg is USD.
+
+      EURUSD / GBPUSD / AUDUSD : quote is USD          -> |dP|     USD per unit
+      USDJPY                   : quote is JPY, P=USDJPY-> |dP| / P USD per unit
+
+    Treating the second case as the first overstates risk by a factor of P
+    (~150x on USDJPY), which would refuse every correctly-sized trade on that
+    pair. Anything matching neither convention raises — no guessing on a
+    correctness-critical input.
+    """
+    sym = pair.replace("=X", "").upper()
+    d = abs(entry - stop)
+    if sym.endswith("USD"):
+        return d
+    if sym.startswith("USD"):
+        return d / entry
+    raise SystemExit(
+        f"cannot reconcile dollar risk for {pair!r}: neither leg is USD. "
+        f"Add an explicit conversion for this pair rather than assuming.")
+
+
 def cmd_open(args):
     if args.direction not in ("LONG", "SHORT"):
         raise SystemExit("direction must be LONG or SHORT")
     # Reconcile position size against stated risk
-    account_size = load_contract("cti_1step").account_size
+    account_size = load_contract(args.firm).account_size
     stated_dollar_risk = args.risk * account_size
-    implied_dollar_risk = args.qty * abs(args.entry - args.stop)
+    implied_dollar_risk = args.qty * usd_risk_per_unit(args.pair, args.entry, args.stop)
     rel_diff = abs(implied_dollar_risk - stated_dollar_risk) / stated_dollar_risk
     if rel_diff > 0.01:
         raise SystemExit(
             f"position size mismatch: stated risk ${stated_dollar_risk:,.0f} "
             f"({args.risk:.2%} of ${account_size:,.0f}), implied ${implied_dollar_risk:,.0f} "
-            f"({args.qty} units × {abs(args.entry - args.stop):.5f} risk/pip). "
+            f"({args.qty} units × "
+            f"{usd_risk_per_unit(args.pair, args.entry, args.stop):.6f} USD/unit). "
             f"Difference {rel_diff:.1%} exceeds 1% tolerance. Check --qty."
         )
     trade_id = uuid.uuid4().hex[:10]
@@ -136,6 +163,8 @@ def main():
     o.add_argument("--stop", type=float, required=True)
     o.add_argument("--risk", type=float, required=True)
     o.add_argument("--qty", type=float, required=True, help="position size (units/contracts)")
+    o.add_argument("--firm", default="cti_1step",
+                   help="contract supplying account_size for the risk reconciliation")
     o.add_argument("--date", default=date.today().isoformat())
     o.set_defaults(fn=cmd_open)
     c = sub.add_parser("close")

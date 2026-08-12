@@ -89,7 +89,7 @@ def isolated_open(tmp_path, monkeypatch):
 
 def _args(**over):
     base = dict(pair="EURUSD=X", direction="LONG", entry=1.1000, stop=1.0900,
-                risk=0.01, qty=100_000, date="2026-08-12")
+                risk=0.01, qty=100_000, firm="cti_1step", date="2026-08-12")
     base.update(over)
     return type("Args", (), base)()
 
@@ -114,3 +114,34 @@ def test_position_size_reconciliation_rejects_divergent_qty(isolated_open):
     assert "stated risk" in msg and "implied" in msg
     assert pcl._read() == [], "refused trade must not reach the paper ledger"
     assert isolated_open == [], "refused trade must not reach the decision log"
+
+
+def test_usd_quoted_pairs_use_raw_price_difference():
+    for pair in ("EURUSD=X", "GBPUSD=X", "AUDUSD=X"):
+        assert pcl.usd_risk_per_unit(pair, 1.1000, 1.0900) == pytest.approx(0.0100)
+
+
+def test_usd_base_pair_converts_quote_currency_to_usd():
+    """USDJPY's price difference is JPY, not USD. Treating it as USD overstates
+    risk by ~the USDJPY rate and refuses every correctly-sized trade."""
+    per_unit = pcl.usd_risk_per_unit("USDJPY=X", 150.00, 148.50)
+    assert per_unit == pytest.approx(1.50 / 150.00)      # 0.01 USD per unit
+    assert per_unit != pytest.approx(1.50)               # the fault being guarded
+
+
+def test_unconvertible_pair_refuses_rather_than_guessing():
+    with pytest.raises(SystemExit) as exc:
+        pcl.usd_risk_per_unit("EURJPY=X", 160.00, 158.50)
+    assert "neither leg is USD" in str(exc.value)
+
+
+def test_correctly_sized_usdjpy_trade_is_accepted(isolated_open):
+    """Regression: 100k units of USDJPY at a 1.50 stop is exactly 1% of a 100k
+    account. The pre-fix check computed $150,000 implied risk and refused it."""
+    pcl.cmd_open(_args(pair="USDJPY=X", entry=150.00, stop=148.50, qty=100_000))
+    assert len(pcl._read()) == 1
+
+
+def test_oversized_usdjpy_trade_is_still_refused(isolated_open):
+    with pytest.raises(SystemExit):
+        pcl.cmd_open(_args(pair="USDJPY=X", entry=150.00, stop=148.50, qty=200_000))

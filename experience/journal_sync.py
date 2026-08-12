@@ -70,6 +70,13 @@ def rows_from_decision_logs(window: tuple[str, str] | None = None) -> list[dict]
                 continue
             if r.get("system") != "FOREX":
                 continue
+            # The decision log also carries non-trade records that reuse this
+            # schema (provenance waivers, log corrections) with sentinel pairs
+            # and risk_pct 0. They are decisions, not entries — emitting them
+            # here would put phantom "ENTER" rows on pairs that do not exist
+            # into the journal. Real trades are LONG or SHORT; nothing else is.
+            if r.get("direction") not in ("LONG", "SHORT"):
+                continue
             d = str(r.get("entry_timestamp", ""))[:10]
             if window and not (window[0] <= d <= window[1]):
                 continue

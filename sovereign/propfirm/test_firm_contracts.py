@@ -71,16 +71,22 @@ def test_no_daily_limit_means_daily_floor_never_binds():
     # itself is a tautology that survives any mutation of the constant.
     assert cti.to_prop_cfg()["daily_loss_limit_pct"] == 1.0
     assert NO_DAILY_LIMIT_PCT == 1.0, "sentinel must mean '100%, never binds'"
-    # Account at 96k with peak 100k. Trailing 5% floor: 100k - 5% = 95k.
+    # The scenario must leave the max-DD floor NOT binding, otherwise both arms
+    # return 0.0 and the comparison cannot observe the daily floor at all.
+    # Day opened at the 100k high-water mark and is down 4k: equity 96k.
+    # Trailing max-DD floor = 100k * 0.95 = 95k, which is below equity.
     state = _state(equity=96_000.0, daily_realized=-4_000.0, peak=100_000.0)
-    assert _ceiling(cti, state) == pytest.approx((96_000 - 95_000) / 96_000)
-    # Deeper scenario: equity 93k, peak 100k. Trailing floor 95k > equity 93k -> 0
-    state2 = _state(equity=93_000.0, daily_realized=-7_000.0, peak=100_000.0)
-    assert _ceiling(cti, state2) == 0.0
-    # Compare: if CTI had a daily budget like FTMO, the daily floor would also bind.
-    daily = replace(cti, daily_dd=DrawdownRule(pct=0.05, basis="balance", mark="close"))
-    # daily floor: start 100k - 5% = 95k > equity 93k -> zero risk permitted
-    assert _ceiling(daily, state2) == 0.0
+    ceiling_no_daily = _ceiling(cti, state)
+    assert ceiling_no_daily == pytest.approx((96_000 - 95_000) / 96_000)
+    assert ceiling_no_daily > 0.0, "max-DD floor must not bind, or this proves nothing"
+
+    # Same state, but give CTI a daily budget tighter than the 5% max-DD floor
+    # (3% -> daily floor 97k) so the two floors are separable. It now binds and
+    # zeroes the ceiling. That difference IS the invariant: absent daily_dd, the
+    # NO_DAILY_LIMIT_PCT sentinel must make the daily floor unreachable.
+    daily = replace(cti, daily_dd=DrawdownRule(pct=0.03, basis="balance", mark="close"))
+    assert _ceiling(daily, state) == 0.0
+    assert _ceiling(daily, state) != ceiling_no_daily
 
 
 def test_alpha_swing_two_phase_targets():
