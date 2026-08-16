@@ -114,5 +114,5 @@ replay sprint, or re-derive G5's n with written justification.
 
 ## Colin's action item
 
-- [ ] **Revoke the GitHub PAT pasted into chat on 2026-08-12.** Never used, but
-      it is exposed. github.com → Settings → Developer settings → PATs.
+- [ ] Credential hygiene item outstanding — see the private session notes, not
+      recorded here. (This repo is public; exposure details do not belong in it.)
