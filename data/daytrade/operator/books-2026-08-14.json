@@ -1,0 +1,87 @@
+{
+ "symbol": "NVDA",
+ "session": "2026-08-14",
+ "bars_fingerprint": "7ba530746517022f",
+ "n_records": 1,
+ "generated_at": "2026-08-16T03:01:15.178100+00:00",
+ "note_full_book": "v1: full == veto until an entry-proposal schema is ratified (spec 023)",
+ "books": {
+  "baseline": {
+   "book": "baseline",
+   "entered": true,
+   "entry_ts": "2026-08-14T09:30:00-04:00",
+   "r": 19.5841,
+   "legs": [
+    {
+     "qty": 81.5,
+     "price": 226.00999450683594,
+     "reason": "TP2: day goal banked",
+     "ts": "2026-08-14T09:35:00-04:00"
+    },
+    {
+     "qty": 81.5,
+     "price": 225.0749969482422,
+     "reason": "stop hit",
+     "ts": "2026-08-14T10:15:00-04:00"
+    }
+   ],
+   "urgency_bars": 0,
+   "bars_fingerprint": "7ba530746517022f",
+   "why": "entered and ran the engine"
+  },
+  "veto": {
+   "book": "veto",
+   "entered": true,
+   "entry_ts": "2026-08-14T09:30:00-04:00",
+   "r": 19.5841,
+   "legs": [
+    {
+     "qty": 81.5,
+     "price": 226.00999450683594,
+     "reason": "TP2: day goal banked",
+     "ts": "2026-08-14T09:35:00-04:00"
+    },
+    {
+     "qty": 81.5,
+     "price": 225.0749969482422,
+     "reason": "stop hit",
+     "ts": "2026-08-14T10:15:00-04:00"
+    }
+   ],
+   "urgency_bars": 0,
+   "bars_fingerprint": "7ba530746517022f",
+   "why": "entered and ran the engine"
+  },
+  "select": {
+   "book": "select",
+   "entered": false,
+   "r": 0.0,
+   "legs": [],
+   "bars_fingerprint": "7ba530746517022f",
+   "why": "no ALLOW_BASELINE record covers this entry"
+  },
+  "full": {
+   "book": "full",
+   "entered": true,
+   "entry_ts": "2026-08-14T09:30:00-04:00",
+   "r": 19.5841,
+   "legs": [
+    {
+     "qty": 81.5,
+     "price": 226.00999450683594,
+     "reason": "TP2: day goal banked",
+     "ts": "2026-08-14T09:35:00-04:00"
+    },
+    {
+     "qty": 81.5,
+     "price": 225.0749969482422,
+     "reason": "stop hit",
+     "ts": "2026-08-14T10:15:00-04:00"
+    }
+   ],
+   "urgency_bars": 0,
+   "bars_fingerprint": "7ba530746517022f",
+   "why": "entered and ran the engine"
+  }
+ }
+}

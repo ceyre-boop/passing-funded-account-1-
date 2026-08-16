@@ -1,6 +1,19 @@
 # daytrade/ — STOCKFISH + ALPHAZERO v1
 Built 2026-08-03, day 1 of the campaign (first green day: +$300 NVDA, ledger row 1).
 
+> **2026-08-15 update — the operator exists.** The v1 wiring below is still
+> accurate for the runner/engine spine, but the AlphaZero side has grown past
+> the keyword bias loop. `alpha_operator.py` (spec 023) is the autonomous
+> research desk: deterministic triggers (position/news/level/bar/premarket) →
+> evidence packet → one structured Claude judgment → sealed record in
+> `data/daytrade/operator/records.jsonl` → 017 forecast recorded before the
+> outcome → bounded 018 directive (TIGHTEN-only, authority 1, EXIT sealed but
+> suppressed) into `data/daytrade/directives.json`, which the runner's
+> directive channel already reads. `alpha_operator.py resolve` closes
+> forecasts from the tape; `grade` runs the promotion scorecard;
+> `four_books.py` compares baseline / veto / select / full books on identical
+> bars. See `specs/023_ALPHA_OPERATOR.md` and `specs/023_MUTATION_LOG.md`.
+
 ## The wiring
 ```
 ALPHAZERO (alphazero_bias.py, runs on Colin's machine, --loop 300)

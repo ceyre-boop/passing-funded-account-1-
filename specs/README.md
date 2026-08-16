@@ -28,6 +28,7 @@ the build sequence.
 | 016 | AZ_DIRECTIVES_AUTHORITY | `context_directive.py` additions + runner wiring | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED; **018 is now WIRED** (runner directive channel, tighten-ceiling authority, tested byte-parity without the file); not EXERCISED (no live session has carried a directive); pending certification | Gate 5 |
 | 017 | AZ_FORECAST_PROMOTION | `daytrade/forecast.py` | `[SPEC]`+built 2026-08-09 — IMPLEMENTED → UNIT VERIFIED (17/17, `017_MUTATION_LOG.md`); promotion_ref interlocks with 016's registry; no producer wired; pending certification | Gate 6 |
 | 022 | EXECUTION_LEDGER (sim lifecycle correlation) | `sovereign/intelligence/execution_ledger.py`, `DecisionRecord.trade_id`, runner entry/partial/exit wiring, `forex_specialist` de-coupling | no `[SPEC]` card — built to a direct instruction from Colin 2026-08-12, so **the spec is owed retroactively**. IMPLEMENTED → UNIT VERIFIED (42 tests; 3 core invariants fault-injected: corruption-raises, multi-leg R, idempotency) → **WIRED** (runner entry + TAKE_PARTIAL legs + EXIT_ALL) → **EXERCISED on the replay path only** (`--replay` produces one closed correlated row; no live/paper session). Engine files byte-unchanged; v3 replay byte-identical. **Not certified — implemented and self-tested by one seat, which the Roles section says is not sufficient.** | independent of daytrade gates |
+| 023 | ALPHA_OPERATOR | `daytrade/alpha_operator.py` (operator + resolver), `daytrade/four_books.py` (comparison harness), `daytrade/test_alpha_operator.py`, `daytrade/test_four_books.py` | `[SPEC]`+built 2026-08-15 — spec written FIRST (022 lesson), then IMPLEMENTED → UNIT VERIFIED (34 tests, 11/11 fault rows `023_MUTATION_LOG.md`; M9 survived once, harness fixed, re-killed). The Gate 5/6 producer: writes sealed records, 015 Evidence + 017 Forecast persistence (JSONL replay), and bounded 018 directives into the runner's WIRED channel. Unpromoted: TIGHTEN-only at authority 1, EXIT sealed-but-suppressed. Not EXERCISED by a live market session yet; implemented and self-tested by one seat — certification owed per Roles. | Gates 5+6 |
 | 021 | CARRY_BUY_GATE | `sovereign/propfirm/firm_contracts.py`, `scripts/carry_buy_gate.py`, `diagnose_repro_gap.py`, `paper_carry_log.py`, repointed verdict page | `[SPEC]` — pre-registered 2026-08-10 (plan: `Plans/soft-churning-pelican.md`); carry lane, not daytrade; supersedes eval_lab*/instant_pro_sim/colin_v2_campaign_sim/oos_campaign_test campaigns | independent of daytrade gates |
 
 ## Status legend
@@ -55,9 +56,14 @@ card, none is silent debt:
   see the 012 row above). Remaining sliver: live-session (non-replay) evidence.
 - **Gate 3:** execution policy is not wired to the broker transport
 - **Gate 4:** shadow/regret is isolated, not operationally integrated
-- **Gate 5:** evidence/directive PRODUCTION wiring is partial (the runner's
-  directive channel is WIRED; news_claude does not yet emit Evidence objects)
-- **Gate 6:** no forecast producer is wired
+- **Gate 5:** producer built 2026-08-15 (023): alpha_operator emits Evidence
+  objects (model-classified, enum-validated) and validated directives into the
+  runner's WIRED channel. news_claude itself still emits headline-shaped
+  output — by design, not debt: the operator is the single Evidence producer;
+  a second producer inside news_claude would duplicate provenance (023 note).
+- **Gate 6:** forecast producer built 2026-08-15 (023): every operator run
+  records a 017 Forecast before resolution; `alpha_operator.py resolve` closes
+  them from the tape and `grade` runs the promotion scorecard.
 - **Gate 7:** portfolio guards sit on no pre-trade path
 
 ## Already built (not specs — real code)
