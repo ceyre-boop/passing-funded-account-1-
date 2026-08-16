@@ -26,6 +26,47 @@ the DoD exists to catch. Fix: each `run_book` now fingerprints the frame it was
 actually handed; `run_session` compares the four independently-computed hashes.
 Re-run: KILLED.
 
+## Round 2 — after the Cato cross-vendor audit (2026-08-16)
+
+Cato (GPT-5.4, read-only) returned `concerns`: 4 high, 5 medium, 2 low. All
+eleven findings fixed same night. The headline finding: the I7 test compared
+`load_ledger()` to `load_ledger()` — replay vs replay, tautological, the same
+decorative-assertion class M9 exposed in the harness. Fixes shipped:
+
+1. I7 test now captures each Forecast at genuine write time (spy with
+   setdefault so run_once's own replays can't re-tautologise it) and compares
+   the disk replay against those originals.
+2. `resolve_open` raises on a forecast with no sealed record; `bar_age_min
+   None` now counts as stale (it was silently False — a promotion-gate input
+   biased toward promotion on missing data).
+3. `check_triggers` returns the observed-world snapshot; state advances from
+   that snapshot, never a post-judgment re-observation (lost-update window
+   closed, Polygon call count halved).
+4. `_write_directive` round-trips EVERY element (pre-existing included)
+   through the 018 contract and refuses anything above the unpromoted cap;
+   per-PID tmp name.
+5. horizon/expires/confidence bounds moved into the pydantic schema (refused,
+   not clamped); TTL computed once — directive expiry and record expiry are
+   provably the same instant.
+6. All validation now precedes all writes — a refused judgment leaves zero
+   orphaned rows.
+7. Resolver shock baseline is the literal prior-20-bars-before-as_of median;
+   <20 bars or zero median leaves the forecast open, never a guess.
+8. Market/sector evidence stores empty `symbols` (provenance honest).
+9. Four-book fingerprint: per-book df copies; len-check before pop.
+10. `state.json` and `directives.json` loads raise OperatorError like the
+    JSONL readers; I10 test parametrised across RECORDS/EV_LOG/FC_LOG.
+11. State snapshot saved in `finally` after the priced call — a persistently
+    malformed response costs one call, not one per invocation.
+
+| # | fault injected | killed by | result |
+|---|---|---|---|
+| M11 | replay drops evidence_ids | test_i7_replay_matches_forecasts_captured_at_write_time | KILLED |
+| M12 | unpromoted-cap check on existing payloads removed | test_hostile_preexisting_directive_is_refused_not_repersisted | KILLED |
+| M13 | evidence written before forecast validation | test_refused_judgment_leaves_no_orphaned_evidence | KILLED |
+
+Suite after round 2: 261/261.
+
 ## Not mutation-testable tonight (stated, not hidden)
 
 - I5 (no trigger → zero API calls) is covered by a direct test with a spy on

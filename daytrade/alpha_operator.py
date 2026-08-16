@@ -117,14 +117,17 @@ class OperatorRead(BaseModel):
     prob_failed_breakout: float
     prob_risk_event: float
     direction: Literal["up", "down", "flat"]
-    horizon_min: int = Field(description="minutes until this forecast can be judged, 15-240")
+    horizon_min: int = Field(ge=15, le=240,
+                             description="minutes until this forecast can be judged, 15-240")
     verdict: Literal["ABSTAIN", "ALLOW_BASELINE", "TIGHTEN", "EXIT"]
     abstain_reason: Optional[Literal["NO_OPINION", "LOW_CONFIDENCE",
                                      "CONFLICTING_EVIDENCE", "STALE_CONTEXT",
                                      "DATA_INCOMPLETE"]] = Field(
         default=None, description="required iff verdict is ABSTAIN")
-    confidence: float = Field(description="0..1, calibrated — this is scored against baselines")
-    expires_min: int = Field(description="minutes any resulting directive stays valid, 5-120")
+    confidence: float = Field(ge=0.0, le=1.0,
+                              description="0..1, calibrated — this is scored against baselines")
+    expires_min: int = Field(ge=5, le=120,
+                             description="minutes any resulting directive stays valid, 5-120")
     evidence: list[EvidenceItem] = Field(description="the headlines that actually matter, classified")
 
 
@@ -216,7 +219,11 @@ def load_evidence_store() -> EvidenceStore:
 def _load_state() -> dict:
     if not STATE.exists():
         return {}
-    return json.loads(STATE.read_text())
+    try:
+        return json.loads(STATE.read_text())
+    except json.JSONDecodeError as e:
+        raise OperatorError(f"{STATE.name} is not JSON ({e}) — refusing to skip "
+                            "a corrupt audit line") from e
 
 
 def _save_state(st: dict) -> None:
@@ -263,13 +270,19 @@ def _event_line_count() -> int:
     return sum(sum(1 for _ in p.open()) for p in sorted(OUT.glob("events*.jsonl")))
 
 
-def check_triggers(symbol: str, st: dict, *, refresh: bool) -> list[tuple[str, str]]:
-    """Every deterministic reason Claude might need to run, priority order.
-    An unchanged world returns [] and costs nothing."""
+def check_triggers(symbol: str, st: dict, *, refresh: bool
+                   ) -> tuple[list[tuple[str, str]], dict]:
+    """Every deterministic reason Claude might need to run, priority order,
+    plus a SNAPSHOT of the world as observed. The snapshot — not a later
+    re-observation — is what advances the dedup state, so an event arriving
+    between observation and judgment cannot be marked seen-but-never-shown
+    (Cato finding 3). An unchanged world returns ([], snapshot), costs nothing."""
     fired: list[tuple[str, str]] = []
+    snapshot: dict = {}
     now_et = datetime.now(ET)
 
     n_events = _event_line_count()
+    snapshot["event_lines"] = n_events
     if n_events != st.get("event_lines", 0):
         fired.append(("position", f"event stream {st.get('event_lines', 0)} -> {n_events} lines"))
 
@@ -277,6 +290,7 @@ def check_triggers(symbol: str, st: dict, *, refresh: bool) -> list[tuple[str, s
         from polygon_news import fetch_headlines
         heads = fetch_headlines(symbol)
         fp = news_claude.headline_fingerprint(heads)
+        snapshot["news_fp"] = fp
         if fp != st.get("news_fp"):
             fired.append(("news", f"headline set changed ({len(heads)} headlines)"))
     else:
@@ -284,6 +298,7 @@ def check_triggers(symbol: str, st: dict, *, refresh: bool) -> list[tuple[str, s
 
     bar_ts = _latest_bar_ts(symbol, refresh=refresh)
     if bar_ts is not None:
+        snapshot["bar_ts"] = bar_ts
         if PLAN.exists():
             closes = _last_two_closes(symbol)
             if closes:
@@ -295,26 +310,13 @@ def check_triggers(symbol: str, st: dict, *, refresh: bool) -> list[tuple[str, s
         if bar_ts != st.get("bar_ts"):
             fired.append(("bar", f"new 5m bar {bar_ts}"))
 
-    if now_et.strftime("%H:%M") < "09:30" and st.get("premarket_date") != str(now_et.date()):
-        fired.append(("premarket", f"first run of {now_et.date()} before the open"))
+    if now_et.strftime("%H:%M") < "09:30":
+        snapshot["premarket_date"] = str(now_et.date())
+        if st.get("premarket_date") != str(now_et.date()):
+            fired.append(("premarket", f"first run of {now_et.date()} before the open"))
 
     prio = {"position": 0, "news": 1, "level": 2, "bar": 3, "premarket": 4}
-    return sorted(fired, key=lambda t: prio[t[0]])
-
-
-def _mark_state(symbol: str, st: dict) -> dict:
-    """Advance trigger dedup state to the world just observed."""
-    st["event_lines"] = _event_line_count()
-    if os.environ.get("POLYGON_API_KEY"):
-        from polygon_news import fetch_headlines
-        st["news_fp"] = news_claude.headline_fingerprint(fetch_headlines(symbol))
-    ts = _latest_bar_ts(symbol, refresh=False)
-    if ts:
-        st["bar_ts"] = ts
-    now_et = datetime.now(ET)
-    if now_et.strftime("%H:%M") < "09:30":
-        st["premarket_date"] = str(now_et.date())
-    return st
+    return sorted(fired, key=lambda t: prio[t[0]]), snapshot
 
 
 # ------------------------------------------------------------ the packet
@@ -402,7 +404,12 @@ def _make_evidence(read: OperatorRead, symbol: str, now: datetime,
             evidence_id=f"{record_id}-ev{i}",
             evidence_type=item.evidence_type,
             scope=item.scope,
-            symbols=(symbol,) if item.scope in ("symbol", "trade") else (symbol,),
+            # Market/sector stories name no symbol — storing them as
+            # symbol-scoped would misrepresent provenance in the 015 store
+            # (Cato finding 8). Delivery to this symbol then correctly runs
+            # through relevant_to's index_linked rule, not through a claim
+            # the evidence never made.
+            symbols=(symbol,) if item.scope in ("symbol", "trade") else (),
             headline=item.headline,
             source="operator:model-classified",
             source_time=_iso(now), first_seen=_iso(now),
@@ -419,7 +426,9 @@ def _make_forecast(read: OperatorRead, symbol: str, now: datetime,
         model_version=f"{MODEL_VERSION_BASE}/{model}",
         prompt_version=PROMPT_VERSION,
         as_of=_iso(now), symbol=symbol,
-        horizon_min=max(15, min(240, read.horizon_min)),
+        horizon_min=read.horizon_min,        # bounds enforced by the schema; a
+                                             # violation raises rather than being
+                                             # silently repaired (Cato finding 5)
         scenario_probs=_scenario_probs(read),
         direction=read.direction,
         recommendation=None,
@@ -429,16 +438,16 @@ def _make_forecast(read: OperatorRead, symbol: str, now: datetime,
 
 
 def _make_directive(read: OperatorRead, symbol: str, now: datetime,
-                    record_id: str, model: str,
-                    evidence_ids: list[str]) -> tuple[Optional[ContextDirective], Optional[str]]:
+                    record_id: str, model: str, evidence_ids: list[str],
+                    ttl: int) -> tuple[Optional[ContextDirective], Optional[str]]:
     """Verdict -> bounded directive. Returns (directive, suppressed_to).
     The interrupt is ALWAYS TIGHTEN at authority 1 — spec 023 ruling 2. An EXIT
     judgment is sealed verbatim elsewhere; here it is capped, and the cap is
-    itself recorded."""
+    itself recorded. `ttl` is computed ONCE by the caller so the directive's
+    expiry and the sealed record's expires_at cannot desynchronise."""
     if read.verdict in ("ABSTAIN", "ALLOW_BASELINE"):
         return None, None
     suppressed = "TIGHTEN" if read.verdict == "EXIT" else None
-    ttl = max(5, min(120, read.expires_min))
     d = ContextDirective(
         directive_id=f"dir-{record_id}",
         scope=Scope(symbols=[symbol]),
@@ -457,14 +466,31 @@ def _make_directive(read: OperatorRead, symbol: str, now: datetime,
 
 def _write_directive(d: ContextDirective) -> None:
     """Append to the runner's list, atomically. Expired history is ignored by
-    evaluate(), never deleted — history is what a scorecard grades."""
+    evaluate(), never deleted — history is what a scorecard grades.
+
+    EVERY element — pre-existing included — must round-trip the 018 contract
+    and sit at-or-below the unpromoted cap before this process will re-persist
+    it. An over-authority payload already sitting in the file is refused, not
+    laundered through under the operator's write (Cato finding 4)."""
     existing = []
     if DIRECTIVES.exists():
-        existing = json.loads(DIRECTIVES.read_text())
+        try:
+            existing = json.loads(DIRECTIVES.read_text())
+        except json.JSONDecodeError as e:
+            raise OperatorError(f"{DIRECTIVES.name} is not JSON ({e}) — "
+                                "refusing to overwrite what I cannot read") from e
         if not isinstance(existing, list):
             raise OperatorError(f"{DIRECTIVES.name} is not a list — refusing to overwrite")
     existing.append(d.to_dict())
-    tmp = DIRECTIVES.with_suffix(".tmp")
+    for p in existing:
+        cd = ContextDirective.from_dict(p)     # malformed -> raises, file untouched
+        if cd.authority_level > 1 or cd.interrupt not in (None, "TIGHTEN",
+                                                          "REDUCE_RISK"):
+            raise OperatorError(
+                f"directive {cd.directive_id!r} carries authority "
+                f"{cd.authority_level}/interrupt {cd.interrupt!r} — above the "
+                "unpromoted cap. The operator will not re-persist it.")
+    tmp = DIRECTIVES.with_suffix(f".tmp-{os.getpid()}")
     tmp.write_text(json.dumps(existing, indent=1))
     tmp.replace(DIRECTIVES)
 
@@ -474,10 +500,9 @@ def _write_directive(d: ContextDirective) -> None:
 def run_once(symbol: str, *, cap: float, model: str,
              force: Optional[str] = None, refresh: bool = True) -> int:
     st = _load_state()
+    fired, snapshot = check_triggers(symbol, st, refresh=refresh)
     if force:
         fired = [(force, "forced by --force")]
-    else:
-        fired = check_triggers(symbol, st, refresh=refresh)
     if not fired:
         print("  no trigger fired — no API call, no cost (spec 023 I5)")
         return 0
@@ -498,30 +523,46 @@ def run_once(symbol: str, *, cap: float, model: str,
 
     read, cost = news_claude._call(system, user, OperatorRead, model=model,
                                    cap=cap, effort="medium", kind="operator")
+    try:
+        return _seal_and_emit(read, cost, symbol, trigger, now, record_id,
+                              model, meta)
+    finally:
+        # The call above was PRICED. Whatever happens to the judgment after —
+        # a malformed response, a refused forecast — the observed-world
+        # snapshot advances, so a persistently bad response costs one call,
+        # never one per invocation (Cato finding 11).
+        _save_state({**st, **snapshot})
 
+
+def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
+                   now: datetime, record_id: str, model: str, meta: dict) -> int:
     if read.verdict == "ABSTAIN" and read.abstain_reason is None:
         raise OperatorError("verdict ABSTAIN with no abstain_reason — "
                             "anonymous silence cannot be scored")
 
+    # VALIDATE EVERYTHING BEFORE WRITING ANYTHING (Cato finding 6): evidence,
+    # forecast, directive, and abstention are all constructed — every contract
+    # check has run — before the first byte hits an append-only log. A refused
+    # judgment leaves no orphaned rows.
+    ttl = read.expires_min                      # schema-bounded; computed once
     evs = _make_evidence(read, symbol, now, record_id)
-    store = load_evidence_store()
-    for ev in evs:
-        store.add(ev)
-        _append_jsonl(EV_LOG, {"kind": "evidence", **ev.to_dict()})
     ev_ids = tuple(ev.evidence_id for ev in evs)
-
     fc = _make_forecast(read, symbol, now, record_id, model, ev_ids)
     ledger = load_ledger()
-    ledger.record(fc)                       # validates against the 017 contract
-    _append_jsonl(FC_LOG, {"kind": "forecast", **fc.to_dict()})
-
+    ledger.record(fc)                           # validates against the 017 contract
     directive, suppressed = _make_directive(read, symbol, now, record_id,
-                                            model, list(ev_ids))
+                                            model, list(ev_ids), ttl)
     abst = None
     if read.verdict == "ABSTAIN":
         abst = Abstention(model_version=f"{MODEL_VERSION_BASE}/{model}",
                           reason=read.abstain_reason,
                           detail=read.base, issued_at=_iso(now))
+
+    store = load_evidence_store()
+    for ev in evs:
+        store.add(ev)
+        _append_jsonl(EV_LOG, {"kind": "evidence", **ev.to_dict()})
+    _append_jsonl(FC_LOG, {"kind": "forecast", **fc.to_dict()})
 
     # SEAL FIRST (spec 023 I3): the record hits disk before the directive is
     # observable by the runner.
@@ -533,7 +574,7 @@ def run_once(symbol: str, *, cap: float, model: str,
         "both_sides": {"bull": read.bull, "base": read.base, "bear": read.bear},
         "invalidators": read.invalidators, "verdict": read.verdict,
         "confidence": read.confidence,
-        "expires_at": _iso(now + timedelta(minutes=max(5, min(120, read.expires_min)))),
+        "expires_at": _iso(now + timedelta(minutes=ttl)),
         "suppressed_to": suppressed,
         "directive": directive.to_dict() if directive else None,
         "abstention": abst.to_dict() if abst else None,
@@ -543,8 +584,6 @@ def run_once(symbol: str, *, cap: float, model: str,
         _write_directive(directive)
         note = f" (EXIT suppressed to TIGHTEN — unpromoted)" if suppressed else ""
         print(f"  directive {directive.directive_id} written{note}")
-
-    _save_state(_mark_state(symbol, st))
     print(f"\n  VERDICT: {read.verdict} ({read.confidence:.2f})   direction {read.direction}"
           f"   horizon {read.horizon_min}m")
     print(f"  bull: {read.bull}\n  base: {read.base}\n  bear: {read.bear}")
@@ -573,14 +612,24 @@ def _outcome(symbol: str, f: Forecast, window) -> tuple[str, str, bool]:
     end_close = float(window["Close"].iloc[-1])
     net = (end_close - start_close) / start_close
 
-    full = _bars_between(symbol, _aware(f.as_of) - timedelta(minutes=20 * 5 + f.horizon_min),
-                         _aware(f.as_of))
-    prior_tr = None
-    if full is not None and len(full) >= 5:
-        tr = (full["High"] - full["Low"]).abs()
-        prior_tr = float(tr.median())
+    # Baseline volatility: the LAST 20 bars strictly before as_of — the spec's
+    # "prior 20-bar median", not a horizon-scaled window (Cato finding 7).
+    import pandas as pd
+    path = bars_mod._cache_path(symbol, "5m")
+    df = pd.read_parquet(path).sort_index()
+    df.index = pd.to_datetime(df.index, utc=True)
+    prior = df[df.index < _aware(f.as_of)].iloc[-20:]
+    if len(prior) < 20:
+        raise OperatorError(
+            f"only {len(prior)} bars precede {f.as_of} — the 20-bar shock "
+            "baseline is undefined, refusing to resolve on a guess")
+    prior_tr = float((prior["High"] - prior["Low"]).abs().median())
+    if not (prior_tr > 0):
+        raise OperatorError(
+            f"prior 20-bar median true range is {prior_tr} — a zero/NaN "
+            "baseline would silently disable shock detection, refusing")
     win_tr = (window["High"] - window["Low"]).abs()
-    shock = bool(prior_tr and float(win_tr.max()) > SHOCK_TR_MULT * prior_tr)
+    shock = bool(float(win_tr.max()) > SHOCK_TR_MULT * prior_tr)
 
     if net > FLAT_BAND:
         direction = "up"
@@ -629,10 +678,23 @@ def resolve_open(now: Optional[datetime] = None) -> int:
         if window is None or len(window) < 2:
             print(f"  {fid}: bars missing for [{f.as_of} +{f.horizon_min}m] — stays OPEN")
             continue
-        scenario, direction, shock = _outcome(f.symbol, f, window)
-        rec = records.get(fid, {})
-        was_stale = (rec.get("bar_age_min") is not None
-                     and rec["bar_age_min"] > STALE_BAR_MIN)
+        try:
+            scenario, direction, shock = _outcome(f.symbol, f, window)
+        except OperatorError as e:
+            print(f"  {fid}: {e} — stays OPEN")
+            continue
+        rec = records.get(fid)
+        if rec is None:
+            # A forecast with no sealed record is a broken audit chain, and
+            # was_stale feeds the promotion gate — defaulting it would bias
+            # toward promotion on exactly the missing-data case (Cato finding 2).
+            raise OperatorError(
+                f"{fid} has no sealed record in {RECORDS.name} — refusing to "
+                "resolve a forecast whose provenance is missing")
+        # bar_age_min None means NO cached bars existed at call time — the
+        # stalest possible context, so it counts as stale, never as fresh.
+        was_stale = (rec.get("bar_age_min") is None
+                     or rec["bar_age_min"] > STALE_BAR_MIN)
         r = Resolution(forecast_id=fid, resolved_at=_iso(now),
                        outcome_scenario=scenario, outcome_direction=direction,
                        shock_occurred=shock, was_stale=was_stale)

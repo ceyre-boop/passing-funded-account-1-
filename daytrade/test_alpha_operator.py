@@ -70,8 +70,8 @@ def sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(ao, "build_packet",
                         lambda s: ("PACKET", [], {"bar_age_min": 3.0}))
     monkeypatch.setattr(ao, "check_triggers",
-                        lambda s, st, refresh: [("bar", "test fixture")])
-    monkeypatch.setattr(ao, "_mark_state", lambda s, st: st)
+                        lambda s, st, refresh: ([("bar", "test fixture")],
+                                                {"bar_ts": "fixture"}))
     ctl["tmp"] = tmp_path
     return ctl
 
@@ -134,7 +134,7 @@ def test_i3_sealed_record_exists_before_directive_is_observable(sandbox, monkeyp
 # --------------------------------------------------------------------- I5
 
 def test_i5_no_trigger_means_zero_api_calls(sandbox, monkeypatch):
-    monkeypatch.setattr(ao, "check_triggers", lambda s, st, refresh: [])
+    monkeypatch.setattr(ao, "check_triggers", lambda s, st, refresh: ([], {}))
     assert _run(sandbox) == 0
     assert sandbox["calls"] == 0
     assert not ao.RECORDS.exists()
@@ -179,14 +179,30 @@ def test_i9_exit_sealed_verbatim_directive_capped_with_suppression_noted(sandbox
 
 # --------------------------------------------------------------------- I7
 
-def test_i7_ledger_replay_reconstructs_identically(sandbox):
-    for verdict in ("TIGHTEN", "ALLOW_BASELINE", "EXIT"):
-        sandbox["read"] = _read(verdict=verdict)
-        _run(sandbox)
-    a, b = ao.load_ledger(), ao.load_ledger()
-    fa = {fid: f.to_dict() for fid, f in a._forecasts.items()}
-    fb = {fid: f.to_dict() for fid, f in b._forecasts.items()}
-    assert fa == fb and len(fa) == 3
+def test_i7_replay_matches_forecasts_captured_at_write_time(sandbox, monkeypatch):
+    """NOT replay-vs-replay (that was tautological — Cato finding 1): capture
+    each Forecast object the moment run_once records it, then assert the
+    from-disk replay reproduces those exact dicts."""
+    written = {}
+    real_record = ao.ForecastLedger.record
+
+    def spy(self, f):
+        # setdefault: the FIRST sighting of each id is the genuine in-memory
+        # write; later sightings are run_once's own replays and must not
+        # overwrite the captured original (that would re-tautologise the test).
+        written.setdefault(f.forecast_id, f.to_dict())
+        return real_record(self, f)
+
+    ao.ForecastLedger.record = spy
+    try:
+        for verdict in ("TIGHTEN", "ALLOW_BASELINE", "EXIT"):
+            sandbox["read"] = _read(verdict=verdict)
+            _run(sandbox)
+    finally:
+        ao.ForecastLedger.record = real_record     # replay must NOT feed the spy
+    replayed = {fid: f.to_dict() for fid, f in ao.load_ledger()._forecasts.items()}
+    assert len(written) == 3
+    assert replayed == written
 
 
 # -------------------------------------------------------------------- I10
@@ -197,6 +213,121 @@ def test_i10_corrupt_persistence_line_raises_on_load(sandbox):
         fh.write("{not json\n")
     with pytest.raises(ao.OperatorError, match="corrupt audit line"):
         ao.load_ledger()
+
+
+# ------------------------------------------- Cato-round hardening tests
+
+def test_hostile_preexisting_directive_is_refused_not_repersisted(sandbox):
+    """An EMERGENCY/authority-4 payload already sitting in directives.json must
+    block the operator's write, never be laundered through it."""
+    hostile = {"directive_id": "evil", "scope": {"market": [], "sector": [],
+               "symbols": ["NVDA"], "trade_id": None},
+               "issued_at": "2026-08-14T13:00:00+00:00",
+               "expires_at": "2026-08-14T20:00:00+00:00",
+               "model_version": "rogue", "authority_level": 4,
+               "schema_version": "1", "regime": {}, "thesis_state": None,
+               "recommendation": None, "interrupt": "EMERGENCY",
+               "confidence": 1.0, "evidence_ids": []}
+    (sandbox["tmp"] / "directives.json").write_text(json.dumps([hostile]))
+    with pytest.raises(ao.OperatorError, match="unpromoted cap"):
+        _run(sandbox)
+    kept = json.loads((sandbox["tmp"] / "directives.json").read_text())
+    assert kept == [hostile]                   # file untouched, nothing laundered
+
+
+def test_refused_judgment_leaves_no_orphaned_evidence(sandbox):
+    """A forecast refused after the call must not leave evidence rows behind."""
+    sandbox["read"] = _read(prob_bull_continuation=0.9, prob_bear_continuation=0.9)
+    with pytest.raises(ao.OperatorError):
+        _run(sandbox)
+    assert not ao.EV_LOG.exists()
+    assert not ao.FC_LOG.exists()
+    assert not ao.RECORDS.exists()
+
+
+def test_state_advances_even_when_judgment_is_refused(sandbox):
+    """The call was priced; a persistently malformed response must cost one
+    call, not one per invocation — the snapshot lands despite the raise."""
+    sandbox["read"] = _read(verdict="ABSTAIN", abstain_reason=None)
+    with pytest.raises(ao.OperatorError):
+        _run(sandbox)
+    assert json.loads(ao.STATE.read_text())["bar_ts"] == "fixture"
+
+
+def test_out_of_range_horizon_is_refused_by_schema_not_clamped():
+    with pytest.raises(Exception):             # pydantic ValidationError
+        _read(horizon_min=100000)
+    with pytest.raises(Exception):
+        _read(horizon_min=0)
+    with pytest.raises(Exception):
+        _read(expires_min=0)
+
+
+def test_directive_ttl_and_record_expiry_are_the_same_instant(sandbox):
+    sandbox["read"] = _read(verdict="TIGHTEN", expires_min=45)
+    _run(sandbox)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["directive"]["expires_at"] == rec["expires_at"]
+
+
+def test_market_scoped_evidence_names_no_symbol(sandbox):
+    sandbox["read"] = _read(evidence=[ao.EvidenceItem(
+        headline="Fed surprises with emergency cut", evidence_type="MACRO",
+        direction="mixed", severity=0.9, scope="market")])
+    _run(sandbox)
+    ev = [r for r in ao._read_jsonl(ao.EV_LOG) if r["kind"] == "evidence"][0]
+    assert ev["scope"] == "market"
+    assert ev["symbols"] == []
+
+
+def test_resolver_refuses_forecast_with_no_sealed_record(sandbox, monkeypatch):
+    _write_bars(sandbox["tmp"], monkeypatch, [100.0] * 13)
+    _seed_forecast(sandbox, horizon=60)
+    ao.RECORDS.unlink()                        # break the audit chain
+    with pytest.raises(ao.OperatorError, match="no sealed record"):
+        ao.resolve_open(now=NOW + timedelta(minutes=61))
+
+
+def test_resolver_null_bar_age_counts_as_stale(sandbox, monkeypatch):
+    _write_bars(sandbox["tmp"], monkeypatch, [100.0] * 13)
+    monkeypatch.setattr(ao, "build_packet",
+                        lambda s: ("PACKET", [], {"bar_age_min": None}))
+    _seed_forecast(sandbox, horizon=60)
+    ao.resolve_open(now=NOW + timedelta(minutes=61))
+    res = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "resolution"][0]
+    assert res["was_stale"] is True
+
+
+def test_resolver_insufficient_prior_bars_stays_open(sandbox, monkeypatch):
+    # Only 10 bars before as_of — the 20-bar shock baseline is undefined
+    import pandas as pd
+    idx = pd.date_range(NOW - timedelta(minutes=50), periods=23, freq="5min", tz="UTC")
+    vals = [100.0] * 23
+    df = pd.DataFrame({"Open": vals, "High": vals, "Low": vals, "Close": vals,
+                       "Volume": [1] * 23}, index=idx)
+    cache = sandbox["tmp"] / "bars"; cache.mkdir(exist_ok=True)
+    monkeypatch.setattr(bars_mod, "CACHE", cache)
+    df.to_parquet(cache / "NVDA_5m.parquet")
+    _seed_forecast(sandbox, horizon=60)
+    ao.resolve_open(now=NOW + timedelta(minutes=61))
+    assert not any(r["kind"] == "resolution" for r in ao._read_jsonl(ao.FC_LOG))
+
+
+@pytest.mark.parametrize("target", ["RECORDS", "EV_LOG", "FC_LOG"])
+def test_i10_corrupt_line_raises_across_all_jsonl_files(sandbox, target):
+    _run(sandbox)
+    path = getattr(ao, target)
+    with path.open("a") as fh:
+        fh.write("{not json\n")
+    with pytest.raises(ao.OperatorError, match="corrupt audit line"):
+        ao._read_jsonl(path)
+
+
+def test_corrupt_state_json_raises(sandbox):
+    ao.STATE.parent.mkdir(parents=True, exist_ok=True)
+    ao.STATE.write_text("{broken")
+    with pytest.raises(ao.OperatorError, match="not JSON"):
+        ao._load_state()
 
 
 # ------------------------------------------------------- prob validation

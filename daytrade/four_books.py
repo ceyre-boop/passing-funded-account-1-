@@ -162,11 +162,14 @@ def run_book(book: str, df, plan: dict, records: list[dict],
 def run_session(symbol: str, df, plan: dict, records: list[dict]) -> dict:
     results = {}
     for book in BOOKS:
-        results[book] = run_book(book, df, plan, records, symbol)
+        # Each book gets its OWN copy of the frame, fingerprinted inside
+        # run_book — so an accidental per-book filter or in-place mutation is
+        # detectable, not equal-by-construction (Cato finding 9).
+        results[book] = run_book(book, df.copy(), plan, records, symbol)
     fps = {b["bars_fingerprint"] for b in results.values()}
-    fp = fps.copy().pop()
     if len(fps) != 1:                            # spec 023 I8, asserted not assumed
         raise HarnessError(f"books consumed different bar data: {fps}")
+    fp = fps.pop()
     return {"symbol": symbol, "session": str(df.index[0].date()),
             "bars_fingerprint": fp, "n_records": len(records),
             "generated_at": datetime.now(timezone.utc).isoformat(),
