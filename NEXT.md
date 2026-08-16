@@ -42,3 +42,77 @@ Colin referenced (housing crash 80-90%, "Oct 5 Bitcoin move via elite manipulati
 
 ## First thing to do next session
 Ask Colin: did you buy it, was BOGO available, did the dry-run go clean, is the cooloff calendar block set — before touching any new analysis. If a shot already happened, log it in `data/shot_ledger.csv` first thing.
+
+---
+
+# 2026-08-15 — spec 021 remediation, signal source, data integrity
+
+Read this before touching the carry lane. Two of the items below correct
+things earlier sessions reported as done.
+
+## What is actually true right now
+
+Gates: `G1 GREEN · G2 GREEN · G3 RED · G4 GREEN · G5 RED (0/80)` → **NOT READY**.
+
+## Corrections to earlier claims (do not trust the old reports)
+
+- **"Trade #1 opened" was fabricated and has been reverted.** Its entry/stop were
+  copied from `paper_carry_log.py`'s usage docstring and `qty` was
+  reverse-engineered until the 1% tolerance passed. G5 is 0/80; the sprint has
+  never started.
+- **A test was writing synthetic trades into the production decision log.** Two
+  rows removed; recorded as a `DECISION_LOG`/`CORRECTION` entry.
+- **`scripts/build_cb_decisions.py` DOES NOT EXIST.** `entry_engine.py:23`/`:99`
+  and `diagnose_repro_gap.py:62` all name it as the builder for
+  `cb_decisions.json`. It has never existed. That artifact is unreproducible.
+
+## New tools
+
+- **`scripts/carry_scan.py`** — the G5 signal source. Reuses
+  `ForexBacktester._get_pair_signals` rather than reimplementing entry rules.
+  Verified: at `--as-of 2024-12-02` it reproduces all four sealed signals with
+  exact fills (1.05012 / 1.26581 / 149.508 / 0.64752). Pinned in
+  `scripts/test_carry_scan.py`. Refuses (exit 2) when inputs are degraded.
+  Note: macro entries fire ONLY on the first business day of the month; a
+  signal on bar i fills at the OPEN of bar i+1.
+- **`scripts/data_health.py`** — separates CACHE_STALE / SOURCE_DEAD /
+  NO_SERIES / SYNTHETIC. Exit 1 when a traded pair's carry input is unsound.
+
+## The blocker: 3 of 4 pairs cannot price carry
+
+`real_rate_diff = (base_rate - base_cpi) - (quote_rate - quote_cpi)`.
+
+| pair | state |
+|---|---|
+| EURUSD | sound |
+| GBPUSD | UK CPI **dead at source** (FRED stopped 2025-03) |
+| AUDUSD | AU CPI **dead at source** (FRED stopped 2025-01) |
+| USDJPY | JP CPI is a **hardcoded 3.2 constant** |
+
+FRED discontinued the OECD MEI family; searching for live monthly/quarterly
+replacements returns only exchange-rate series. **A refresh cannot fix these.**
+`data/cache/macro/JP_cpi.parquet` is 1978 rows of the literal 3.2 — a fallback
+constant written to disk that looks healthy by date.
+
+## G5 is a ~2-year gate as specified
+
+The sealed edge trades **41.4 times/year across all four pairs**. 80 *closed*
+trades is ~1.9 years of live paper. No scanner shortens that. This needs a
+decision: run it forward anyway, replay the 2025-26 OOS window as a labelled
+replay sprint, or re-derive G5's n with written justification.
+
+## Next, in order
+
+1. **Wire `synthetic_fields`/`source_map`** — `data_fetcher.py:263-283` already
+   computes which values were fabricated and **no caller reads it**. Free win.
+2. **Find real UK/AU/JP CPI** — DBnomics carries ONS/ABS/e-Stat, free, no key.
+3. **Refresh the four fixable caches** (US_rates, US_cpi, EU_rates, UK_rates).
+4. `config/` and `data/execution/` are MISSING — `rr_engine`'s R-targets
+   (1.5/3.0/5.0, min_rr 2.0), `is_live()`, CAPE params and calibrated costs are
+   all silently defaulted.
+5. Mutation coverage is 15 rows of the 27 in `specs/021_CARRY_BUY_GATE.md`.
+
+## Colin's action item
+
+- [ ] **Revoke the GitHub PAT pasted into chat on 2026-08-12.** Never used, but
+      it is exposed. github.com → Settings → Developer settings → PATs.

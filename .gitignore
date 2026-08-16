@@ -11,3 +11,4 @@ logs/
 # described a directory that did not exist in the pushed commit.
 !data/daytrade/replay_expected/*.log
 data/agent/*.jsonl
+.env
