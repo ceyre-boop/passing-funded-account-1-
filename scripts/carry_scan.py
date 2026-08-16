@@ -120,8 +120,11 @@ def preflight(as_of: date) -> list[str]:
         if dates:
             stale = (as_of - date.fromisoformat(max(dates)[:10])).days
             if stale > MACRO_MAX_STALE_DAYS:
-                bad.append(f"cb_decisions.json: ends {max(dates)[:10]} ({stale}d stale) "
-                           f"— rebuild with scripts/build_cb_decisions.py")
+                bad.append(
+                    f"cb_decisions.json: ends {max(dates)[:10]} ({stale}d stale) "
+                    f"and is UNREPRODUCIBLE — entry_engine.py:23 and :99 name "
+                    f"scripts/build_cb_decisions.py as its builder, but that script "
+                    f"does not exist in this repo. It cannot be regenerated.")
 
     try:                                    # the gate inputs the engine swallows
         import yfinance as yf

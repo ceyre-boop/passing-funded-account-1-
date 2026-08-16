@@ -183,6 +183,37 @@ def check_artifacts(as_of: date):
     return rows
 
 
+# Artifacts that gate something real and have NO builder in this repo. If any is
+# deleted or corrupted it cannot be regenerated — the gate it feeds dies with it.
+# Each entry: path -> the reference that names a builder which does not exist.
+UNREPRODUCIBLE = {
+    "data/cache/cb_decisions.json":
+        "entry_engine.py:23/:99 name scripts/build_cb_decisions.py — that file does not exist",
+    "data/oos_trades_2025_2026.json":
+        "gates G3; no writer found anywhere (searched ~/quant exhaustively)",
+    "data/proof/backtest_trades_v015_2015_2024.csv":
+        "the sealed record; diagnose_repro_gap.py:65 notes its generator is absent",
+}
+
+# Directories whose absence silently switches a subsystem to hardcoded defaults.
+REQUIRED_DIRS = {
+    "config": "rr_engine R-targets (1.5/3.0/5.0), autonomous is_live(), CAPE params "
+              "— all silently defaulted while this is missing",
+    "data/execution": "calibrated_costs.json lives here; absent -> modelled slippage "
+                      "and the static swap table",
+}
+
+
+def check_structure():
+    rows = []
+    for d, why in REQUIRED_DIRS.items():
+        rows.append((d, "OK" if (ROOT / d).is_dir() else "MISSING_DIR", why))
+    for f, why in UNREPRODUCIBLE.items():
+        present = (ROOT / f).exists()
+        rows.append((f, "PRESENT_UNREPRODUCIBLE" if present else "LOST", why))
+    return rows
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--as-of", default=date.today().isoformat())
@@ -211,9 +242,22 @@ def main() -> int:
     for rel, state, note in check_artifacts(as_of):
         print(f" {' ' if state=='OK' else '!'} {rel:48s} {state:16s} {note}")
 
+    print("\nSTRUCTURE  (missing dirs silently switch a subsystem to defaults;"
+          "\n            unreproducible artifacts cannot be rebuilt if lost)")
+    lost = 0
+    for path, state, why in check_structure():
+        if state == "LOST":
+            lost += 1
+        print(f" {' ' if state == 'OK' else '!'} {path:48s} {state}")
+        if state != "OK":
+            print(f"     {why}")
+
     # Per-pair verdict: can this pair's carry leg be priced today?
+    # UNKNOWN counts as unsound. Offline we cannot see SOURCE_DEAD, and a
+    # verdict of "sound" that only means "not checked" is the exact false green
+    # this tool exists to stop.
     bad = {r[0]: r[4] for r in macro
-           if r[4] in ("SOURCE_DEAD", "NO_SERIES", "MISSING", "SYNTHETIC")}
+           if r[4] in ("SOURCE_DEAD", "NO_SERIES", "MISSING", "SYNTHETIC", "UNKNOWN")}
     print("\nPER-PAIR SIGNAL INTEGRITY  (real_rate_diff needs BOTH legs' rate AND cpi)")
     unsound = 0
     for pair, (b, q) in sorted(PAIR_LEGS.items()):
