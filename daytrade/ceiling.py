@@ -133,7 +133,7 @@ def _fill(action, st: TradeState, e: Entry, bar_open: float, bar_close: float) -
     return bar_open if gapped else st.sl
 
 
-def simulate(session, e: Entry, cfg: dict) -> float:
+def simulate(session, e: Entry, cfg: dict, observer=None) -> float:
     """Replay the rest of the session under one exit config. Returns R.
 
     Bars are presented to the engine in PESSIMISTIC order — adverse extreme
@@ -157,6 +157,12 @@ def simulate(session, e: Entry, cfg: dict) -> float:
         adverse = float(bar["Low"] if e.direction > 0 else bar["High"])
         favour = float(bar["High"] if e.direction > 0 else bar["Low"])
         st.now_et = ts.strftime("%H:%M")
+
+        # spec 025 observer hook: a read-only view of (state, realized, held)
+        # at each bar OPEN, before this bar's decisions. The observer cannot
+        # act — the engine and this harness remain the only deciders (rule 1).
+        if observer is not None:
+            observer(ts=ts, bar=bar, st=st, realized=realized, held=held)
 
         for px in (adverse, favour, c):
             st.price = px

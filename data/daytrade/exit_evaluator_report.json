@@ -1,0 +1,72 @@
+{
+ "generated_at": "2026-08-17T08:02:12.599536+00:00",
+ "n_entries": 336,
+ "n_decision_points": 18305,
+ "oof_advantage_corr": 0.081,
+ "top_features": [
+  [
+   "hwm_r",
+   0.3443
+  ],
+  [
+   "minutes_to_close",
+   0.2886
+  ],
+  [
+   "tr5_r",
+   0.2563
+  ],
+  [
+   "dd_from_hwm_r",
+   0.2338
+  ],
+  [
+   "bars_held",
+   0.1804
+  ],
+  [
+   "dist_to_stop_r",
+   0.1634
+  ],
+  [
+   "unrealized_r",
+   0.0882
+  ],
+  [
+   "r_banked",
+   0.0769
+  ]
+ ],
+ "policy": {
+  "SINGLE_NAME": {
+   "n": 171,
+   "model_mean_R": -0.0445,
+   "shipped_mean_R": 0.218,
+   "delta_R": -0.2626
+  },
+  "CASH_INDEX": {
+   "n": 100,
+   "model_mean_R": -0.0274,
+   "shipped_mean_R": 0.1259,
+   "delta_R": -0.1534
+  },
+  "FUTURES": {
+   "n": 65,
+   "model_mean_R": 0.1247,
+   "shipped_mean_R": 0.0275,
+   "delta_R": 0.0972
+  }
+ },
+ "verdict": {
+  "verdict": "NO_SUPERSEDE",
+  "class_wins": {
+   "SINGLE_NAME": false,
+   "CASH_INDEX": false,
+   "FUTURES": true
+  },
+  "futures_beats_frozen_candidate": false,
+  "frozen_candidate_mean_R": 0.1135,
+  "detail": "static candidates stand; the sealed read's object is unchanged \u2014 a null result is a result"
+ },
+ "preregistration": "specs/025_EXIT_EVALUATOR.md"
+}

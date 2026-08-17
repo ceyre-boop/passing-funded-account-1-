@@ -1,82 +1,109 @@
 {
- "ts": "2026-08-06T16:02:53.262989+00:00",
- "symbol": "NVDA",
- "mode": "morning",
- "bias": 0.05,
+ "ts": "2026-08-17T07:59:08.484131+00:00",
+ "bias": 0.0625,
  "urgency": "none",
- "n_headlines": 12,
- "conviction": "low",
- "suggested_urgency": "none",
- "urgency_armed": false,
- "model": "claude-opus-5 (spec 009 morning, scored \u2014 see news_scorecard.csv)",
- "thesis": "No NVDA-specific catalyst today \u2014 it's a macro/rates day (claims, 30-year auction) with the tape de-risking into tomorrow's payrolls, so expect range-bound chop around 206-207 with drift driven by Nasdaq beta rather than anything about Nvidia.",
- "day_plan": "Treat this as a range day: no NVDA catalyst, so trade the levels and the clock, not a narrative. Let the 08:30 claims and the first 30 minutes define the range, then be a buyer of dips toward 204-206 while VWAP holds and a fader of failed pokes above 210; the 13:00 30-year auction is the one scheduled event that can break the range, so size down into it. Expect afternoon de-risking into tomorrow's payrolls to cap upside extension and shrink late-day volatility.",
- "important_news": [
-  "AMD fell 7-9% Tue/Wed despite data-center revenue doubling to $6.7B \u2014 the punish-on-margin-guidance reaction is the key read-through for how the market will treat NVDA's own Aug 26 print, and near-term it removes a share-loss narrative from NVDA",
-  "Sell-side/media build-up to NVDA Aug 26 earnings (calls for ~$95B rev vs $91B guide) \u2014 supports a bid into the print but is opinion, not news; no numbers change today",
-  "Ark Invest added to NVDA on Wednesday \u2014 flow-positive optics only, immaterial size relative to $5.3T cap",
-  "Insider-selling story ($3.4B across NVDA/PLTR/GOOGL/META trailing 12m) \u2014 recurring bear talking point, has not moved the tape",
-  "CXMT's ~500% IPO debut and $10B DRAM capex raise \u2014 matters only as an HBM/memory-supply cost narrative, watch if it bleeds into AI-hardware sentiment",
-  "Everything else in the feed (QQQ listicles, ETF comparisons, millionaire-maker takes) is noise \u2014 ignore"
- ],
- "schedule": [
+ "n_headlines": 24,
+ "detail": [
   {
-   "time_et": "pre-open",
-   "event": "Overnight semis/AI tape: check SOX futures, TSM/ASML ADRs, and any Asia memory follow-through from the CXMT IPO",
-   "why_it_matters": "NVDA's open is almost entirely group beta today; a red semi complex caps any gap-up attempt"
+   "ticker": "NVDA",
+   "headline": "Alphabet's Reported $112 Billion Profit Included a $94 Billion Paper Gain From SpaceX. Here's What the Company Actually Earned.",
+   "score": 0
   },
   {
-   "time_et": "08:30",
-   "event": "Initial jobless claims + Q2 nonfarm productivity & unit labor costs",
-   "why_it_matters": "Claims is the only labor read before tomorrow's NFP; a hot claims number moves rate expectations and long-duration megacap tech in the pre-market"
+   "ticker": "NVDA",
+   "headline": "3 Nuclear Stocks With Real Revenue vs. 3 That Are Still Pre-Revenue. Here's Where the Money Actually Is.",
+   "score": 0
   },
   {
-   "time_et": "09:30",
-   "event": "Cash open",
-   "why_it_matters": "First 15 minutes sets the day's range; with no stock-specific news the opening drive usually retraces rather than trends"
+   "ticker": "NVDA",
+   "headline": "3 Critical Things Investors Overlooked in Rivian's Strong Q2",
+   "score": 1
   },
   {
-   "time_et": "10:00-10:30",
-   "event": "Opening-auction imbalance fades / regime shift",
-   "why_it_matters": "On catalyst-free days NVDA typically establishes its VWAP band here; the 10:30 area is where the real range for the session gets defined"
+   "ticker": "NVDA",
+   "headline": "What Nvidia's $500 billion Wall Street deal signals about the AI boom",
+   "score": 0
   },
   {
-   "time_et": "13:00",
-   "event": "Treasury 30-year bond auction (final leg of quarterly refunding)",
-   "why_it_matters": "A sloppy tail steepens the curve and is the single most likely intraday source of a megacap-tech air pocket; a strong auction usually gives equities a 1-2pm lift"
+   "ticker": "NVDA",
+   "headline": "Michael Burry Says \u2018You Could Have Heard It First\u2019 \u2014 As Big Tech\u2019s $3T AI Spending Risk Comes Into Focus",
+   "score": 0
   },
   {
-   "time_et": "14:00-15:00",
-   "event": "Post-auction drift, low-volume midday",
-   "why_it_matters": "Highest chance of a false breakout on thin liquidity \u2014 the classic chop-and-trap window"
+   "ticker": "NVDA",
+   "headline": "Dan Niles Says AI Infrastructure Rally Has \u2018At Least A Year\u2019 To Run \u2014 Names Intel His Favorite Chip Bet",
+   "score": 1
   },
   {
-   "time_et": "15:00-16:00",
-   "event": "Close / de-risking into payrolls",
-   "why_it_matters": "Traders flatten ahead of 08:30 Friday NFP; expect fade of intraday extremes and MOC-driven final print"
+   "ticker": "NVDA",
+   "headline": "Why This Memory Chip Boom May Have More Staying Power Than History Suggests",
+   "score": 0
   },
   {
-   "time_et": "after-close",
-   "event": "No NVDA event; watch for supply-chain or AI-capex headlines only",
-   "why_it_matters": "Earnings is Aug 26 \u2014 there is no post-close catalyst in this name today"
+   "ticker": "NVDA",
+   "headline": "Where Will Palantir Stock Be in 2030?",
+   "score": 0
+  },
+  {
+   "ticker": "SPY",
+   "headline": "\u201cThat Ain\u2019t Okay:\u201d Dave Ramsey Blasts Couple With $150,000 in Cash and a $60,000 Car Loan",
+   "score": 0
+  },
+  {
+   "ticker": "SPY",
+   "headline": "High Dividend ETFs Are Beating the S&P 500 by 9 Points in 2026 and These 3 Pay Up to 4 Percent While Doing It",
+   "score": 0
+  },
+  {
+   "ticker": "SPY",
+   "headline": "JEPQ vs. SPYI: Nearly Identical Yields, and One ETF Charges You Twice the Fee",
+   "score": 0
+  },
+  {
+   "ticker": "SPY",
+   "headline": "DIVO or JEPI: Which Monthly Dividend Actually Protects Your Principal?",
+   "score": 0
+  },
+  {
+   "ticker": "SPY",
+   "headline": "Which Is the Better ETF, State Street's Broad Market Exposure Through SPY or Invesco's Tech-Focused QQQ?",
+   "score": 0
+  },
+  {
+   "ticker": "SPY",
+   "headline": "Social Security Pays the Average Couple $3,120 a Month. Here\u2019s the Portfolio It Takes to Match It.",
+   "score": 0
+  },
+  {
+   "ticker": "SPY",
+   "headline": "Cash Pays 3.8% and the Fed May Hike. This T-Bill Fund Pays the Same but Sends No Tax Bill Until You Sell",
+   "score": 0
+  },
+  {
+   "ticker": "SPY",
+   "headline": "Broadcom is Down Over 3 Months: One Wall Street Pro Sees 60%+ Gains Ahead",
+   "score": 0
+  },
+  {
+   "ticker": "QQQ",
+   "headline": "This ETF Is the Most Important in the Market. You Probably Haven\u2019t Heard of It.",
+   "score": 0
+  },
+  {
+   "ticker": "QQQ",
+   "headline": "If You Invest $100 a Month in VGT Starting Today, Here's What History Says You Could Have in 20 Years",
+   "score": 0
+  },
+  {
+   "ticker": "QQQ",
+   "headline": "JEPQ vs. SPYI: Nearly Identical Yields, and One ETF Charges You Twice the Fee",
+   "score": 0
+  },
+  {
+   "ticker": "QQQ",
+   "headline": "The Anti-AI ETF Is Here, and Its Biggest Holdings Are Engines, Trucks and Air Conditioners",
+   "score": 0
   }
  ],
- "key_levels": [
-  "206.69 \u2014 prior close and the day's pivot; holding above it on any morning dip keeps the into-earnings drift intact",
-  "210 \u2014 round-number/near-all-time-high magnet; a push through with volume signals the pre-Aug-26 melt-up is live, failure there is the obvious short-side fade",
-  "203-204 \u2014 first real support zone / likely prior-day low area; loss of it on a soft auction or hot claims opens 200",
-  "200 \u2014 psychological round number and where a real pre-payrolls de-risk would take it; a break would mark the first genuine trend change in the name",
-  "Session VWAP \u2014 with no news, the honest bias tool: above and holding = buy dips, repeated rejections = mean-revert short",
-  "SOX / QQQ relative strength \u2014 NVDA underperforming the group on a green tape is the earliest sign of distribution near highs"
- ],
- "invalidators": [
-  "NVDA gaps or trades below 200 \u2014 the into-earnings-drift read is dead and this becomes a momentum-break day",
-  "Decisive break and hold above 211 on above-average volume \u2014 upside melt-up, stop fading strength",
-  "Jobless claims materially above ~250k or unit labor costs sharply hot at 08:30, driving a >1% Nasdaq futures move \u2014 macro takes over and the range thesis is void",
-  "30-year auction tails badly (yield well above when-issued, weak indirect bids) and 30y yield jumps >6bp \u2014 expect a genuine afternoon leg lower in megacap tech",
-  "Any NVDA-specific headline: China export-license change, hyperscaler capex cut, a pre-announcement, or a major customer switching silicon \u2014 bias becomes irrelevant",
-  "NVDA underperforming SOX by more than ~1.5% intraday \u2014 signals name-specific distribution near highs rather than macro chop"
- ],
- "consensus_eps": null,
- "projected_eps": null
+ "model": "keyword-valence v1 (placeholder, unvalidated)"
 }

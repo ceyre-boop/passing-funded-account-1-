@@ -19,5 +19,6 @@
     "half_split_informational": "+0.214 older / +0.003 newer — positive both halves, decaying; noted, not gating",
     "report": "data/daytrade/stockfish_tune_report.json @ commit of this file"
   },
+  "status_2026-08-17": "UNSEAL ON HOLD — architecture-first, verdict-second (cross-chat review). A pooled state-action evaluator (spec 025) may supersede static per-class configs; the one-shot holdout read waits until we know WHAT we are validating. This config stays frozen as the benchmark any evaluator must beat on the tune split.",
   "law": "This config is FROZEN, not live. Next and only next step: after this file has stood for >= 1 commit, ONE sealed-holdout read via splits.sealed_sessions(unseal_reason=..., rule_version='futures-exit-v1'). The unseal burns the holdout for this rule and is Colin's explicit call — no agent triggers it. No live path change before that number exists and is judged."
 }
