@@ -21,7 +21,10 @@ echo "--- tick $(date -u +%FT%TZ) (ET $ET_HM)"
 # The resolver runs REGARDLESS of the operator call's fate — a spend-cap or
 # network failure on `run` must not stall the learning loop (review fix 3).
 set +e
-python3 alpha_operator.py run --symbol NVDA
+# SHADOW SOAK (spec 024 I22): full judgment, sealed records, forecasts —
+# zero directive writes. Remove --shadow deliberately, as its own decision,
+# after the soak has proven the directive vocabulary.
+python3 alpha_operator.py run --symbol NVDA --shadow
 RUN_RC=$?
 if [[ $RUN_RC -ne 0 ]]; then
   echo "!! OPERATOR RUN FAILED (exit $RUN_RC) — resolver still running"
