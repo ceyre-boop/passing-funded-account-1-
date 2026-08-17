@@ -63,6 +63,23 @@ MIN_ENTRIES = 100                 # R1
 WORST_TRADE_FLOOR = -2.0          # R3
 BEAT_SHIPPED_BY = 0.05            # R/trade margin for a CHANGE verdict
 
+# --- PER-ASSET-CLASS SPLIT (registered 2026-08-17, before the first
+# per-class run; prompted by the two-universe finding that exit style is
+# universe-dependent). Same gates R2-R4 applied WITHIN the class; R1 floor
+# per class is 60 (smaller than the global 100 because a class is one third
+# of the basket — registered here, not tuned after reading). One additional
+# INFORMATIONAL (non-gating) readout: the winner's mean on a date-median
+# half-split of its class, to expose configs that won on one fortnight.
+CLASS_MIN_ENTRIES = 60
+CLASSES = {
+    "SINGLE_NAME": ("NVDA", "AMD", "TSLA", "META", "MSFT", "AAPL",
+                    "AMZN", "GOOGL"),
+    "CASH_INDEX": ("SPY", "QQQ", "DIA", "IWM"),
+    "FUTURES": ("ES=F", "NQ=F", "RTY=F", "CL=F"),
+}
+UNION_BASKET = tuple(dict.fromkeys(
+    s for syms in CLASSES.values() for s in syms))
+
 
 def collect_entries(symbols: list[str]) -> list[tuple]:
     """(symbol, session, entry) for every tune-split session with a valid
@@ -175,9 +192,84 @@ def apply_rule(scores: dict[str, dict], shipped: dict[str, dict]) -> dict:
             "n_eligible": len(eligible)}
 
 
+def slice_rows(rows_by_cfg: dict[str, list[tuple]],
+               symbols: tuple) -> dict[str, list[tuple]]:
+    """Slice one sweep's per-entry rows down to a symbol subset — the whole
+    reason per-class analysis costs zero extra simulations."""
+    want = set(symbols)
+    return {n: [r for r in rows if r[0] in want]
+            for n, rows in rows_by_cfg.items()}
+
+
+def half_split_means(rows: list[tuple]) -> tuple[float, float] | None:
+    """Informational stability: mean R in the older vs newer date half."""
+    if len(rows) < 8:
+        return None
+    days = sorted({d for _, d, _ in rows})
+    cut = days[len(days) // 2]
+    a = [r for _, d, r in rows if d <= cut]
+    b = [r for _, d, r in rows if d > cut]
+    if not a or not b:
+        return None
+    return (round(sum(a) / len(a), 4), round(sum(b) / len(b), 4))
+
+
+def class_report(cls: str, wide_rows: dict, shipped_rows: dict,
+                 top: int) -> dict:
+    rows = {n: r for n, r in wide_rows.items() if r}
+    if not rows or not any(shipped_rows.values()):
+        return {"class": cls, "verdict": "NO_ENTRIES"}
+    scores = {n: score_config(r) for n, r in rows.items()}
+    shipped = {n: score_config(r) for n, r in shipped_rows.items() if r}
+
+    n_total = next(iter(scores.values()))["n"]
+    med_of_meds = statistics.median(s["median_R"] for s in scores.values())
+    eligible = {n: s for n, s in scores.items()
+                if s["positive_symbols"] >= s["n_symbols"] / 2
+                and s["worst_R"] >= WORST_TRADE_FLOOR
+                and s["median_R"] > med_of_meds}
+    best_shipped = max(shipped, key=lambda n: shipped[n]["mean_R"])
+
+    if n_total < CLASS_MIN_ENTRIES:
+        verdict, winner, margin = "INSUFFICIENT_SAMPLE", None, None
+    elif not eligible:
+        verdict, winner, margin = "NO_ELIGIBLE_CONFIG", None, None
+    else:
+        winner = max(eligible, key=lambda n: scores[n]["mean_R"])
+        margin = round(scores[winner]["mean_R"]
+                       - shipped[best_shipped]["mean_R"], 4)
+        verdict = ("CANDIDATE_CONFIG" if margin >= BEAT_SHIPPED_BY
+                   else "KEEP_SHIPPED")
+
+    print(f"\n  ── {cls} ── {n_total} entries · best shipped {best_shipped} "
+          f"{shipped[best_shipped]['mean_R']:+.4f} R/trade")
+    for n, s in sorted(scores.items(), key=lambda kv: -kv[1]["mean_R"])[:top]:
+        ok = n in eligible
+        hs = half_split_means(rows[n])
+        hs_s = f"halves {hs[0]:+.3f}/{hs[1]:+.3f}" if hs else ""
+        print(f"    {n:34s} mean {s['mean_R']:+.4f}  med {s['median_R']:+.4f}  "
+              f"worst {s['worst_R']:+.2f}  win {s['win_rate']:.0%}  "
+              f"{'PASS' if ok else 'gated'}  {hs_s}")
+    print(f"    VERDICT: {verdict}"
+          + (f" — {winner} beats {best_shipped} by {margin:+.4f} R/trade"
+             if winner else ""))
+
+    out = {"class": cls, "n_entries": n_total, "verdict": verdict,
+           "best_shipped": best_shipped,
+           "best_shipped_score": shipped[best_shipped],
+           "shipped": shipped}
+    if winner:
+        out.update({"winner": winner, "winner_score": scores[winner],
+                    "margin_R_per_trade": margin,
+                    "winner_half_split": half_split_means(rows[winner])})
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Stockfish exit-config furnace (tune split only)")
-    ap.add_argument("--symbols", default=",".join(BASKET))
+    ap.add_argument("--symbols", default=",".join(UNION_BASKET))
+    ap.add_argument("--no-classes", action="store_true",
+                    help="skip the per-class slice (whole-basket ruling only)")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--top", type=int, default=15)
     a = ap.parse_args(argv)
@@ -224,8 +316,16 @@ def main(argv=None) -> int:
               f"+syms {s['positive_symbols']}/{s['n_symbols']}  "
               f"{' '.join(gates) or 'PASS'}")
 
-    print(f"\n  VERDICT: {ruling['verdict']}")
+    print(f"\n  WHOLE-BASKET VERDICT: {ruling['verdict']}")
     print(f"  {ruling['detail']}")
+
+    # Per-class slice — zero extra simulations; the same rows, resliced.
+    class_rulings = []
+    if not a.no_classes:
+        for cls, syms in CLASSES.items():
+            class_rulings.append(class_report(
+                cls, slice_rows(wide_rows, syms),
+                slice_rows(shipped_rows, syms), top=5))
 
     OUT.write_text(json.dumps({
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -236,6 +336,9 @@ def main(argv=None) -> int:
                            "beat_shipped_by_R": BEAT_SHIPPED_BY,
                            "registered": "2026-08-17, before first basket run"},
         "shipped": shipped, "ruling": ruling,
+        "class_rulings": class_rulings,
+        "class_rule": {"min_entries": CLASS_MIN_ENTRIES,
+                       "registered": "2026-08-17, before first per-class run"},
         "configs": {n: scores[n] for n in
                     sorted(scores, key=lambda n: -scores[n]["mean_R"])},
     }, indent=1))

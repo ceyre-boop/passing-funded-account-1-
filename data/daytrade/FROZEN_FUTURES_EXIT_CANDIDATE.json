@@ -1,0 +1,23 @@
+{
+  "rule_version": "futures-exit-v1",
+  "frozen_at": "2026-08-17",
+  "asset_class": "FUTURES",
+  "symbols": ["ES=F", "NQ=F", "RTY=F", "CL=F"],
+  "config": {
+    "trail_mult": null,
+    "be_arm_frac": 0.25,
+    "partial_frac": 0.75,
+    "flatten_et": "12:00",
+    "hold_past_tp2": true
+  },
+  "meaning": "never trail; breakeven arms at 25% of the way to TP1; bank 75% at TP2; hard flatten 12:00 ET",
+  "tune_split_evidence": {
+    "n_entries": 65,
+    "mean_R_per_trade": 0.1135,
+    "beats_best_shipped": "TRAIL_WIDE by +0.0860 R/trade (pre-registered margin 0.05)",
+    "gates": "R1(class floor 60) R2 R3 R4 all PASS",
+    "half_split_informational": "+0.214 older / +0.003 newer — positive both halves, decaying; noted, not gating",
+    "report": "data/daytrade/stockfish_tune_report.json @ commit of this file"
+  },
+  "law": "This config is FROZEN, not live. Next and only next step: after this file has stood for >= 1 commit, ONE sealed-holdout read via splits.sealed_sessions(unseal_reason=..., rule_version='futures-exit-v1'). The unseal burns the holdout for this rule and is Colin's explicit call — no agent triggers it. No live path change before that number exists and is judged."
+}
