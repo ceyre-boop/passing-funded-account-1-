@@ -1,0 +1,7 @@
+{
+  "EQUITY_INDEX": ["SPY", "QQQ", "DIA", "IWM", "ES=F", "NQ=F", "YM=F", "RTY=F"],
+  "NDX_COMPLEX": ["QQQ", "NQ=F", "NVDA"],
+  "SMALLCAP": ["IWM", "RTY=F"],
+  "ENERGY": ["CL=F"],
+  "METALS": ["GC=F", "SI=F"]
+}

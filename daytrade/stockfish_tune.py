@@ -49,8 +49,15 @@ from ceiling import (find_entry, simulate, wide_space, narrow_space,  # noqa: E4
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "daytrade" / "stockfish_tune_report.json"
 
-BASKET = ("NVDA", "SPY", "QQQ", "AMD", "TSLA", "META", "MSFT", "AAPL",
-          "AMZN", "GOOGL")
+# Widened 2026-08-17 on Colin's call: a NARROW universe of related pairs —
+# the equity-index complex (futures + cash ETFs), crude, and NVDA as the
+# original single-name. YM=F / GC=F / SI=F are deliberately absent: each has
+# a vendor gap inside an RTH session and bars.py raises on gaps rather than
+# repairing them (metals RTH 5m liquidity is too thin for this cache).
+BASKET = ("NVDA", "SPY", "QQQ", "DIA", "IWM",
+          "ES=F", "NQ=F", "RTY=F", "CL=F")
+# Prior 10-single-name basket (first furnace run, KEEP_SHIPPED verdict):
+# NVDA SPY QQQ AMD TSLA META MSFT AAPL AMZN GOOGL — report archived in git.
 
 MIN_ENTRIES = 100                 # R1
 WORST_TRADE_FLOOR = -2.0          # R3
