@@ -3,7 +3,7 @@
   "clean": true,
   "directives_emitted": 0,
   "directives_file_exists": false,
-  "directives_suppressed_shadow": 0,
+  "directives_suppressed_shadow": 3,
   "emission_refusals": 0
  },
  "disciplines": [
@@ -99,14 +99,16 @@
  ],
  "forecasts": {
   "direction_counts": {
-   "flat": 3
+   "down": 7,
+   "flat": 6,
+   "up": 1
   },
-  "open": 3,
+  "open": 4,
   "prereg_in_band": 0,
   "prereg_in_band_rate": null,
-  "prereg_scored": 0,
-  "resolved": 0,
-  "total": 3
+  "prereg_scored": 7,
+  "resolved": 10,
+  "total": 14
  },
  "four_books": {
   "available": true,
@@ -147,41 +149,49 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-17T05:41:13.413792+00:00",
+ "generated_at": "2026-08-17T20:44:14.675107+00:00",
  "latest_judgment": {
   "abstention": {
-   "detail": "newest bar 3458 min old (> 15)",
-   "issued_at": "2026-08-17T05:33:31.827800+00:00",
-   "model_version": "alpha-operator-v1/stale-gate",
-   "reason": "STALE_CONTEXT"
+   "detail": "No real catalyst today \u2014 this is generic Motley Fool content mill noise, not fresh news; price is drifting down slightly on light intraday chop within a tight ~225-226 range with no volume spike or breakout.",
+   "issued_at": "2026-08-17T19:53:35.400001+00:00",
+   "model_version": "alpha-operator-v1/claude-sonnet-5",
+   "reason": "NO_OPINION"
   },
   "available": true,
-  "bar_age_min": 3458.5,
-  "both_sides": null,
-  "confidence": 0.0,
-  "cost_usd": 0.0,
+  "bar_age_min": 3.6,
+  "both_sides": {
+   "base": "No real catalyst today \u2014 this is generic Motley Fool content mill noise, not fresh news; price is drifting down slightly on light intraday chop within a tight ~225-226 range with no volume spike or breakout.",
+   "bear": "Price has been steadily bleeding from ~226.15 to 225.15 over the session with the last bar closing at the low, and the custom-silicon-competitive-threat narrative (Meta piece) lingers as an overhang even if not acted on today.",
+   "bull": "Structural AI capex tailwinds (SpaceX, hyperscaler capex raises) keep the long-term Nvidia narrative intact, and the stock has held the 225 area despite a slow grind lower, leaving room for a bounce back toward 226+."
+  },
+  "confidence": 0.3,
+  "cost_usd": 0.03020775,
   "emission_refused": null,
-  "invalidators": [],
-  "model_version": "alpha-operator-v1/stale-gate",
-  "packet_as_of": "2026-08-17T05:33:31.827800+00:00",
-  "packet_max_data_ts": "2026-08-16T19:27:57+00:00",
+  "invalidators": [
+   "5m close below 225.00",
+   "5m close above 226.05",
+   "intraday range exceeds 1.5R from current level without reversal"
+  ],
+  "model_version": "alpha-operator-v1/claude-sonnet-5",
+  "packet_as_of": "2026-08-17T19:53:35.400001+00:00",
+  "packet_max_data_ts": "2026-08-17T19:50:00+00:00",
   "pre_registration": null,
-  "record_id": "op-20260817-053331-827800-NVDA",
-  "trigger": "bar",
-  "ts": "2026-08-17T05:33:31.827800+00:00",
+  "record_id": "op-20260817-195335-400001-NVDA",
+  "trigger": "news",
+  "ts": "2026-08-17T19:53:35.400001+00:00",
   "verdict": "ABSTAIN"
  },
  "session": {
   "available": true,
-  "last_record_ts": "2026-08-17T05:33:31.827800+00:00",
-  "last_trigger": "bar",
+  "last_record_ts": "2026-08-17T19:53:35.400001+00:00",
+  "last_trigger": "news",
   "mode": "SHADOW SOAK",
-  "records_total": 5,
+  "records_total": 17,
   "shadow": true,
   "symbol": "NVDA"
  },
  "spend": {
-  "avg_call_usd": 0.03087,
+  "avg_call_usd": 0.03532,
   "by_day": [
    {
     "calls": 9,
@@ -194,25 +204,26 @@
     "usd": 0.0367
    },
    {
-    "calls": 1,
+    "calls": 13,
     "date": "2026-08-17",
-    "usd": 0.0246
+    "usd": 0.5018
    }
   ],
-  "call_count": 12,
+  "call_count": 24,
   "cap_usd": 5.0,
-  "total_usd": 0.3704
+  "total_usd": 0.8476
  },
  "verdicts": {
   "abstain_reasons": {
-   "DATA_INCOMPLETE": 1,
-   "STALE_CONTEXT": 4
+   "DATA_INCOMPLETE": 2,
+   "NO_OPINION": 3,
+   "STALE_CONTEXT": 5
   },
   "counts": {
-   "ABSTAIN": 5,
-   "ALLOW_BASELINE": 0,
+   "ABSTAIN": 10,
+   "ALLOW_BASELINE": 4,
    "EXIT": 0,
-   "TIGHTEN": 0
+   "TIGHTEN": 3
   },
   "series": [
    {
@@ -243,6 +254,78 @@
     "confidence": 0.0,
     "shadow": true,
     "ts": "2026-08-17T05:33:31.827800+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-17T13:19:53.521743+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.42,
+    "shadow": true,
+    "ts": "2026-08-17T16:16:20.501380+00:00",
+    "verdict": "ALLOW_BASELINE"
+   },
+   {
+    "confidence": 0.45,
+    "shadow": true,
+    "ts": "2026-08-17T17:07:48.454204+00:00",
+    "verdict": "ALLOW_BASELINE"
+   },
+   {
+    "confidence": 0.35,
+    "shadow": true,
+    "ts": "2026-08-17T17:13:03.658975+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.25,
+    "shadow": true,
+    "ts": "2026-08-17T17:18:21.709292+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.52,
+    "shadow": true,
+    "ts": "2026-08-17T17:23:44.922502+00:00",
+    "verdict": "TIGHTEN"
+   },
+   {
+    "confidence": 0.42,
+    "shadow": true,
+    "ts": "2026-08-17T17:29:11.003105+00:00",
+    "verdict": "ALLOW_BASELINE"
+   },
+   {
+    "confidence": 0.35,
+    "shadow": true,
+    "ts": "2026-08-17T17:34:34.282453+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.42,
+    "shadow": true,
+    "ts": "2026-08-17T17:45:22.424544+00:00",
+    "verdict": "ALLOW_BASELINE"
+   },
+   {
+    "confidence": 0.4,
+    "shadow": true,
+    "ts": "2026-08-17T17:50:43.855441+00:00",
+    "verdict": "TIGHTEN"
+   },
+   {
+    "confidence": 0.5,
+    "shadow": true,
+    "ts": "2026-08-17T17:56:09.745889+00:00",
+    "verdict": "TIGHTEN"
+   },
+   {
+    "confidence": 0.3,
+    "shadow": true,
+    "ts": "2026-08-17T19:53:35.400001+00:00",
     "verdict": "ABSTAIN"
    }
   ]
