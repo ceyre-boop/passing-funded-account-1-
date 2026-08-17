@@ -245,7 +245,7 @@ class FillLedger:
         rec = self._intents.get(intent_id)
         if rec is None:
             return 0.0
-        return 0.0
+        return rec.intent.qty - self.filled(intent_id)
 
     def avg_fill_price(self, intent_id: str) -> Optional[float]:
         pairs = [(q, p) for o in self._orders_of(intent_id)
