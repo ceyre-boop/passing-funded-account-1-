@@ -201,7 +201,12 @@ Rules:
   prose version too.
 - classify each headline that matters into the evidence taxonomy; drop noise.
 - If the packet says data is missing or stale, say ABSTAIN with the honest
-  reason rather than manufacturing a view. That is the failure mode."""
+  reason rather than manufacturing a view. That is the failure mode.
+- ALWAYS classify at least one evidence item when ANY headline or market
+  observation informed your read — including for ABSTAIN. An abstention
+  whose reasons cite no evidence cannot be audited, and unexplained
+  judgments are excluded from promotion (explainability gate, 95%). Only a
+  packet with literally nothing decision-relevant justifies empty evidence."""
 
 
 # ------------------------------------------------------------- persistence

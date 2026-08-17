@@ -18,6 +18,9 @@ set -a; source "$REPO/.env"; set +a
 cd "$REPO/daytrade"
 
 echo "--- tick $(date -u +%FT%TZ) (ET $ET_HM)"
+# Mechanical R-geometry plan (spec 024 prereg scoring) — no-op before 10:00,
+# idempotent per day, never touches a hand-written plan.
+python3 write_baseline_plan.py NVDA || echo "!! plan writer failed (non-fatal)"
 # The resolver runs REGARDLESS of the operator call's fate — a spend-cap or
 # network failure on `run` must not stall the learning loop (review fix 3).
 set +e
