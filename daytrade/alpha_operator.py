@@ -72,6 +72,15 @@ SHOCK_TR_MULT = 3.0                # bar TR > 3x prior-20 median TR == shock
 STALE_BAR_MIN = 15                 # newest bar older than this at call time
 PROB_RENORM_TOL = 0.05             # LLM float drift we renormalise; beyond, raise
 
+# ---- spec 024 pre-committed constants. Sealed in the spec card; changing one
+# after data has been seen is the exact failure the discipline layer exists
+# to prevent.
+MAX_DIRECTIVES_PER_SESSION = 3
+CODRIFT_N = 2
+CODRIFT_WINDOW_MIN = 30
+GROUPS_FILE = OPDIR / "correlated_groups.json"
+LIMITS_FILE = OPDIR / "limits.json"
+
 VERDICTS = ("ABSTAIN", "ALLOW_BASELINE", "TIGHTEN", "EXIT")
 
 
@@ -105,6 +114,15 @@ class EvidenceItem(BaseModel):
     scope: Literal["market", "sector", "symbol"]
 
 
+class InvalidationPredicate(BaseModel):
+    """One machine-checkable invalidation, closed vocabulary (spec 024 I13).
+    close_below/close_above: a 5m close beyond `value` (a price).
+    range_exceeds_r: window true range exceeds `value` (in R, needs plan risk).
+    """
+    kind: Literal["close_below", "close_above", "range_exceeds_r"]
+    value: float
+
+
 class OperatorRead(BaseModel):
     """One sealed judgment. Both sides argued, then a verdict."""
     bull: str = Field(description="strongest honest bull case, 1-2 sentences")
@@ -129,6 +147,15 @@ class OperatorRead(BaseModel):
     expires_min: int = Field(ge=5, le=120,
                              description="minutes any resulting directive stays valid, 5-120")
     evidence: list[EvidenceItem] = Field(description="the headlines that actually matter, classified")
+    expected_r_low: Optional[float] = Field(
+        default=None, ge=-5, le=5,
+        description="lower bound of the expected R outcome for the baseline setup over the horizon; REQUIRED unless verdict is ABSTAIN")
+    expected_r_high: Optional[float] = Field(
+        default=None, ge=-5, le=5,
+        description="upper bound of the expected R outcome; REQUIRED unless verdict is ABSTAIN")
+    invalidation_predicates: list[InvalidationPredicate] = Field(
+        default_factory=list,
+        description="machine-checkable invalidations (price levels / R ranges); the scoreable subset of your invalidators")
 
 
 OPERATOR_SYSTEM = """You are the discretionary research desk for a single-name
@@ -153,6 +180,15 @@ Rules:
                       EXIT is recorded but mechanically capped to TIGHTEN until
                       this model earns interrupt authority on its track record.
 - invalidators must be specific and checkable, never vague.
+- PRE-REGISTER your number: unless you ABSTAIN, you MUST give expected_r_low
+  and expected_r_high — the R-multiple band you expect the baseline setup to
+  realize over your horizon. This band is sealed before the outcome and scored
+  against what actually happened. Give the honest band, not a wide one: a band
+  that always contains the outcome scores as an uninformative forecast.
+- invalidation_predicates: express every invalidator that IS a price level or
+  range as a typed predicate (close_below/close_above with the price,
+  range_exceeds_r with the R multiple) so it can be auto-checked. Keep the
+  prose version too.
 - classify each headline that matters into the evidence taxonomy; drop noise.
 - If the packet says data is missing or stale, say ABSTAIN with the honest
   reason rather than manufacturing a view. That is the failure mode."""
@@ -200,6 +236,9 @@ def load_ledger() -> ForecastLedger:
             led.record(Forecast(**body))
         elif kind == "resolution":
             led.resolve(Resolution(**body))
+        elif kind == "prereg_score":
+            pass                       # spec 024: scored pre-registration rows
+                                       # live beside the ledger, not inside 017
         else:
             raise OperatorError(f"unknown row kind {kind!r} in {FC_LOG.name}")
     return led
@@ -357,24 +396,44 @@ def check_triggers(symbol: str, st: dict, *, refresh: bool
 
 # ------------------------------------------------------------ the packet
 
-def build_packet(symbol: str) -> tuple[str, list[dict], dict]:
+def build_packet(symbol: str, *, as_of: Optional[datetime] = None
+                 ) -> tuple[str, list[dict], dict]:
     """Everything Claude sees: recent tape, the plan, position events,
     headlines. Missing pieces are NAMED as missing, never papered over —
-    the model is instructed to abstain on bad data, so it must see the truth."""
+    the model is instructed to abstain on bad data, so it must see the truth.
+
+    POINT-IN-TIME (spec 024 I14): nothing newer than `as_of` enters the
+    packet — bars, headlines, and events are all filtered, and the maximum
+    data timestamp actually included is returned in meta so the sealed record
+    can prove it. Claude cannot evaluate a setup it has already seen resolve.
+    """
     import pandas as pd
+    as_of = as_of or _utcnow()
     lines: list[str] = []
-    meta: dict = {"bar_age_min": None}
+    max_ts: Optional[datetime] = None
+    meta: dict = {"bar_age_min": None, "as_of": _iso(as_of)}
+
+    def _bump(ts: datetime) -> None:
+        nonlocal max_ts
+        if max_ts is None or ts > max_ts:
+            max_ts = ts
 
     path = bars_mod._cache_path(symbol, "5m")
     if path.exists():
-        df = pd.read_parquet(path).sort_index().tail(24)
-        meta["bar_age_min"] = round(
-            (_utcnow() - df.index.max().tz_convert(timezone.utc)).total_seconds() / 60, 1)
-        lines.append(f"RECENT 5M BARS (last {len(df)}, newest bar "
-                     f"{meta['bar_age_min']} min old):")
-        for ts, r in df.iterrows():
-            lines.append(f"  {ts.strftime('%m-%d %H:%M')} O {r.Open:.2f} H {r.High:.2f} "
-                         f"L {r.Low:.2f} C {r.Close:.2f} V {int(r.Volume)}")
+        df = pd.read_parquet(path).sort_index()
+        df.index = pd.to_datetime(df.index, utc=True)
+        df = df[df.index <= as_of].tail(24)
+        if len(df):
+            newest = df.index.max().to_pydatetime()
+            _bump(newest)
+            meta["bar_age_min"] = round((as_of - newest).total_seconds() / 60, 1)
+            lines.append(f"RECENT 5M BARS (last {len(df)}, newest bar "
+                         f"{meta['bar_age_min']} min old):")
+            for ts, r in df.iterrows():
+                lines.append(f"  {ts.strftime('%m-%d %H:%M')} O {r.Open:.2f} H {r.High:.2f} "
+                             f"L {r.Low:.2f} C {r.Close:.2f} V {int(r.Volume)}")
+        else:
+            lines.append("RECENT BARS: none at-or-before as_of — price context is missing")
     else:
         lines.append("RECENT BARS: NONE CACHED — price context is missing")
 
@@ -385,10 +444,22 @@ def build_packet(symbol: str) -> tuple[str, list[dict], dict]:
         lines.append("\nBASELINE PLAN: none on file")
 
     ev_files = _event_files(symbol)
+    ev_tail = []
     if ev_files:
-        tail = _read_jsonl(ev_files[-1])[-5:]
+        for e in _read_jsonl(ev_files[-1]):
+            ts_raw = e.get("occurred_at") or e.get("ts")
+            if ts_raw:
+                try:
+                    ts = _aware(ts_raw)
+                except ValueError:
+                    continue
+                if ts > as_of:
+                    continue
+                _bump(ts)
+            ev_tail.append(e)
+    if ev_tail:
         lines.append("\nRECENT POSITION EVENTS:")
-        for e in tail:
+        for e in ev_tail[-5:]:
             lines.append(f"  {json.dumps(e)[:200]}")
     else:
         lines.append("\nRECENT POSITION EVENTS: none")
@@ -396,15 +467,125 @@ def build_packet(symbol: str) -> tuple[str, list[dict], dict]:
     heads: list[dict] = []
     if os.environ.get("POLYGON_API_KEY"):
         from polygon_news import fetch_headlines
-        heads = fetch_headlines(symbol)
-        lines.append(f"\nHEADLINES ({len(heads)}):")
+        raw = fetch_headlines(symbol)
+        dropped = 0
+        for h in raw:
+            pub = h.get("published_utc")
+            if not pub:
+                dropped += 1          # undated headline: excluded, counted, loud
+                continue
+            try:
+                ts = _aware(pub)
+            except ValueError:
+                dropped += 1
+                continue
+            if ts > as_of:
+                dropped += 1
+                continue
+            _bump(ts)
+            heads.append(h)
+        note = f" ({dropped} dropped: undated or after as_of)" if dropped else ""
+        lines.append(f"\nHEADLINES ({len(heads)}){note}:")
         for h in heads:
             lines.append(f"  [{h.get('published_utc', '')[:16]}] {h.get('publisher', '')}: "
                          f"{h.get('title', '')}")
     else:
         lines.append("\nHEADLINES: UNAVAILABLE (no POLYGON_API_KEY) — news context is missing")
 
+    meta["max_data_ts"] = _iso(max_ts) if max_ts else None
     return "\n".join(lines), heads, meta
+
+
+# ------------------------------------------------ spec 024 discipline layer
+
+def _pre_registration(read: OperatorRead) -> Optional[dict]:
+    """The number, committed before it is seen (spec 024 I11). Non-ABSTAIN
+    without a coherent R band is refused — a judgment that declines to state
+    what it expects cannot be scored, only remembered as correct."""
+    if read.verdict == "ABSTAIN":
+        return None
+    lo, hi = read.expected_r_low, read.expected_r_high
+    if lo is None or hi is None:
+        raise OperatorError(
+            f"verdict {read.verdict} carries no expected R band — "
+            "pre-registration is required for every non-ABSTAIN judgment")
+    if lo > hi:
+        raise OperatorError(f"expected R band inverted: [{lo}, {hi}]")
+    return {"expected_r_low": lo, "expected_r_high": hi,
+            "invalidation_predicates": [p.model_dump()
+                                        for p in read.invalidation_predicates]}
+
+
+def _session_directive_count(symbol: str, now: datetime) -> int:
+    """Directives EMITTED for this symbol this ET day (refused ones excluded)."""
+    day = now.astimezone(ET).date().isoformat()
+    return sum(1 for r in _read_jsonl(RECORDS)
+               if r["symbol"] == symbol and r.get("directive")
+               and not r.get("shadow")      # shadow directives were never emitted
+               and _aware(r["ts"]).astimezone(ET).date().isoformat() == day)
+
+
+def _load_groups() -> dict:
+    """Correlated groups, upstream-supplied (portfolio_guard's contract).
+    Missing file = no groups = co-drift gate inert. Malformed = loud."""
+    if not GROUPS_FILE.exists():
+        return {}
+    try:
+        groups = json.loads(GROUPS_FILE.read_text())
+    except json.JSONDecodeError as e:
+        raise OperatorError(f"{GROUPS_FILE.name} is not JSON ({e})") from e
+    if not isinstance(groups, dict):
+        raise OperatorError(f"{GROUPS_FILE.name} must map group -> [symbols]")
+    return groups
+
+
+def check_emission_gate(symbol: str, now: datetime) -> Optional[dict]:
+    """Deterministic pre-emission gates, in order (spec 024 I15/I16).
+    Returns a refusal dict, or None to allow. The judgment is sealed either
+    way — only the emission is gated."""
+    n = _session_directive_count(symbol, now)
+    if n >= MAX_DIRECTIVES_PER_SESSION:
+        return {"gate": "session_cap",
+                "detail": f"{n} directives already emitted for {symbol} today "
+                          f"(cap {MAX_DIRECTIVES_PER_SESSION})"}
+
+    groups = _load_groups()
+    my_groups = [g for g, syms in groups.items() if symbol in syms]
+    if my_groups:
+        window_start = now - timedelta(minutes=CODRIFT_WINDOW_MIN)
+        peers = {s for g in my_groups for s in groups[g]} - {symbol}
+        recent = [r for r in _read_jsonl(RECORDS)
+                  if r.get("directive") and not r.get("shadow")
+                  and r["symbol"] in peers
+                  and r["verdict"] in ("TIGHTEN", "EXIT")
+                  and window_start <= _aware(r["ts"]) <= now]
+        if len(recent) >= CODRIFT_N - 1:
+            return {"gate": "codrift_pause",
+                    "detail": f"{len(recent)} correlated interrupt(s) in the last "
+                              f"{CODRIFT_WINDOW_MIN}m ({sorted({r['symbol'] for r in recent})}) — "
+                              "N same-group interrupts are one decision with N× "
+                              "the size; pausing, not averaging"}
+    return None
+
+
+def _portfolio_advisory() -> Optional[dict]:
+    """portfolio_guard.check, ADVISORY ONLY (Gate 7 enforces last — I17).
+    Needs limits.json plus a position picture; either missing = skipped with
+    a printed reason, present-but-malformed = loud."""
+    if not LIMITS_FILE.exists():
+        return None
+    from portfolio_guard import PortfolioLimits, PositionSnapshot, check, GuardError
+    try:
+        cfg = json.loads(LIMITS_FILE.read_text())
+        limits = PortfolioLimits(**cfg["limits"])
+        positions = [PositionSnapshot(**p) for p in cfg.get("positions", [])]
+        verdict = check(limits, positions,
+                        realized_today_r=float(cfg.get("realized_today_r", 0.0)),
+                        correlated_groups=_load_groups() or None)
+    except (KeyError, TypeError, ValueError, GuardError) as e:
+        raise OperatorError(f"{LIMITS_FILE.name} present but unusable: {e}") from e
+    return {"violations": [v.to_dict() for v in verdict.violations],
+            "required_action": verdict.required_action, "why": verdict.why}
 
 
 # ----------------------------------------------------- read -> typed outputs
@@ -534,7 +715,8 @@ def _write_directive(d: ContextDirective) -> None:
 # ----------------------------------------------------------------- run once
 
 def run_once(symbol: str, *, cap: float, model: str,
-             force: Optional[str] = None, refresh: bool = True) -> int:
+             force: Optional[str] = None, refresh: bool = True,
+             shadow: bool = False) -> int:
     _reconcile_derived()
     st = _load_state()
     fired, snapshot = check_triggers(symbol, st, refresh=refresh)
@@ -546,8 +728,8 @@ def run_once(symbol: str, *, cap: float, model: str,
     trigger, detail = fired[0]
     print(f"  trigger: {trigger} — {detail}")
 
-    packet, heads, meta = build_packet(symbol)
-    now = _utcnow()
+    now = _utcnow()                    # the decision timestamp — fixed BEFORE
+    packet, heads, meta = build_packet(symbol, as_of=now)   # the packet (I14)
     # Microseconds: two triggers inside the same wall-clock second must not
     # mint the same id — the 017 ledger rightly refuses a duplicated claim.
     record_id = f"op-{now.strftime('%Y%m%d-%H%M%S-%f')}-{symbol}"
@@ -573,6 +755,10 @@ def run_once(symbol: str, *, cap: float, model: str,
             "expires_at": _iso(now), "suppressed_to": None,
             "directive": None, "abstention": abst.to_dict(),
             "forecast": None, "evidence": [],
+            "pre_registration": None, "emission_refused": None,
+            "portfolio_advisory": None, "shadow": shadow,
+            "packet_as_of": meta.get("as_of"),
+            "packet_max_data_ts": meta.get("max_data_ts"),
             "bar_age_min": age, "cost_usd": 0.0})
         _save_state({**st, **snapshot})
         print(f"  STALE GATE: {why} — sealed ABSTAIN(STALE_CONTEXT), "
@@ -589,7 +775,7 @@ def run_once(symbol: str, *, cap: float, model: str,
                                    cap=cap, effort="medium", kind="operator")
     try:
         return _seal_and_emit(read, cost, symbol, trigger, now, record_id,
-                              model, meta)
+                              model, meta, shadow=shadow)
     finally:
         # The call above was PRICED. Whatever happens to the judgment after —
         # a malformed response, a refused forecast — the observed-world
@@ -599,7 +785,8 @@ def run_once(symbol: str, *, cap: float, model: str,
 
 
 def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
-                   now: datetime, record_id: str, model: str, meta: dict) -> int:
+                   now: datetime, record_id: str, model: str, meta: dict,
+                   *, shadow: bool = False) -> int:
     if read.verdict == "ABSTAIN" and read.abstain_reason is None:
         raise OperatorError("verdict ABSTAIN with no abstain_reason — "
                             "anonymous silence cannot be scored")
@@ -609,6 +796,7 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
     # check has run — before the first byte hits an append-only log. A refused
     # judgment leaves no orphaned rows.
     ttl = read.expires_min                      # schema-bounded; computed once
+    prereg = _pre_registration(read)            # I11: refused if band missing
     evs = _make_evidence(read, symbol, now, record_id)
     ev_ids = tuple(ev.evidence_id for ev in evs)
     fc = _make_forecast(read, symbol, now, record_id, model, ev_ids)
@@ -616,6 +804,16 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
     ledger.record(fc)                           # validates against the 017 contract
     directive, suppressed = _make_directive(read, symbol, now, record_id,
                                             model, list(ev_ids), ttl)
+
+    # Deterministic emission gates (I15/I16) + advisory guards (I17), decided
+    # BEFORE the seal so the record carries the refusal. Shadow mode (I22)
+    # suppresses emission entirely; the gates still run so their verdicts soak.
+    emission_refused = None
+    if directive:
+        emission_refused = check_emission_gate(symbol, now)
+        if emission_refused:
+            directive = None            # judgment sealed verbatim; emission gated
+    advisory = _portfolio_advisory()
     abst = None
     if read.verdict == "ABSTAIN":
         abst = Abstention(model_version=f"{MODEL_VERSION_BASE}/{model}",
@@ -641,6 +839,10 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
         "directive": directive.to_dict() if directive else None,
         "abstention": abst.to_dict() if abst else None,
         "forecast": fc.to_dict(), "evidence": [ev.to_dict() for ev in evs],
+        "pre_registration": prereg, "emission_refused": emission_refused,
+        "portfolio_advisory": advisory, "shadow": shadow,
+        "packet_as_of": meta.get("as_of"),
+        "packet_max_data_ts": meta.get("max_data_ts"),
         "bar_age_min": meta.get("bar_age_min"), "cost_usd": round(cost, 8)})
 
     store = load_evidence_store()
@@ -649,10 +851,16 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
         _append_jsonl(EV_LOG, {"kind": "evidence", **ev.to_dict()})
     _append_jsonl(FC_LOG, {"kind": "forecast", **fc.to_dict()})
 
-    if directive:
+    if directive and shadow:
+        print(f"  SHADOW: directive {directive.directive_id} suppressed "
+              "(soak mode — sealed, never emitted)")
+    elif directive:
         _write_directive(directive)
         note = f" (EXIT suppressed to TIGHTEN — unpromoted)" if suppressed else ""
         print(f"  directive {directive.directive_id} written{note}")
+    elif emission_refused:
+        print(f"  EMISSION REFUSED [{emission_refused['gate']}]: "
+              f"{emission_refused['detail']}")
     print(f"\n  VERDICT: {read.verdict} ({read.confidence:.2f})   direction {read.direction}"
           f"   horizon {read.horizon_min}m")
     print(f"  bull: {read.bull}\n  base: {read.base}\n  bear: {read.bear}")
@@ -662,6 +870,61 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
 
 
 # ---------------------------------------------------------------- resolver
+
+def _score_pre_registration(rec: dict, f: Forecast, window) -> Optional[dict]:
+    """Score the pre-committed claim against what happened (spec 024 I13).
+    Deterministic: same window, same verdicts. R uses the plan risk sealed at
+    decision time; without it, r_in_band is null with the reason stated —
+    never a defaulted 0."""
+    prereg = rec.get("pre_registration")
+    if not prereg:
+        return None
+    start_close = float(window["Close"].iloc[0])
+    end_close = float(window["Close"].iloc[-1])
+
+    r_in_band = None
+    realized_r = None
+    reason = None
+    plan = json.loads(PLAN.read_text()) if PLAN.exists() else None
+    if plan and plan.get("entry") is not None and plan.get("sl") is not None:
+        risk = abs(float(plan["entry"]) - float(plan["sl"]))
+        if risk > 0:
+            d = {"long": 1, "short": -1}.get(str(plan.get("direction")).lower(),
+                                             plan.get("direction"))
+            d = d if d in (1, -1) else 1
+            realized_r = (end_close - start_close) * d / risk
+            r_in_band = bool(prereg["expected_r_low"] <= realized_r
+                             <= prereg["expected_r_high"])
+        else:
+            reason = "plan risk is zero"
+    else:
+        reason = "no plan with entry/sl on file — R is undefined"
+
+    fired = []
+    hi = float(window["High"].max())
+    lo = float(window["Low"].min())
+    closes = window["Close"]
+    for p in prereg.get("invalidation_predicates", []):
+        kind, val = p["kind"], float(p["value"])
+        if kind == "close_below":
+            hit = bool((closes < val).any())
+        elif kind == "close_above":
+            hit = bool((closes > val).any())
+        elif kind == "range_exceeds_r":
+            if plan and plan.get("entry") is not None and plan.get("sl") is not None \
+                    and abs(float(plan["entry"]) - float(plan["sl"])) > 0:
+                risk = abs(float(plan["entry"]) - float(plan["sl"]))
+                hit = bool((hi - lo) / risk > val)
+            else:
+                hit = None             # unscoreable without risk; stated, not 0
+        else:
+            raise OperatorError(f"unknown predicate kind {kind!r}")
+        fired.append({**p, "fired": hit})
+
+    return {"kind": "prereg_score", "forecast_id": f.forecast_id,
+            "record_id": rec["record_id"], "realized_r": realized_r,
+            "r_in_band": r_in_band, "unscoreable_reason": reason,
+            "predicates": fired}
 
 def _bars_between(symbol: str, start: datetime, end: datetime):
     import pandas as pd
@@ -770,12 +1033,18 @@ def resolve_open(now: Optional[datetime] = None) -> int:
                        shock_occurred=shock, was_stale=was_stale)
         ledger.resolve(r)                   # 017 refuses early resolution
         _append_jsonl(FC_LOG, {"kind": "resolution", **r.__dict__})
+        prereg_row = _score_pre_registration(rec, f, window)
+        if prereg_row is not None:
+            _append_jsonl(FC_LOG, prereg_row)
         hit = "HIT" if direction == f.direction else "miss"
         print(f"  {fid}: {scenario} / {direction} ({hit})"
               + (" SHOCK" if shock else ""))
         n += 1
     print(f"  resolved {n} forecast(s); {len(open_ids) - n} still open")
     return 0
+
+
+YIELD_LOG = OPDIR / "yield.jsonl"
 
 
 def grade(model: str) -> int:
@@ -787,6 +1056,34 @@ def grade(model: str) -> int:
         return 1
     for k, v in rep.to_dict().items():
         print(f"  {k:24s} {v}")
+
+    # Pre-registration scoreboard (spec 024): the number, vs the number.
+    scores = [r for r in _read_jsonl(FC_LOG) if r["kind"] == "prereg_score"]
+    banded = [s for s in scores if s["r_in_band"] is not None]
+    if banded:
+        hit = sum(1 for s in banded if s["r_in_band"])
+        print(f"  {'prereg_r_in_band':24s} {hit}/{len(banded)}")
+    elif scores:
+        print(f"  {'prereg_r_in_band':24s} {len(scores)} scored, none R-scoreable")
+
+    # Yield trajectory (spec 024 I21): demotion must be readable from data.
+    ys = _read_jsonl(YIELD_LOG)
+    if ys:
+        traj = " → ".join(f"{y['yield_delta_r']:+.3f}" for y in ys[-6:])
+        print(f"  {'veto_yield_trajectory':24s} {traj}")
+        last3 = [y["yield_delta_r"] for y in ys[-3:]]
+        if len(last3) == 3 and last3[0] > last3[1] > last3[2]:
+            print("  !! YIELD_DECAY: three consecutive declining sessions — "
+                  "the overlay is fading; promotion case weakens")
+
+    # Sim→live tripwire (spec 024 I20): wraps the report, not the 017 gate.
+    import gap_log
+    st = gap_log.status()
+    print(f"  {'sim_live_gap':24s} drift={st['drift']} n={st['n_gaps']}")
+    if st["tripwire"]:
+        print(f"  !! TRIPWIRE: {st['tripwire']}")
+        print("  PROMOTABLE: NO (tripwire)")
+        return 1
     return 0
 
 
@@ -802,6 +1099,9 @@ def main(argv=None) -> int:
     run.add_argument("--cap", type=float, default=news_claude.DEFAULT_CAP_USD)
     run.add_argument("--force", choices=("premarket", "bar", "level", "news", "position"),
                      help="run even if nothing changed, attributing to this trigger")
+    run.add_argument("--shadow", action="store_true",
+                     help="soak mode (spec 024 I22): full judgment, sealed record, "
+                          "forecast — but ZERO directive writes")
     run.add_argument("--no-refresh", action="store_true",
                      help="skip the bar-cache refresh (offline / test)")
 
@@ -813,6 +1113,7 @@ def main(argv=None) -> int:
     if a.cmd == "run":
         try:
             return run_once(a.symbol, cap=a.cap, model=a.model, force=a.force,
+                            shadow=a.shadow,
                             refresh=not a.no_refresh)
         except news_claude.SpendCapReached as e:
             print(f"  !! SPEND CAP: {e}")

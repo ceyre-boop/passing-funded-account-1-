@@ -40,7 +40,11 @@ def _read(verdict="TIGHTEN", **kw):
         confidence=0.55, expires_min=45,
         evidence=[ao.EvidenceItem(headline="NVDA supplier reports record orders",
                                   evidence_type="PRODUCT", direction="bullish",
-                                  severity=0.4, scope="symbol")])
+                                  severity=0.4, scope="symbol")],
+        expected_r_low=None if verdict == "ABSTAIN" else -0.5,
+        expected_r_high=None if verdict == "ABSTAIN" else 1.5,
+        invalidation_predicates=[] if verdict == "ABSTAIN" else
+            [ao.InvalidationPredicate(kind="close_below", value=99.5)])
     base.update(kw)
     return ao.OperatorRead(**base)
 
@@ -68,7 +72,7 @@ def sandbox(tmp_path, monkeypatch):
 
     monkeypatch.setattr(news_claude, "_call", fake_call)
     monkeypatch.setattr(ao, "build_packet",
-                        lambda s: ("PACKET", [], {"bar_age_min": 3.0}))
+                        lambda s, as_of=None: ("PACKET", [], {"bar_age_min": 3.0}))
     monkeypatch.setattr(ao, "check_triggers",
                         lambda s, st, refresh: ([("bar", "test fixture")],
                                                 {"bar_ts": "fixture"}))
@@ -215,6 +219,187 @@ def test_i10_corrupt_persistence_line_raises_on_load(sandbox):
         ao.load_ledger()
 
 
+# ------------------------------------------- spec 024 discipline-layer tests
+
+def test_i11_non_abstain_requires_expected_r_band(sandbox):
+    sandbox["read"] = _read(verdict="TIGHTEN", expected_r_low=None,
+                            expected_r_high=None)
+    with pytest.raises(ao.OperatorError, match="pre-registration is required"):
+        _run(sandbox)
+    assert not ao.RECORDS.exists()             # refused before any write
+
+
+def test_i11_inverted_band_refused(sandbox):
+    sandbox["read"] = _read(verdict="TIGHTEN", expected_r_low=2.0,
+                            expected_r_high=-1.0)
+    with pytest.raises(ao.OperatorError, match="inverted"):
+        _run(sandbox)
+
+
+def test_i12_prereg_block_sealed_with_record(sandbox):
+    _run(sandbox)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["pre_registration"]["expected_r_low"] == -0.5
+    assert rec["pre_registration"]["expected_r_high"] == 1.5
+    assert rec["pre_registration"]["invalidation_predicates"][0]["kind"] == "close_below"
+
+
+def test_abstain_carries_no_prereg(sandbox):
+    sandbox["read"] = _read(verdict="ABSTAIN")
+    _run(sandbox)
+    assert ao._read_jsonl(ao.RECORDS)[0]["pre_registration"] is None
+
+
+def test_i13_resolver_scores_prereg_deterministically(sandbox, monkeypatch):
+    _write_bars(sandbox["tmp"], monkeypatch, [100 + i * 0.1 for i in range(13)])
+    (sandbox["tmp"] / "plan.json").write_text(json.dumps(
+        {"symbol": "NVDA", "direction": "long", "entry": 100.0, "sl": 99.0,
+         "qty": 100, "tp1": 101.0, "tp2": 102.0, "trail_dist": 0.5}))
+    _seed_forecast(sandbox, horizon=60)
+    ao.resolve_open(now=NOW + timedelta(minutes=61))
+    scores = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "prereg_score"]
+    assert len(scores) == 1
+    s = scores[0]
+    # up-drift of +1.2 over risk 1.0 → realized ~+1.2R, inside [-0.5, 1.5]
+    assert s["r_in_band"] is True
+    assert 1.0 < s["realized_r"] < 1.4
+    # close_below 99.5 never fired on a rising tape
+    assert s["predicates"][0]["fired"] is False
+    # ledger replay tolerates the extra row kind
+    ao.load_ledger()
+
+
+def test_i13b_out_of_band_outcome_scores_false(sandbox, monkeypatch):
+    """A rising tape against a pre-registered band of [-1.5, -0.5] must score
+    r_in_band=False — the miss is recorded, not forgiven."""
+    _write_bars(sandbox["tmp"], monkeypatch, [100 + i * 0.1 for i in range(13)])
+    (sandbox["tmp"] / "plan.json").write_text(json.dumps(
+        {"symbol": "NVDA", "direction": "long", "entry": 100.0, "sl": 99.0,
+         "qty": 100, "tp1": 101.0, "tp2": 102.0, "trail_dist": 0.5}))
+    sandbox["read"] = _read(expected_r_low=-1.5, expected_r_high=-0.5)
+    orig = ao._utcnow
+    ao._utcnow = lambda: NOW               # forecast as_of pinned to NOW
+    try:
+        _run(sandbox)
+    finally:
+        ao._utcnow = orig
+    ao.resolve_open(now=NOW + timedelta(minutes=61))
+    s = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "prereg_score"][0]
+    assert s["r_in_band"] is False
+
+
+def test_i15_session_cap_refuses_fourth_directive(sandbox):
+    for i in range(4):
+        sandbox["read"] = _read(verdict="TIGHTEN")
+        _run(sandbox)
+    recs = ao._read_jsonl(ao.RECORDS)
+    emitted = [r for r in recs if r["directive"]]
+    refused = [r for r in recs if r["emission_refused"]]
+    assert len(emitted) == 3
+    assert len(refused) == 1
+    assert refused[0]["emission_refused"]["gate"] == "session_cap"
+    assert refused[0]["verdict"] == "TIGHTEN"  # judgment sealed verbatim
+    assert len(json.loads((sandbox["tmp"] / "directives.json").read_text())) == 3
+
+
+def test_i16_codrift_pause_two_symbols_same_group(sandbox, monkeypatch):
+    ao.OPDIR.mkdir(parents=True, exist_ok=True)
+    (sandbox["tmp"] / "operator" / "correlated_groups.json").write_text(
+        json.dumps({"SEMIS": ["NVDA", "AMD"]}))
+    monkeypatch.setattr(ao, "GROUPS_FILE",
+                        sandbox["tmp"] / "operator" / "correlated_groups.json")
+    # a freshly-emitted AMD TIGHTEN directive inside the window
+    ao._append_jsonl(ao.RECORDS, {
+        "record_id": "op-amd", "symbol": "AMD", "verdict": "TIGHTEN",
+        "ts": ao._iso(ao._utcnow() - timedelta(minutes=5)),
+        "expires_at": ao._iso(ao._utcnow() + timedelta(minutes=40)),
+        "directive": {"directive_id": "d-amd"}, "shadow": False})
+    sandbox["read"] = _read(verdict="TIGHTEN")
+    _run(sandbox)
+    rec = [r for r in ao._read_jsonl(ao.RECORDS) if r["symbol"] == "NVDA"][0]
+    assert rec["emission_refused"]["gate"] == "codrift_pause"
+    assert rec["directive"] is None
+    assert not (sandbox["tmp"] / "directives.json").exists()
+
+
+def test_i16b_codrift_inert_without_groups_file(sandbox):
+    sandbox["read"] = _read(verdict="TIGHTEN")
+    _run(sandbox)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["emission_refused"] is None
+    assert rec["directive"] is not None
+
+
+def test_i17_guard_violation_never_blocks_emission(sandbox, monkeypatch):
+    ao.OPDIR.mkdir(parents=True, exist_ok=True)
+    limits_path = sandbox["tmp"] / "operator" / "limits.json"
+    limits_path.write_text(json.dumps({
+        "limits": {"max_total_open_risk_r": 1.0, "max_per_symbol_exposure_r": 0.5,
+                   "max_correlated_exposure_r": 1.0, "max_unprotected_count": 0,
+                   "daily_loss_lock_r": 2.0, "emergency_flatten_r": 3.0},
+        "positions": [{"symbol": "NVDA", "open_risk_r": 2.0, "protected": False}],
+        "realized_today_r": 0.0}))
+    monkeypatch.setattr(ao, "LIMITS_FILE", limits_path)
+    sandbox["read"] = _read(verdict="TIGHTEN")
+    _run(sandbox)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["portfolio_advisory"]["violations"]          # G001/G002/G004 fired
+    assert rec["directive"] is not None                     # ...and blocked nothing
+
+
+def test_i22_shadow_writes_zero_directives(sandbox):
+    sandbox["read"] = _read(verdict="TIGHTEN")
+    ao.run_once("NVDA", cap=5.0, model="claude-sonnet-5", refresh=False,
+                shadow=True)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["shadow"] is True
+    assert rec["directive"] is not None        # sealed for the soak record...
+    assert not (sandbox["tmp"] / "directives.json").exists()  # ...never emitted
+
+
+def test_shadow_directives_do_not_count_toward_session_cap(sandbox):
+    for _ in range(3):
+        sandbox["read"] = _read(verdict="TIGHTEN")
+        ao.run_once("NVDA", cap=5.0, model="claude-sonnet-5", refresh=False,
+                    shadow=True)
+    assert ao._session_directive_count("NVDA", ao._utcnow()) == 0
+    sandbox["read"] = _read(verdict="TIGHTEN")
+    _run(sandbox)                              # real emission still allowed
+    assert len(json.loads((sandbox["tmp"] / "directives.json").read_text())) == 1
+
+
+def test_i14_packet_point_in_time(tmp_path, monkeypatch):
+    """Reconstruct the packet at T: nothing newer than T enters, and two
+    builds at the same T are byte-identical. Uses the REAL build_packet —
+    deliberately not the sandbox fixture, which stubs it."""
+    import pandas as pd
+    monkeypatch.setattr(ao, "OUT", tmp_path)
+    monkeypatch.setattr(ao, "PLAN", tmp_path / "plan.json")
+    sandbox = {"tmp": tmp_path}
+    T = NOW
+    idx = pd.date_range(T - timedelta(hours=2), T + timedelta(hours=1),
+                        freq="5min", tz="UTC")
+    vals = [100.0 + i * 0.01 for i in range(len(idx))]
+    df = pd.DataFrame({"Open": vals, "High": vals, "Low": vals, "Close": vals,
+                       "Volume": [1] * len(idx)}, index=idx)
+    cache = sandbox["tmp"] / "bars"; cache.mkdir(exist_ok=True)
+    monkeypatch.setattr(bars_mod, "CACHE", cache)
+    df.to_parquet(cache / "NVDA_5m.parquet")
+    # an event after T must be excluded
+    (sandbox["tmp"] / "events_2026-08-14_NVDA.jsonl").write_text(
+        json.dumps({"occurred_at": ao._iso(T + timedelta(minutes=10)),
+                    "event_type": "LATE"}) + "\n" +
+        json.dumps({"occurred_at": ao._iso(T - timedelta(minutes=10)),
+                    "event_type": "EARLY"}) + "\n")
+    p1, _, meta1 = ao.build_packet("NVDA", as_of=T)
+    p2, _, meta2 = ao.build_packet("NVDA", as_of=T)
+    assert p1 == p2                            # byte-identical reconstruction
+    assert ao._aware(meta1["max_data_ts"]) <= T
+    assert "LATE" not in p1 and "EARLY" in p1
+    # the newest bar shown is at-or-before T
+    assert meta1["bar_age_min"] >= 0
+
+
 # ---------------------------------------- round-3 (durability review) tests
 
 def test_stale_bars_mechanically_seal_abstain_without_api_call(sandbox, monkeypatch):
@@ -222,7 +407,7 @@ def test_stale_bars_mechanically_seal_abstain_without_api_call(sandbox, monkeypa
     ABSTAIN(STALE_CONTEXT), zero cost, no directive (review fix 2)."""
     for age in (None, 16.0, 17705.7):
         monkeypatch.setattr(ao, "build_packet",
-                            lambda s, a=age: ("PACKET", [], {"bar_age_min": a}))
+                            lambda s, a=age, as_of=None: ("PACKET", [], {"bar_age_min": a}))
         assert _run(sandbox) == 0
     assert sandbox["calls"] == 0               # the model was never consulted
     recs = ao._read_jsonl(ao.RECORDS)

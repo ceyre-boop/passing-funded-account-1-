@@ -43,6 +43,13 @@ import alpha_operator as ao                                    # noqa: E402
 
 BOOKS = ("baseline", "veto", "select", "full")
 
+# Referee-first doctrine (spec 024): a system that can only abstain/tighten/
+# exit has bounded downside and gives the cleanest signal on whether the
+# discretion has any edge. Veto is the book of record; full stays unbuilt
+# until an ENTER schema is ratified.
+ROLES = {"veto": "primary", "baseline": "reference",
+         "select": "experimental", "full": "unbuilt"}
+
 
 class HarnessError(RuntimeError):
     """Books diverging on inputs, or a position that cannot reconcile."""
@@ -170,11 +177,16 @@ def run_session(symbol: str, df, plan: dict, records: list[dict]) -> dict:
     if len(fps) != 1:                            # spec 023 I8, asserted not assumed
         raise HarnessError(f"books consumed different bar data: {fps}")
     fp = fps.pop()
+    for book in BOOKS:
+        results[book]["role"] = ROLES[book]
     return {"symbol": symbol, "session": str(df.index[0].date()),
             "bars_fingerprint": fp, "n_records": len(records),
             "generated_at": datetime.now(timezone.utc).isoformat(),
+            "policy": "referee-first (spec 024): veto is the book of record; "
+                      "full is measured-not-built",
             "note_full_book": "v1: full == veto until an entry-proposal "
                               "schema is ratified (spec 023)",
+            "yield_delta_r": round(results["veto"]["r"] - results["baseline"]["r"], 4),
             "books": results}
 
 
@@ -206,15 +218,26 @@ def main(argv=None) -> int:
 
     print(f"\n  {a.symbol} {out['session']}   bars {out['bars_fingerprint']}   "
           f"operator records {out['n_records']}")
-    print(f"  {'book':10s} {'entered':8s} {'R':>8s}   why")
-    for book in BOOKS:
+    print(f"  {'book':10s} {'role':13s} {'entered':8s} {'R':>8s}   why")
+    for book in ("veto", "baseline", "select", "full"):   # referee first
         b = out["books"][book]
-        print(f"  {book:10s} {str(b['entered']):8s} {b['r']:>+8.3f}   {b['why']}")
+        print(f"  {book:10s} {ROLES[book]:13s} {str(b['entered']):8s} "
+              f"{b['r']:>+8.3f}   {b['why']}")
 
     ao.OPDIR.mkdir(parents=True, exist_ok=True)
     artifact = ao.OPDIR / f"books-{out['session']}.json"
     artifact.write_text(json.dumps(out, indent=1))
-    print(f"\n  artifact: {artifact}")
+    # One yield row per session (spec 024 I21) — the demotion decision must be
+    # readable from data, not reconstructed from memory of a hot week.
+    ao._append_jsonl(ao.YIELD_LOG, {
+        "session": out["session"], "symbol": a.symbol,
+        "veto_r": out["books"]["veto"]["r"],
+        "baseline_r": out["books"]["baseline"]["r"],
+        "yield_delta_r": out["yield_delta_r"],
+        "bars_fingerprint": out["bars_fingerprint"],
+        "n_records": out["n_records"]})
+    print(f"\n  yield (veto − baseline): {out['yield_delta_r']:+.3f}R")
+    print(f"  artifact: {artifact}")
     return 0
 
 
