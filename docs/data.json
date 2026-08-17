@@ -1,0 +1,328 @@
+{
+ "containment": {
+  "clean": true,
+  "directives_emitted": 0,
+  "directives_file_exists": false,
+  "directives_suppressed_shadow": 0,
+  "emission_refusals": 0
+ },
+ "disciplines": [
+  {
+   "id": 1,
+   "invariants": [
+    "I11",
+    "I12",
+    "I13"
+   ],
+   "mechanism": "Expected-R band in [-5,+5] plus a closed predicate vocabulary, sealed before the outcome; the resolver scores every claim as a prereg_score row.",
+   "mutations": [
+    "M17",
+    "M26"
+   ],
+   "name": "Pre-registration",
+   "status": "active"
+  },
+  {
+   "id": 2,
+   "invariants": [
+    "I14"
+   ],
+   "mechanism": "build_packet(as_of=T) admits no bar, headline, or event newer than T; max_data_ts is sealed in the record as proof.",
+   "mutations": [
+    "M18",
+    "M19"
+   ],
+   "name": "Point-in-time packets",
+   "status": "active"
+  },
+  {
+   "id": 3,
+   "invariants": [
+    "I15",
+    "I16",
+    "I17"
+   ],
+   "mechanism": "3 directives per session; a 2nd same-group interrupt inside 30 min pauses instead of averaging. Emission refused, judgment still sealed.",
+   "mutations": [
+    "M20",
+    "M21",
+    "M22"
+   ],
+   "name": "Caps & co-drift",
+   "status": "active"
+  },
+  {
+   "id": 4,
+   "invariants": [],
+   "mechanism": "The veto book is the book of record \u2014 bounded downside, cleanest edge signal. Full discretion stays unbuilt.",
+   "mutations": [],
+   "name": "Referee first",
+   "status": "active"
+  },
+  {
+   "id": 5,
+   "invariants": [
+    "I18",
+    "I19",
+    "I20"
+   ],
+   "mechanism": "gap_log.py matches trade_ids across sim and paper ledgers; widening drift beyond 0.05R blocks the promotion report.",
+   "mutations": [
+    "M24",
+    "M25"
+   ],
+   "name": "Sim\u2192live gap tripwire",
+   "status": "armed \u2014 no paper ledger yet"
+  },
+  {
+   "id": 6,
+   "invariants": [
+    "I21"
+   ],
+   "mechanism": "One yield row per session (veto R \u2212 baseline R); three monotone declines print YIELD_DECAY. Demotion readable from data.",
+   "mutations": [],
+   "name": "Yield curve",
+   "status": "awaiting first live session"
+  },
+  {
+   "id": 7,
+   "invariants": [
+    "I22"
+   ],
+   "mechanism": "--shadow: full judgment, sealed record, forecast \u2014 zero directive bytes. Excluded from the session cap.",
+   "mutations": [
+    "M23"
+   ],
+   "name": "Shadow soak",
+   "status": "ON"
+  }
+ ],
+ "forecasts": {
+  "direction_counts": {
+   "flat": 3
+  },
+  "open": 3,
+  "prereg_in_band": 0,
+  "prereg_in_band_rate": null,
+  "prereg_scored": 0,
+  "resolved": 0,
+  "total": 3
+ },
+ "four_books": {
+  "available": true,
+  "bars_fingerprint": "7ba530746517022f",
+  "books": [
+   {
+    "book": "veto",
+    "entered": true,
+    "r": 19.5841,
+    "role": "BOOK OF RECORD",
+    "why": "entered and ran the engine"
+   },
+   {
+    "book": "baseline",
+    "entered": true,
+    "r": 19.5841,
+    "role": "reference",
+    "why": "entered and ran the engine"
+   },
+   {
+    "book": "select",
+    "entered": false,
+    "r": 0.0,
+    "role": "experimental",
+    "why": "no ALLOW_BASELINE record covers this entry"
+   },
+   {
+    "book": "full",
+    "entered": true,
+    "r": 19.5841,
+    "role": "unbuilt (== veto)",
+    "why": "entered and ran the engine"
+   }
+  ],
+  "n_records": 1,
+  "note_full_book": "v1: full == veto until an entry-proposal schema is ratified (spec 023)",
+  "session": "2026-08-14",
+  "symbol": "NVDA",
+  "yield_delta_r": 0.0
+ },
+ "generated_at": "2026-08-17T05:41:13.413792+00:00",
+ "latest_judgment": {
+  "abstention": {
+   "detail": "newest bar 3458 min old (> 15)",
+   "issued_at": "2026-08-17T05:33:31.827800+00:00",
+   "model_version": "alpha-operator-v1/stale-gate",
+   "reason": "STALE_CONTEXT"
+  },
+  "available": true,
+  "bar_age_min": 3458.5,
+  "both_sides": null,
+  "confidence": 0.0,
+  "cost_usd": 0.0,
+  "emission_refused": null,
+  "invalidators": [],
+  "model_version": "alpha-operator-v1/stale-gate",
+  "packet_as_of": "2026-08-17T05:33:31.827800+00:00",
+  "packet_max_data_ts": "2026-08-16T19:27:57+00:00",
+  "pre_registration": null,
+  "record_id": "op-20260817-053331-827800-NVDA",
+  "trigger": "bar",
+  "ts": "2026-08-17T05:33:31.827800+00:00",
+  "verdict": "ABSTAIN"
+ },
+ "session": {
+  "available": true,
+  "last_record_ts": "2026-08-17T05:33:31.827800+00:00",
+  "last_trigger": "bar",
+  "mode": "SHADOW SOAK",
+  "records_total": 5,
+  "shadow": true,
+  "symbol": "NVDA"
+ },
+ "spend": {
+  "avg_call_usd": 0.03087,
+  "by_day": [
+   {
+    "calls": 9,
+    "date": "2026-08-06",
+    "usd": 0.3091
+   },
+   {
+    "calls": 2,
+    "date": "2026-08-16",
+    "usd": 0.0367
+   },
+   {
+    "calls": 1,
+    "date": "2026-08-17",
+    "usd": 0.0246
+   }
+  ],
+  "call_count": 12,
+  "cap_usd": 5.0,
+  "total_usd": 0.3704
+ },
+ "verdicts": {
+  "abstain_reasons": {
+   "DATA_INCOMPLETE": 1,
+   "STALE_CONTEXT": 4
+  },
+  "counts": {
+   "ABSTAIN": 5,
+   "ALLOW_BASELINE": 0,
+   "EXIT": 0,
+   "TIGHTEN": 0
+  },
+  "series": [
+   {
+    "confidence": 0.05,
+    "shadow": false,
+    "ts": "2026-08-16T03:00:41.537973+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.25,
+    "shadow": false,
+    "ts": "2026-08-16T04:40:34.709506+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.15,
+    "shadow": false,
+    "ts": "2026-08-17T04:46:23.661738+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-17T05:29:16.136063+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-17T05:33:31.827800+00:00",
+    "verdict": "ABSTAIN"
+   }
+  ]
+ },
+ "verification": {
+  "flagged": {
+   "M26": "false-killed first (bad test target); real negative test added, then killed",
+   "M9": "survived first run \u2014 decorative fingerprint check found and fixed, then killed"
+  },
+  "gates": [
+   {
+    "gate": 1,
+    "name": "AZ spine",
+    "status": "closed"
+   },
+   {
+    "gate": 2,
+    "name": "Event memory",
+    "status": "closed"
+   },
+   {
+    "gate": 3,
+    "name": "Execution \u2192 broker",
+    "status": "open"
+   },
+   {
+    "gate": 4,
+    "name": "Shadow / regret",
+    "status": "open"
+   },
+   {
+    "gate": 5,
+    "name": "Evidence / directive producer",
+    "status": "producer built (023)"
+   },
+   {
+    "gate": 6,
+    "name": "Forecast producer",
+    "status": "producer built (023)"
+   },
+   {
+    "gate": 7,
+    "name": "Portfolio guards",
+    "status": "advisory wired (enforce last)"
+   }
+  ],
+  "mutation_rows": 26,
+  "mutations": [
+   "M1",
+   "M2",
+   "M3",
+   "M4",
+   "M5",
+   "M6",
+   "M7",
+   "M8",
+   "M9",
+   "M10",
+   "M11",
+   "M12",
+   "M13",
+   "M14",
+   "M15",
+   "M16",
+   "M17",
+   "M18",
+   "M19",
+   "M20",
+   "M21",
+   "M22",
+   "M23",
+   "M24",
+   "M25",
+   "M26"
+  ],
+  "mutations_killed": 26,
+  "tests": 290
+ },
+ "yield_curve": {
+  "available": false,
+  "rows": []
+ }
+}

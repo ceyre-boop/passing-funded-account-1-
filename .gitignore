@@ -12,3 +12,4 @@ logs/
 !data/daytrade/replay_expected/*.log
 data/agent/*.jsonl
 .env
+data/daytrade/operator/.dashboard_published

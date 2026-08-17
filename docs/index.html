@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STOCKFISH × ALPHAZERO — Funded Account Desk</title>
+<style>
+  :root {
+    --bg: #07090c; --panel: #0d1117; --line: #1c2530; --line-hi: #2b3a4d;
+    --green: #3fdc97; --amber: #e8b44a; --red: #e5534b; --blue: #58a6ff;
+    --text: #c9d4e0; --muted: #5b6b7d;
+    --mono: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  ::selection { background: rgba(63,220,151,.35); }
+  html { background: var(--bg); }
+  body {
+    color: var(--text); background: var(--bg);
+    font: 15px/1.55 -apple-system, "Inter", "Segoe UI", sans-serif;
+    border-top: 2px solid transparent;
+    border-image: linear-gradient(90deg, var(--green), var(--blue)) 1;
+    padding-bottom: 48px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    padding: 18px 20px; transition: border-color 150ms;
+  }
+  .card:hover { border-color: var(--line-hi); }
+  .s12 { grid-column: span 12; } .s6 { grid-column: span 6; }
+  .s4 { grid-column: span 4; } .s8 { grid-column: span 8; }
+  @media (max-width: 760px) { .s6, .s4, .s8 { grid-column: span 12; } }
+
+  .label {
+    font: 600 11px/1 var(--mono); text-transform: uppercase;
+    letter-spacing: .14em; color: var(--muted); margin-bottom: 12px;
+  }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .big { font: 700 clamp(1.6rem, 4vw, 2.6rem)/1.1 var(--mono);
+         letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .green { color: var(--green); } .amber { color: var(--amber); }
+  .red { color: var(--red); } .blue { color: var(--blue); }
+
+  /* hero */
+  header {
+    padding: 44px 0 30px;
+    background:
+      repeating-linear-gradient(0deg, transparent 0 2px, rgba(255,255,255,.012) 2px 4px);
+    border-bottom: 1px solid var(--line); margin-bottom: 24px;
+  }
+  .hero-top { display: flex; justify-content: space-between; align-items: flex-start;
+              gap: 20px; flex-wrap: wrap; }
+  h1 { font: 800 clamp(1.7rem, 5vw, 3rem)/1.05 var(--mono);
+       letter-spacing: -0.03em; }
+  .subtitle { color: var(--muted); font-family: var(--mono); font-size: 13px;
+              margin-top: 8px; letter-spacing: .04em; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--line-hi); border-radius: 20px;
+    padding: 7px 15px; font: 600 12px var(--mono); letter-spacing: .08em;
+    white-space: nowrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green);
+         animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(63,220,151,.5); }
+    50% { box-shadow: 0 0 0 7px rgba(63,220,151,0); }
+  }
+  .statstrip { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+  .stat { flex: 1 1 190px; background: var(--panel); border: 1px solid var(--line);
+          border-radius: 6px; padding: 14px 18px; }
+  .stat .v { font: 700 clamp(1.5rem, 3.5vw, 2.1rem)/1.15 var(--mono);
+             font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .stat .k { font: 600 10px var(--mono); letter-spacing: .12em;
+             text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+
+  /* pills / badges */
+  .pill { display: inline-block; border-radius: 4px; padding: 3px 10px;
+          font: 700 12px var(--mono); letter-spacing: .06em; border: 1px solid; }
+  .pill.abstain { color: var(--amber); border-color: rgba(232,180,74,.45);
+                  background: rgba(232,180,74,.10); }
+  .pill.allow  { color: var(--green); border-color: rgba(63,220,151,.45);
+                 background: rgba(63,220,151,.10); }
+  .pill.tighten{ color: var(--blue); border-color: rgba(88,166,255,.45);
+                 background: rgba(88,166,255,.10); }
+  .pill.exit   { color: var(--red); border-color: rgba(229,83,75,.45);
+                 background: rgba(229,83,75,.10); }
+  .chiplet { display: inline-block; font: 600 10px var(--mono); color: var(--muted);
+             border: 1px solid var(--line); border-radius: 3px;
+             padding: 2px 6px; margin: 2px 3px 0 0; letter-spacing: .05em; }
+  .chiplet.m { color: var(--green); border-color: rgba(63,220,151,.3); }
+
+  /* both sides */
+  .triptych { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+              margin-top: 12px; }
+  @media (max-width: 760px) { .triptych { grid-template-columns: 1fr; } }
+  .side { border-radius: 5px; padding: 12px 14px; font-size: 13.5px;
+          border: 1px solid var(--line); }
+  .side h4 { font: 700 10px var(--mono); letter-spacing: .14em;
+             text-transform: uppercase; margin-bottom: 7px; }
+  .side.bull { border-left: 3px solid var(--green); }
+  .side.base { border-left: 3px solid var(--muted); }
+  .side.bear { border-left: 3px solid var(--red); }
+
+  ul.inv { list-style: none; margin-top: 8px; }
+  ul.inv li { padding: 5px 0 5px 22px; position: relative; font-size: 13.5px;
+              border-bottom: 1px dashed var(--line); }
+  ul.inv li:last-child { border-bottom: 0; }
+  ul.inv li::before { content: "◇"; position: absolute; left: 2px;
+                      color: var(--amber); font-size: 12px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { font: 600 10px var(--mono); text-transform: uppercase; letter-spacing: .12em;
+       color: var(--muted); text-align: left; padding: 8px 10px;
+       border-bottom: 1px solid var(--line); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--line);
+       font-family: var(--mono); font-size: 13px; }
+  tr:last-child td { border-bottom: 0; }
+  tr.hi td { background: rgba(63,220,151,.05); }
+  td.r { text-align: right; }
+
+  .meter { height: 10px; background: #131a22; border-radius: 5px;
+           overflow: hidden; margin: 8px 0 4px; }
+  .meter > div { height: 100%; background: var(--green); border-radius: 5px;
+                 box-shadow: 0 0 8px rgba(63,220,151,.4); }
+
+  .empty { border: 1px dashed var(--line-hi); border-radius: 6px;
+           padding: 22px; text-align: center; color: var(--muted);
+           font-family: var(--mono); font-size: 13px; }
+
+  .killgrid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 6px;
+              margin-top: 8px; }
+  .kill { aspect-ratio: 1; border-radius: 3px; background: rgba(63,220,151,.16);
+          border: 1px solid rgba(63,220,151,.5); position: relative;
+          display: flex; align-items: center; justify-content: center;
+          font: 600 8.5px var(--mono); color: var(--green); cursor: default; }
+  .kill.flag { border-color: var(--amber); }
+  .kill:hover::after {
+    content: attr(data-tip); position: absolute; bottom: 120%; left: 50%;
+    transform: translateX(-50%); background: #131a22; color: var(--text);
+    border: 1px solid var(--line-hi); border-radius: 4px; padding: 6px 10px;
+    font: 400 11px/1.4 var(--mono); white-space: normal; width: 210px;
+    z-index: 5; text-align: left;
+  }
+
+  .gates { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .gate { flex: 1 1 130px; border-radius: 5px; padding: 9px 11px;
+          font: 600 11px var(--mono); border: 1px solid var(--line-hi);
+          color: var(--muted); }
+  .gate.done { border-color: rgba(63,220,151,.5); color: var(--green);
+               background: rgba(63,220,151,.07); }
+  .gate.part { border-color: rgba(88,166,255,.5); color: var(--blue);
+               background: rgba(88,166,255,.07); }
+  .gate small { display: block; font-weight: 400; color: var(--muted);
+                margin-top: 2px; font-size: 10px; }
+
+  .disc { border-left: 3px solid var(--green); }
+  .disc h3 { font: 700 14px var(--mono); margin-bottom: 6px; }
+  .disc p { font-size: 12.5px; color: var(--text); opacity: .85; line-height: 1.5; }
+  .disc .status { float: right; }
+  .pill.on { color: var(--green); border-color: rgba(63,220,151,.45);
+             background: rgba(63,220,151,.10); }
+  .pill.armed { color: var(--amber); border-color: rgba(232,180,74,.45);
+                background: rgba(232,180,74,.10); }
+
+  .sec { margin: 26px 0 12px; font: 700 13px var(--mono); letter-spacing: .16em;
+         text-transform: uppercase; color: var(--muted); }
+  .sec::before { content: "// "; color: var(--green); }
+  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--line);
+           font: 12px var(--mono); color: var(--muted); line-height: 1.8; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  svg text { font-family: var(--mono); }
+  .prooofline { font: 11px var(--mono); color: var(--muted); margin-top: 12px;
+                border-top: 1px dashed var(--line); padding-top: 10px; }
+  #err { display: none; margin: 40px auto; max-width: 600px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="hero-top">
+      <div>
+        <h1>PASSING A FUNDED ACCOUNT</h1>
+        <div class="subtitle">STOCKFISH × ALPHAZERO — mechanics decide, meaning advises</div>
+      </div>
+      <div style="text-align:right">
+        <span class="chip"><span class="dot" id="modeDot"></span><span id="modeChip">LOADING…</span></span>
+        <div class="muted mono" style="font-size:11px;margin-top:8px" id="lastTs"></div>
+      </div>
+    </div>
+    <div class="statstrip" id="statstrip"></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="card empty" id="err">failed to load data.json — the generator has not published yet</div>
+
+  <div class="sec">Latest sealed judgment</div>
+  <div class="grid">
+    <div class="card s8" id="judgmentCard"></div>
+    <div class="card s4" id="judgmentSide"></div>
+  </div>
+
+  <div class="sec">Session telemetry</div>
+  <div class="grid">
+    <div class="card s4"><div class="label">Verdict breakdown</div><div id="donut"></div></div>
+    <div class="card s4"><div class="label">Spend vs cap</div><div id="spend"></div></div>
+    <div class="card s4"><div class="label">Forecast ledger</div><div id="forecasts"></div></div>
+  </div>
+
+  <div class="sec">Four books — referee first</div>
+  <div class="grid">
+    <div class="card s8" id="books"></div>
+    <div class="card s4"><div class="label">Yield trajectory (veto − baseline)</div><div id="yield"></div></div>
+  </div>
+
+  <div class="sec">The discipline layer</div>
+  <div class="grid" id="disciplines"></div>
+
+  <div class="sec">Verification</div>
+  <div class="grid">
+    <div class="card s6"><div class="label">Mutation kill grid — <span id="mutCount"></span></div><div class="killgrid" id="killgrid"></div></div>
+    <div class="card s6"><div class="label">Gate map</div><div class="gates" id="gates"></div></div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+};
+const fmtTs = iso => iso ? iso.replace("T", " ").slice(0, 16) + " UTC" : "—";
+const VP = { ABSTAIN: "abstain", ALLOW_BASELINE: "allow", TIGHTEN: "tighten", EXIT: "exit" };
+
+function stat(value, key, cls) {
+  const s = el("div", "stat");
+  s.appendChild(el("div", "v " + (cls || ""), value));
+  s.appendChild(el("div", "k", key));
+  return s;
+}
+
+function donutSVG(counts) {
+  const colors = { ABSTAIN: "#e8b44a", ALLOW_BASELINE: "#3fdc97",
+                   TIGHTEN: "#58a6ff", EXIT: "#e5534b" };
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 120 120");
+  svg.setAttribute("width", "130"); svg.setAttribute("height", "130");
+  const C = 2 * Math.PI * 44;
+  let off = 0;
+  for (const [k, n] of Object.entries(counts)) {
+    if (!n) continue;
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", 60); c.setAttribute("cy", 60); c.setAttribute("r", 44);
+    c.setAttribute("fill", "none"); c.setAttribute("stroke", colors[k]);
+    c.setAttribute("stroke-width", "11");
+    c.setAttribute("stroke-dasharray", `${C * n / total - 2} ${C - C * n / total + 2}`);
+    c.setAttribute("stroke-dashoffset", String(-off + C / 4));
+    c.setAttribute("opacity", "0.9");
+    off += C * n / total;
+    svg.appendChild(c);
+  }
+  const t = document.createElementNS(NS, "text");
+  t.setAttribute("x", 60); t.setAttribute("y", 58); t.setAttribute("text-anchor", "middle");
+  t.setAttribute("fill", "#c9d4e0"); t.setAttribute("font-size", "22");
+  t.setAttribute("font-weight", "700"); t.textContent = String(total);
+  const t2 = document.createElementNS(NS, "text");
+  t2.setAttribute("x", 60); t2.setAttribute("y", 74); t2.setAttribute("text-anchor", "middle");
+  t2.setAttribute("fill", "#5b6b7d"); t2.setAttribute("font-size", "9");
+  t2.textContent = "JUDGMENTS";
+  svg.appendChild(t); svg.appendChild(t2);
+  return svg;
+}
+
+function sparkSVG(rows) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 300 90"); svg.setAttribute("width", "100%");
+  const ys = rows.map(r => r.yield_delta_r);
+  const min = Math.min(...ys, 0), max = Math.max(...ys, 0);
+  const X = i => 10 + i * 280 / Math.max(rows.length - 1, 1);
+  const Y = v => 78 - (v - min) / (max - min || 1) * 66;
+  const zero = document.createElementNS(NS, "line");
+  zero.setAttribute("x1", 10); zero.setAttribute("x2", 290);
+  zero.setAttribute("y1", Y(0)); zero.setAttribute("y2", Y(0));
+  zero.setAttribute("stroke", "#1c2530"); zero.setAttribute("stroke-dasharray", "3 3");
+  svg.appendChild(zero);
+  const p = document.createElementNS(NS, "polyline");
+  p.setAttribute("points", rows.map((r, i) => `${X(i)},${Y(r.yield_delta_r)}`).join(" "));
+  p.setAttribute("fill", "none"); p.setAttribute("stroke", "#3fdc97");
+  p.setAttribute("stroke-width", "1.5");
+  p.setAttribute("filter", "drop-shadow(0 0 4px rgba(63,220,151,.35))");
+  svg.appendChild(p);
+  rows.forEach((r, i) => {
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", X(i)); c.setAttribute("cy", Y(r.yield_delta_r));
+    c.setAttribute("r", 2.5); c.setAttribute("fill", "#3fdc97");
+    svg.appendChild(c);
+  });
+  return svg;
+}
+
+function bandSVG(lo, hi) {
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 300 44"); svg.setAttribute("width", "100%");
+  const X = v => 10 + (v + 5) * 28;   // [-5,+5] -> [10,290]
+  const axis = document.createElementNS(NS, "line");
+  axis.setAttribute("x1", 10); axis.setAttribute("x2", 290);
+  axis.setAttribute("y1", 22); axis.setAttribute("y2", 22);
+  axis.setAttribute("stroke", "#1c2530"); axis.setAttribute("stroke-width", "2");
+  svg.appendChild(axis);
+  [-5, 0, 5].forEach(v => {
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("x", X(v)); t.setAttribute("y", 40);
+    t.setAttribute("text-anchor", "middle"); t.setAttribute("fill", "#5b6b7d");
+    t.setAttribute("font-size", "9"); t.textContent = (v > 0 ? "+" : "") + v + "R";
+    svg.appendChild(t);
+  });
+  const band = document.createElementNS(NS, "rect");
+  band.setAttribute("x", X(lo)); band.setAttribute("y", 14);
+  band.setAttribute("width", Math.max(X(hi) - X(lo), 2)); band.setAttribute("height", 16);
+  band.setAttribute("rx", 3); band.setAttribute("fill", "rgba(63,220,151,.25)");
+  band.setAttribute("stroke", "#3fdc97"); band.setAttribute("stroke-width", "1.5");
+  svg.appendChild(band);
+  return svg;
+}
+
+function render(d) {
+  // hero
+  const s = d.session, c = d.containment;
+  $("modeChip").textContent = s.mode + (s.symbol ? " · " + s.symbol : "");
+  $("modeDot").style.background = s.shadow ? "#3fdc97" : "#58a6ff";
+  $("lastTs").textContent = "last record " + fmtTs(s.last_record_ts);
+  const strip = $("statstrip");
+  strip.appendChild(stat(String(d.verification.tests), "tests passing", "green"));
+  strip.appendChild(stat(`${d.verification.mutations_killed}/${d.verification.mutation_rows}`,
+                         "mutations killed", "green"));
+  strip.appendChild(stat(String(c.directives_emitted), "directives emitted",
+                         c.clean ? "green" : "red"));
+  strip.appendChild(stat(`$${d.spend.total_usd.toFixed(2)} / $${d.spend.cap_usd.toFixed(2)}`,
+                         "model spend vs cap",
+                         d.spend.total_usd < d.spend.cap_usd * .8 ? "" : "amber"));
+
+  // latest judgment
+  const j = d.latest_judgment, jc = $("judgmentCard"), js = $("judgmentSide");
+  if (!j.available) {
+    jc.className = "card s8 empty"; jc.textContent = "no data yet";
+  } else {
+    const head = el("div");
+    const pill = el("span", "pill " + (VP[j.verdict] || "abstain"), j.verdict);
+    head.appendChild(pill);
+    head.appendChild(el("span", "mono muted",
+      `  conf ${(j.confidence ?? 0).toFixed(2)} · trigger ${j.trigger} · ${fmtTs(j.ts)}`));
+    jc.appendChild(el("div", "label", "The judgment"));
+    jc.appendChild(head);
+    if (j.abstention) {
+      const a = el("div", "mono amber");
+      a.style.marginTop = "10px"; a.style.fontSize = "13px";
+      a.textContent = `ABSTAIN(${j.abstention.reason}): ${j.abstention.detail}`;
+      jc.appendChild(a);
+    }
+    if (j.both_sides) {
+      const t = el("div", "triptych");
+      [["bull", "green"], ["base", ""], ["bear", "red"]].forEach(([k, cls]) => {
+        const sd = el("div", "side " + k);
+        sd.appendChild(el("h4", cls, k.toUpperCase()));
+        sd.appendChild(el("div", "", j.both_sides[k] || "—"));
+        t.appendChild(sd);
+      });
+      jc.appendChild(t);
+    }
+    const proof = el("div", "prooofline",
+      `sealed ${j.record_id || ""} · packet_as_of ${fmtTs(j.packet_as_of)} · ` +
+      `max_data_ts ${fmtTs(j.packet_max_data_ts)} · cost $${(j.cost_usd ?? 0).toFixed(4)}`);
+    jc.appendChild(proof);
+
+    js.appendChild(el("div", "label", "Pre-registration"));
+    if (j.pre_registration) {
+      const pr = j.pre_registration;
+      js.appendChild(el("div", "mono",
+        `expected R  [${pr.expected_r_low}, ${pr.expected_r_high}]`));
+      js.appendChild(bandSVG(pr.expected_r_low, pr.expected_r_high));
+      (pr.invalidation_predicates || []).forEach(p =>
+        js.appendChild(el("div", "chiplet", `${p.kind} ${p.value}`)));
+    } else {
+      js.appendChild(el("div", "empty", "no prereg — ABSTAIN carries no claim"));
+    }
+    if (j.invalidators && j.invalidators.length) {
+      js.appendChild(el("div", "label", "Invalidators")).style.marginTop = "16px";
+      const ul = el("ul", "inv");
+      j.invalidators.forEach(x => ul.appendChild(el("li", "", x)));
+      js.appendChild(ul);
+    }
+  }
+
+  // telemetry
+  const dn = $("donut");
+  dn.appendChild(donutSVG(d.verdicts.counts));
+  const legend = el("div", "mono", "");
+  legend.style.fontSize = "11px";
+  Object.entries(d.verdicts.counts).forEach(([k, n]) => {
+    if (n) legend.appendChild(el("div", "", `${k}: ${n}`));
+  });
+  Object.entries(d.verdicts.abstain_reasons || {}).forEach(([k, n]) =>
+    legend.appendChild(el("div", "muted", `  └ ${k}: ${n}`)));
+  dn.appendChild(legend);
+
+  const sp = $("spend");
+  sp.appendChild(el("div", "big", `$${d.spend.total_usd.toFixed(4)}`));
+  const meter = el("div", "meter"); const fill = el("div");
+  fill.style.width = Math.min(100, d.spend.total_usd / d.spend.cap_usd * 100) + "%";
+  meter.appendChild(fill); sp.appendChild(meter);
+  sp.appendChild(el("div", "mono muted",
+    `${d.spend.call_count} priced calls · avg $${d.spend.avg_call_usd ?? "—"} · hard cap $${d.spend.cap_usd}`))
+    .style.fontSize = "11px";
+  (d.spend.by_day || []).slice(-7).forEach(r => {
+    const row = el("div", "mono muted", `${r.date}  $${r.usd.toFixed(4)}  (${r.calls})`);
+    row.style.fontSize = "11px"; sp.appendChild(row);
+  });
+
+  const fc = $("forecasts"), f = d.forecasts;
+  fc.appendChild(el("div", "big", `${f.resolved}/${f.total}`));
+  fc.appendChild(el("div", "mono muted", "resolved / recorded")).style.fontSize = "11px";
+  fc.appendChild(el("div", "mono", `open: ${f.open}`)).style.marginTop = "8px";
+  const rate = f.prereg_in_band_rate;
+  fc.appendChild(el("div", "mono " + (rate === null ? "muted" : "green"),
+    rate === null ? "prereg in-band: no scored claims yet"
+                  : `prereg in-band: ${(rate * 100).toFixed(0)}% (${f.prereg_in_band}/${f.prereg_scored})`));
+
+  // four books
+  const bk = $("books"), b = d.four_books;
+  bk.appendChild(el("div", "label", "Latest session comparison"));
+  if (!b.available) {
+    bk.appendChild(el("div", "empty", "no books artifact yet — first four-books run pending"));
+  } else {
+    const tb = el("table"); const hd = el("tr");
+    ["book", "role", "entered", "R", "why"].forEach(h => hd.appendChild(el("th", "", h)));
+    tb.appendChild(hd);
+    b.books.forEach(row => {
+      const tr = el("tr", row.book === "veto" ? "hi" : "");
+      tr.appendChild(el("td", row.book === "veto" ? "green" : "", row.book));
+      tr.appendChild(el("td", "muted", row.role));
+      tr.appendChild(el("td", "", row.entered ? "yes" : "no"));
+      const r = el("td", "r " + (row.r > 0 ? "green" : row.r < 0 ? "red" : "muted"),
+                   (row.r >= 0 ? "+" : "") + row.r.toFixed(3));
+      tr.appendChild(r);
+      tr.appendChild(el("td", "muted", row.why));
+      tb.appendChild(tr);
+    });
+    bk.appendChild(tb);
+    bk.appendChild(el("div", "prooofline",
+      `${b.session} · ${b.symbol} · yield Δ ${(b.yield_delta_r >= 0 ? "+" : "")}${b.yield_delta_r}R · ` +
+      `bars ${b.bars_fingerprint} · ${b.note_full_book}`));
+  }
+
+  const yd = $("yield");
+  if (d.yield_curve.available && d.yield_curve.rows.length) {
+    yd.appendChild(sparkSVG(d.yield_curve.rows));
+    yd.appendChild(el("div", "mono muted",
+      d.yield_curve.rows.map(r => (r.yield_delta_r >= 0 ? "+" : "") + r.yield_delta_r.toFixed(3)).join(" → ")))
+      .style.fontSize = "11px";
+  } else {
+    yd.appendChild(el("div", "empty", "no yield rows yet — first post-session grade pending"));
+  }
+
+  // disciplines
+  const dg = $("disciplines");
+  d.disciplines.forEach(x => {
+    const cardEl = el("div", "card s4 disc");
+    const st = el("span", "pill status " + (/^(active|ON)$/.test(x.status) ? "on" : "armed"), x.status);
+    cardEl.appendChild(st);
+    cardEl.appendChild(el("h3", "", `${x.id}. ${x.name}`));
+    cardEl.appendChild(el("p", "", x.mechanism));
+    const chips = el("div"); chips.style.marginTop = "9px";
+    x.invariants.forEach(i => chips.appendChild(el("span", "chiplet", i)));
+    x.mutations.forEach(m => chips.appendChild(el("span", "chiplet m", m + " ✓")));
+    cardEl.appendChild(chips);
+    dg.appendChild(cardEl);
+  });
+
+  // verification
+  $("mutCount").textContent =
+    `${d.verification.mutations_killed}/${d.verification.mutation_rows} killed`;
+  const kg = $("killgrid");
+  d.verification.mutations.forEach(m => {
+    const flagged = d.verification.flagged[m];
+    const k = el("div", "kill" + (flagged ? " flag" : ""), m);
+    k.setAttribute("data-tip", flagged ? `${m}: ${flagged}` : `${m}: fault injected, named test failed, restored — KILLED`);
+    kg.appendChild(k);
+  });
+  const gt = $("gates");
+  d.verification.gates.forEach(g => {
+    const cls = /closed/.test(g.status) ? "done" : /built|advisory/.test(g.status) ? "part" : "";
+    const ge = el("div", "gate " + cls, `G${g.gate} ${g.name}`);
+    const sm = el("small", "", g.status);
+    ge.appendChild(sm); gt.appendChild(ge);
+  });
+
+  $("foot").textContent =
+    `generated ${fmtTs(d.generated_at)} · shadow soak; no live fills; single-seat build, ` +
+    `certification owed · specs 023 + 024 · `;
+  const a = el("a", "", "ceyre-boop/passing-funded-account-1-");
+  a.href = "https://github.com/ceyre-boop/passing-funded-account-1-";
+  $("foot").appendChild(a);
+}
+
+fetch("./data.json", { cache: "no-store" })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(render)
+  .catch(() => { $("err").style.display = "block"; });
+</script>
+</body>
+</html>
