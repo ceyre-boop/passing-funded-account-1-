@@ -1,0 +1,62 @@
+{
+ "generated_at": "2026-08-17T17:35:35.450727+00:00",
+ "n_entries": 336,
+ "families": [
+  "STATIC",
+  "EARLY_BANK",
+  "NOON_FLAT",
+  "TIGHT_TRAIL",
+  "EXIT_TP2",
+  "RIDE"
+ ],
+ "fixed_means": {
+  "STATIC": 0.1364,
+  "EARLY_BANK": 0.0872,
+  "NOON_FLAT": 0.1508,
+  "TIGHT_TRAIL": 0.0906,
+  "EXIT_TP2": 0.1068,
+  "RIDE": 0.0942
+ },
+ "best_fixed": "NOON_FLAT",
+ "shortlist_oracle_R": 0.548,
+ "shortlist_leak_R": 0.3972,
+ "null_leak_R": 1.7369,
+ "null_gate": 0.15,
+ "null_gate_pass": false,
+ "honest_leak_R": -1.3397,
+ "tree_oof_R": 0.123,
+ "realizable_leak_R": -0.0278,
+ "oracle_agreement_oof": 0.4643,
+ "per_scenario": {
+  "against_trade": {
+   "n": 137,
+   "tree_R": -0.3398,
+   "fixed_R": -0.3437
+  },
+  "failed_breakout": {
+   "n": 35,
+   "tree_R": 0.0845,
+   "fixed_R": 0.2913
+  },
+  "risk_event": {
+   "n": 29,
+   "tree_R": 0.2274,
+   "fixed_R": 0.2699
+  },
+  "with_trade": {
+   "n": 135,
+   "tree_R": 0.5803,
+   "fixed_R": 0.5907
+  }
+ },
+ "sample_size": {
+  "per_day_sigma": 0.697,
+  "delta": 0.2,
+  "n_days": 75,
+  "years": 0.3,
+  "consequence": "oracle-agreement is the promotion gate"
+ },
+ "tree_rules": "|--- pre_tr_med_r <= 0.84\n|   |--- pre_tr_med_r <= 0.73\n|   |   |--- pre_tr_med_r <= 0.60\n|   |   |   |--- class: NOON_FLAT\n|   |   |--- pre_tr_med_r >  0.60\n|   |   |   |--- class: STATIC\n|   |--- pre_tr_med_r >  0.73\n|   |   |--- class: EARLY_BANK\n|--- pre_tr_med_r >  0.84\n|   |--- pre_tr_med_r <= 1.83\n|   |   |--- gap_pct <= 0.24\n|   |   |   |--- class: STATIC\n|   |   |--- gap_pct >  0.24\n|   |   |   |--- class: STATIC\n|   |--- pre_tr_med_r >  1.83\n|   |   |--- dow <= 0.50\n|   |   |   |--- class: STATIC\n|   |   |--- dow >  0.50\n|   |   |   |--- class: STATIC\n",
+ "verdict": "NOTHING_QUOTABLE",
+ "prediction_on_the_hook": "0.15-0.30 realizable; >0.5 rich; <0.1 drawer"
+}

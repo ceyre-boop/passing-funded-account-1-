@@ -75,6 +75,16 @@ PROB_RENORM_TOL = 0.05             # LLM float drift we renormalise; beyond, rai
 # ---- spec 024 pre-committed constants. Sealed in the spec card; changing one
 # after data has been seen is the exact failure the discipline layer exists
 # to prevent.
+# INTERRUPT CHANNEL RETIRED 2026-08-17 (spec 026 addendum). The competence
+# study measured perfect-hindsight tighten at ~0 uplift in every cell and
+# perfect exit at ~0 in 11/12 — a channel with a zero ceiling is strictly
+# negative under imperfect use. Judgments are still sealed in full (that is
+# the training data); directives are constructed and recorded but NOT written
+# to the runner's file. Do not rediscover this as a good idea: re-arming
+# requires new evidence that clears the same competence harness this failed.
+# Tests exercise the live path by overriding this to "live".
+EMISSION_MODE = "log-only"
+
 MAX_DIRECTIVES_PER_SESSION = 3
 CODRIFT_N = 2
 CODRIFT_WINDOW_MIN = 30
@@ -854,6 +864,9 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
     if directive and shadow:
         print(f"  SHADOW: directive {directive.directive_id} suppressed "
               "(soak mode — sealed, never emitted)")
+    elif directive and EMISSION_MODE == "log-only":
+        print(f"  CHANNEL RETIRED: directive {directive.directive_id} sealed, "
+              "not emitted (spec 026 — interrupt ceiling measured at zero)")
     elif directive:
         _write_directive(directive)
         note = f" (EXIT suppressed to TIGHTEN — unpromoted)" if suppressed else ""

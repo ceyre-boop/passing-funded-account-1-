@@ -50,3 +50,37 @@ family for the day), not the interrupt. The soak's sealed records already
 capture verdict+forecast; the promotion path to authority 2 is the road the
 +0.67 prize sits behind. Interrupts stay as tail-risk insurance, not the
 value channel.
+
+## Addendum — the oracle audit (2026-08-17, same night)
+
+Cross-chat review deflated the +0.67 headline; every move ran same night
+(`daytrade/oracle_audit.py`, gates + prediction committed before first run):
+
+- **Shortlist oracle (6 families):** leak drops +0.67 → +0.40. NOON_FLAT is
+  the best fixed family on the pooled basket (+0.151).
+- **Null oracle: my pre-registered permutation was MIS-DESIGNED** — permuting
+  family columns independently destroys the strong within-day correlation
+  between families and inflates the null max (+1.74, gate FAIL). Recorded as
+  a design error, not evidence; the load-bearing number is the tree bound.
+- **Information-limited realizable bound (the number that matters):** a
+  depth-3 tree on entry-time features, day-grouped OOF, choosing among the 6
+  families: **−0.028 R/trade vs always-NOON_FLAT. DRAWER** — below the
+  reviewer's 0.15–0.30 prediction floor. Even risk-event days gain nothing
+  (tree +0.227 vs fixed +0.270). OOF oracle-agreement 46% vs 51%
+  majority-class — the tree cannot beat "always pick the modal family".
+- **Move 4 (calendar rule) rendered moot on this data:** the risk-event cell
+  is already captured by the fixed policy; config choice adds ~0 there.
+- **Sample size, registered:** per-day σ=0.70 → +0.20 R/trade detectable in
+  ~75 trading days. Cheap — but academic while realizable ≈ 0.
+
+**Standing conclusions:**
+1. Interrupt channel RETIRED in code (`EMISSION_MODE = "log-only"` in
+   alpha_operator.py). Re-arming requires new evidence through this harness.
+2. Mechanical policy-selection (features → family) adds ~zero. Every
+   mechanical channel is now measured: exits tuned to a validated dead end,
+   interrupts zero, mechanical config-choice zero.
+3. **AlphaZero's entire remaining case is non-mechanical information** —
+   news, narrative, the thing not in a feature column — which no harness
+   here can price. Only the soak's sealed judgments accumulate that
+   evidence. The oracle study stays what gold-58 was: a ranking instrument
+   and a channel-killer, never a target.

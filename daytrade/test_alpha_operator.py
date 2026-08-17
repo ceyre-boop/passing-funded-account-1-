@@ -63,6 +63,10 @@ def sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(ao, "DIRECTIVES", tmp_path / "directives.json")
     monkeypatch.setattr(ao, "PLAN", tmp_path / "plan.json")
 
+    # Tests exercise the LIVE emission path deliberately — production default
+    # is "log-only" since the spec-026 channel retirement.
+    monkeypatch.setattr(ao, "EMISSION_MODE", "live")
+
     ctl = {"read": _read(), "calls": 0, "call_order": []}
 
     def fake_call(system, user, schema, *, model, cap, effort, kind):
