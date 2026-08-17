@@ -133,7 +133,8 @@ def _fill(action, st: TradeState, e: Entry, bar_open: float, bar_close: float) -
     return bar_open if gapped else st.sl
 
 
-def simulate(session, e: Entry, cfg: dict, observer=None) -> float:
+def simulate(session, e: Entry, cfg: dict, observer=None,
+             urgency_schedule=None) -> float:
     """Replay the rest of the session under one exit config. Returns R.
 
     Bars are presented to the engine in PESSIMISTIC order — adverse extreme
@@ -163,6 +164,12 @@ def simulate(session, e: Entry, cfg: dict, observer=None) -> float:
         # act — the engine and this harness remain the only deciders (rule 1).
         if observer is not None:
             observer(ts=ts, bar=bar, st=st, realized=realized, held=held)
+
+        # spec 026 urgency schedule: counterfactual AlphaZero signals injected
+        # through the SAME channel the runner uses (st.urgent). The schedule
+        # returns None|'tighten'|'exit' per bar; the engine still decides.
+        if urgency_schedule is not None:
+            st.urgent = urgency_schedule(ts)
 
         for px in (adverse, favour, c):
             st.price = px

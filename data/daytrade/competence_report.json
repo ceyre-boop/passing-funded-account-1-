@@ -1,0 +1,129 @@
+{
+ "generated_at": "2026-08-17T08:22:32.856542+00:00",
+ "n_entries": 336,
+ "n_sims": 134064,
+ "oracle_warning": "vocab_oracle and az_* are HINDSIGHT counterfactuals \u2014 upper bounds, never expected results",
+ "total_regret_R_per_trade": 0.6696,
+ "cells": [
+  {
+   "class": "CASH_INDEX",
+   "scenario": "against_trade",
+   "n": 43,
+   "shipped_R": -0.3796,
+   "vocab_oracle_R": 0.1698,
+   "regret_R": 0.5493,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "CASH_INDEX",
+   "scenario": "failed_breakout",
+   "n": 15,
+   "shipped_R": 0.2106,
+   "vocab_oracle_R": 0.5897,
+   "regret_R": 0.3791,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "CASH_INDEX",
+   "scenario": "risk_event",
+   "n": 10,
+   "shipped_R": 0.0077,
+   "vocab_oracle_R": 1.5099,
+   "regret_R": 1.5022,
+   "az_exit_uplift_R": 0.3548,
+   "az_tighten_uplift_R": 0.011
+  },
+  {
+   "class": "CASH_INDEX",
+   "scenario": "with_trade",
+   "n": 32,
+   "shipped_R": 0.8025,
+   "vocab_oracle_R": 1.4407,
+   "regret_R": 0.6382,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "FUTURES",
+   "scenario": "against_trade",
+   "n": 30,
+   "shipped_R": -0.5121,
+   "vocab_oracle_R": -0.0379,
+   "regret_R": 0.4742,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "FUTURES",
+   "scenario": "failed_breakout",
+   "n": 6,
+   "shipped_R": 0.7749,
+   "vocab_oracle_R": 1.9325,
+   "regret_R": 1.1576,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "FUTURES",
+   "scenario": "risk_event",
+   "n": 9,
+   "shipped_R": -0.1235,
+   "vocab_oracle_R": 1.011,
+   "regret_R": 1.1345,
+   "az_exit_uplift_R": 0.0503,
+   "az_tighten_uplift_R": 0.0112
+  },
+  {
+   "class": "FUTURES",
+   "scenario": "with_trade",
+   "n": 20,
+   "shipped_R": 0.6807,
+   "vocab_oracle_R": 1.4754,
+   "regret_R": 0.7947,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "SINGLE_NAME",
+   "scenario": "against_trade",
+   "n": 64,
+   "shipped_R": -0.2725,
+   "vocab_oracle_R": 0.2266,
+   "regret_R": 0.4992,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "SINGLE_NAME",
+   "scenario": "failed_breakout",
+   "n": 14,
+   "shipped_R": -0.2928,
+   "vocab_oracle_R": 0.5045,
+   "regret_R": 0.7973,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "SINGLE_NAME",
+   "scenario": "risk_event",
+   "n": 10,
+   "shipped_R": 0.3219,
+   "vocab_oracle_R": 1.2248,
+   "regret_R": 0.9029,
+   "az_exit_uplift_R": -0.0006,
+   "az_tighten_uplift_R": 0.0
+  },
+  {
+   "class": "SINGLE_NAME",
+   "scenario": "with_trade",
+   "n": 83,
+   "shipped_R": 0.67,
+   "vocab_oracle_R": 1.4028,
+   "regret_R": 0.7328,
+   "az_exit_uplift_R": 0.0,
+   "az_tighten_uplift_R": 0.0
+  }
+ ]
+}
