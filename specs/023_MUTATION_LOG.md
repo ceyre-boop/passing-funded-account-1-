@@ -74,3 +74,32 @@ Suite after round 2: 261/261.
   test's own stub, so a fault row would be circular.
 - The live Claude call path (`news_claude._call`) is 009's machinery, already
   under its own log; these tests stub it by design.
+
+## Round 3 — durability review fixes (2026-08-17, pre-Monday)
+
+External review (Colin-relayed) named four operational holes; all fixed:
+
+1. **Crash-safe seal.** `_append_jsonl` now fsyncs. The sealed record embeds
+   the full forecast + evidence dicts and is written FIRST; EV_LOG/FC_LOG are
+   derived views, rebuilt by `_reconcile_derived()` (called at run and resolve
+   start) after any crash between the seal and the derived appends. Directive
+   still last — nothing observable before the seal.
+2. **Mechanical stale gate.** bars missing or older than STALE_BAR_MIN now
+   seal a code-authored ABSTAIN(STALE_CONTEXT) under model_version
+   `alpha-operator-v1/stale-gate` — zero API calls, no directive. The model
+   never sees data the desk would refuse to trade on.
+3. **Resolver decoupled from operator failure.** operator_tick.sh runs
+   `resolve` regardless of `run`'s exit, logging each failure loudly.
+4. **Symbol-scoped position triggers.** `_event_files(symbol)` globs
+   `events_*_{symbol}.jsonl`; another symbol's session can no longer fire the
+   trigger or leak into the packet.
+
+| # | fault injected | killed by | result |
+|---|---|---|---|
+| M14 | stale gate disabled | test_stale_bars_mechanically_seal_abstain_without_api_call | KILLED |
+| M15 | reconcile writes nothing | test_crash_between_seal_and_derived_rows_is_recovered | KILLED |
+| M16 | event trigger unscoped | test_position_trigger_scoped_to_symbol | KILLED |
+
+Suite after round 3: 266/266 (daytrade). Known consequence, stated: premarket
+runs will mechanically ABSTAIN while the newest cached bar is Friday's close —
+the news-driven premarket read returns when a premarket data source exists.

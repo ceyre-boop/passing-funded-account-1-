@@ -161,9 +161,13 @@ Rules:
 # ------------------------------------------------------------- persistence
 
 def _append_jsonl(path: Path, obj: dict) -> None:
+    """Append + fsync. These are audit logs; a row the OS buffered but never
+    flushed is a row that never happened at the worst possible moment."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a") as fh:
         fh.write(json.dumps(obj, sort_keys=True) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
 
 
 def _read_jsonl(path: Path) -> list[dict]:
@@ -199,6 +203,31 @@ def load_ledger() -> ForecastLedger:
         else:
             raise OperatorError(f"unknown row kind {kind!r} in {FC_LOG.name}")
     return led
+
+
+def _reconcile_derived() -> int:
+    """Crash recovery: the sealed record is the transaction; EV_LOG and FC_LOG
+    are derived views. Any record whose forecast/evidence rows never landed
+    (crash between the seal and the derived appends) gets them re-derived here.
+    Idempotent; returns the number of rows recovered."""
+    recovered = 0
+    have_fc = {r["forecast_id"] for r in _read_jsonl(FC_LOG) if r["kind"] == "forecast"}
+    have_ev = {r["evidence_id"] for r in _read_jsonl(EV_LOG) if r["kind"] == "evidence"}
+    for rec in _read_jsonl(RECORDS):
+        fc = rec.get("forecast")
+        if fc and fc["forecast_id"] not in have_fc:
+            _append_jsonl(FC_LOG, {"kind": "forecast", **fc})
+            have_fc.add(fc["forecast_id"])
+            recovered += 1
+        for ev in rec.get("evidence") or []:
+            if ev["evidence_id"] not in have_ev:
+                _append_jsonl(EV_LOG, {"kind": "evidence", **ev})
+                have_ev.add(ev["evidence_id"])
+                recovered += 1
+    if recovered:
+        print(f"  reconciled {recovered} derived row(s) from sealed records "
+              "(crash recovery — spec 023 seal-is-the-transaction)")
+    return recovered
 
 
 def load_evidence_store() -> EvidenceStore:
@@ -266,8 +295,15 @@ def _plan_levels(plan: dict) -> list[float]:
     return [float(x) for x in lv if x is not None]
 
 
-def _event_line_count() -> int:
-    return sum(sum(1 for _ in p.open()) for p in sorted(OUT.glob("events*.jsonl")))
+def _event_files(symbol: str) -> list[Path]:
+    """The runner writes events_{session_date}_{symbol}.jsonl — scope to THIS
+    symbol so a second symbol's session cannot fire our position trigger or
+    leak into our packet (multi-symbol review fix)."""
+    return sorted(OUT.glob(f"events_*_{symbol}.jsonl"))
+
+
+def _event_line_count(symbol: str) -> int:
+    return sum(sum(1 for _ in p.open()) for p in _event_files(symbol))
 
 
 def check_triggers(symbol: str, st: dict, *, refresh: bool
@@ -281,7 +317,7 @@ def check_triggers(symbol: str, st: dict, *, refresh: bool
     snapshot: dict = {}
     now_et = datetime.now(ET)
 
-    n_events = _event_line_count()
+    n_events = _event_line_count(symbol)
     snapshot["event_lines"] = n_events
     if n_events != st.get("event_lines", 0):
         fired.append(("position", f"event stream {st.get('event_lines', 0)} -> {n_events} lines"))
@@ -348,7 +384,7 @@ def build_packet(symbol: str) -> tuple[str, list[dict], dict]:
     else:
         lines.append("\nBASELINE PLAN: none on file")
 
-    ev_files = sorted(OUT.glob("events*.jsonl"))
+    ev_files = _event_files(symbol)
     if ev_files:
         tail = _read_jsonl(ev_files[-1])[-5:]
         lines.append("\nRECENT POSITION EVENTS:")
@@ -499,6 +535,7 @@ def _write_directive(d: ContextDirective) -> None:
 
 def run_once(symbol: str, *, cap: float, model: str,
              force: Optional[str] = None, refresh: bool = True) -> int:
+    _reconcile_derived()
     st = _load_state()
     fired, snapshot = check_triggers(symbol, st, refresh=refresh)
     if force:
@@ -514,6 +551,33 @@ def run_once(symbol: str, *, cap: float, model: str,
     # Microseconds: two triggers inside the same wall-clock second must not
     # mint the same id — the 017 ledger rightly refuses a duplicated claim.
     record_id = f"op-{now.strftime('%Y%m%d-%H%M%S-%f')}-{symbol}"
+
+    # MECHANICAL STALE GATE: the prompt asks Claude to abstain on stale data,
+    # but an instruction is not an enforcement. Bars missing or older than
+    # STALE_BAR_MIN produce a sealed code-authored ABSTAIN(STALE_CONTEXT) with
+    # no API call and no directive — the model never gets the chance to form a
+    # view on data this desk would refuse to trade on.
+    age = meta.get("bar_age_min")
+    if age is None or age > STALE_BAR_MIN:
+        why = ("no cached bars" if age is None
+               else f"newest bar {age:.0f} min old (> {STALE_BAR_MIN})")
+        abst = Abstention(model_version=f"{MODEL_VERSION_BASE}/stale-gate",
+                          reason="STALE_CONTEXT", detail=why, issued_at=_iso(now))
+        _append_jsonl(RECORDS, {
+            "record_id": record_id, "ts": _iso(now), "trigger": trigger,
+            "symbol": symbol, "model_version": f"{MODEL_VERSION_BASE}/stale-gate",
+            "prompt_version": PROMPT_VERSION, "forecast_id": None,
+            "trade_id": None, "evidence_ids": [],
+            "both_sides": None, "invalidators": [],
+            "verdict": "ABSTAIN", "confidence": 0.0,
+            "expires_at": _iso(now), "suppressed_to": None,
+            "directive": None, "abstention": abst.to_dict(),
+            "forecast": None, "evidence": [],
+            "bar_age_min": age, "cost_usd": 0.0})
+        _save_state({**st, **snapshot})
+        print(f"  STALE GATE: {why} — sealed ABSTAIN(STALE_CONTEXT), "
+              "no API call, no directive")
+        return 0
 
     system = [{"type": "text", "text": OPERATOR_SYSTEM,
                "cache_control": {"type": "ephemeral"}}]
@@ -558,14 +622,12 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
                           reason=read.abstain_reason,
                           detail=read.base, issued_at=_iso(now))
 
-    store = load_evidence_store()
-    for ev in evs:
-        store.add(ev)
-        _append_jsonl(EV_LOG, {"kind": "evidence", **ev.to_dict()})
-    _append_jsonl(FC_LOG, {"kind": "forecast", **fc.to_dict()})
-
-    # SEAL FIRST (spec 023 I3): the record hits disk before the directive is
-    # observable by the runner.
+    # SEAL FIRST, DURABLY, WITH EVERYTHING (spec 023 I3 + crash-safety review):
+    # the record is the single transaction. It embeds the full forecast and
+    # evidence dicts, so a crash between this fsync'd write and the derived
+    # EV_LOG/FC_LOG appends loses nothing — _reconcile_derived() rebuilds the
+    # derived rows from the record on the next start. The directive is still
+    # last: nothing is observable by the runner before the seal exists.
     _append_jsonl(RECORDS, {
         "record_id": record_id, "ts": _iso(now), "trigger": trigger,
         "symbol": symbol, "model_version": f"{MODEL_VERSION_BASE}/{model}",
@@ -578,7 +640,14 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
         "suppressed_to": suppressed,
         "directive": directive.to_dict() if directive else None,
         "abstention": abst.to_dict() if abst else None,
+        "forecast": fc.to_dict(), "evidence": [ev.to_dict() for ev in evs],
         "bar_age_min": meta.get("bar_age_min"), "cost_usd": round(cost, 8)})
+
+    store = load_evidence_store()
+    for ev in evs:
+        store.add(ev)
+        _append_jsonl(EV_LOG, {"kind": "evidence", **ev.to_dict()})
+    _append_jsonl(FC_LOG, {"kind": "forecast", **fc.to_dict()})
 
     if directive:
         _write_directive(directive)
@@ -663,6 +732,7 @@ def resolve_open(now: Optional[datetime] = None) -> int:
     """Close every open forecast whose horizon has passed. Missing bars leave
     the forecast open with a printed reason — nothing resolves partially."""
     now = now or _utcnow()
+    _reconcile_derived()
     ledger = load_ledger()
     records = {r["forecast_id"]: r for r in _read_jsonl(RECORDS)}
     rows = _read_jsonl(FC_LOG)

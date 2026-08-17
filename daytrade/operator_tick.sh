@@ -18,5 +18,17 @@ set -a; source "$REPO/.env"; set +a
 cd "$REPO/daytrade"
 
 echo "--- tick $(date -u +%FT%TZ) (ET $ET_HM)"
+# The resolver runs REGARDLESS of the operator call's fate — a spend-cap or
+# network failure on `run` must not stall the learning loop (review fix 3).
+set +e
 python3 alpha_operator.py run --symbol NVDA
+RUN_RC=$?
+if [[ $RUN_RC -ne 0 ]]; then
+  echo "!! OPERATOR RUN FAILED (exit $RUN_RC) — resolver still running"
+fi
 python3 alpha_operator.py resolve
+RES_RC=$?
+if [[ $RES_RC -ne 0 ]]; then
+  echo "!! RESOLVER FAILED (exit $RES_RC)"
+fi
+exit $(( RUN_RC || RES_RC ))

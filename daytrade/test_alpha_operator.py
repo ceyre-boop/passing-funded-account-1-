@@ -215,6 +215,62 @@ def test_i10_corrupt_persistence_line_raises_on_load(sandbox):
         ao.load_ledger()
 
 
+# ---------------------------------------- round-3 (durability review) tests
+
+def test_stale_bars_mechanically_seal_abstain_without_api_call(sandbox, monkeypatch):
+    """Stale data must not reach the model at all — code-authored
+    ABSTAIN(STALE_CONTEXT), zero cost, no directive (review fix 2)."""
+    for age in (None, 16.0, 17705.7):
+        monkeypatch.setattr(ao, "build_packet",
+                            lambda s, a=age: ("PACKET", [], {"bar_age_min": a}))
+        assert _run(sandbox) == 0
+    assert sandbox["calls"] == 0               # the model was never consulted
+    recs = ao._read_jsonl(ao.RECORDS)
+    assert len(recs) == 3
+    for r in recs:
+        assert r["verdict"] == "ABSTAIN"
+        assert r["abstention"]["reason"] == "STALE_CONTEXT"
+        assert r["directive"] is None and r["forecast"] is None
+        assert r["cost_usd"] == 0.0
+    assert not (sandbox["tmp"] / "directives.json").exists()
+
+
+def test_fresh_bars_pass_the_stale_gate(sandbox):
+    _run(sandbox)                              # fixture bar_age_min=3.0
+    assert sandbox["calls"] == 1
+
+
+def test_crash_between_seal_and_derived_rows_is_recovered(sandbox):
+    """The sealed record is the transaction: wipe the derived logs, and
+    reconcile rebuilds them byte-honest from the seal (review fix 1)."""
+    for verdict in ("TIGHTEN", "EXIT"):
+        sandbox["read"] = _read(verdict=verdict)
+        _run(sandbox)
+    before = {fid: f.to_dict() for fid, f in ao.load_ledger()._forecasts.items()}
+    ao.FC_LOG.unlink()                         # the crash: seal landed, derived lost
+    ao.EV_LOG.unlink()
+    assert ao._reconcile_derived() > 0
+    after = {fid: f.to_dict() for fid, f in ao.load_ledger()._forecasts.items()}
+    assert after == before
+    ev = [r for r in ao._read_jsonl(ao.EV_LOG) if r["kind"] == "evidence"]
+    assert len(ev) == 2
+
+
+def test_reconcile_is_idempotent(sandbox):
+    _run(sandbox)
+    assert ao._reconcile_derived() == 0        # nothing missing, nothing duplicated
+    assert len([r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "forecast"]) == 1
+
+
+def test_position_trigger_scoped_to_symbol(sandbox, tmp_path):
+    """Another symbol's session events must not fire our position trigger."""
+    (sandbox["tmp"] / "events_2026-08-17_AMD.jsonl").write_text('{"e":1}\n{"e":2}\n')
+    assert ao._event_line_count("NVDA") == 0
+    (sandbox["tmp"] / "events_2026-08-17_NVDA.jsonl").write_text('{"e":1}\n')
+    assert ao._event_line_count("NVDA") == 1
+    assert [p.name for p in ao._event_files("NVDA")] == ["events_2026-08-17_NVDA.jsonl"]
+
+
 # ------------------------------------------- Cato-round hardening tests
 
 def test_hostile_preexisting_directive_is_refused_not_repersisted(sandbox):
@@ -289,10 +345,15 @@ def test_resolver_refuses_forecast_with_no_sealed_record(sandbox, monkeypatch):
 
 
 def test_resolver_null_bar_age_counts_as_stale(sandbox, monkeypatch):
+    """The mechanical stale gate now prevents a live run from ever producing a
+    forecast with null bar_age — but the resolver's None→stale branch stays as
+    defense for legacy/hand-edited records, so it is pinned by rewriting a
+    sealed record's bar_age_min after the fact."""
     _write_bars(sandbox["tmp"], monkeypatch, [100.0] * 13)
-    monkeypatch.setattr(ao, "build_packet",
-                        lambda s: ("PACKET", [], {"bar_age_min": None}))
     _seed_forecast(sandbox, horizon=60)
+    rows = ao._read_jsonl(ao.RECORDS)
+    rows[0]["bar_age_min"] = None
+    ao.RECORDS.write_text("".join(json.dumps(r, sort_keys=True) + "\n" for r in rows))
     ao.resolve_open(now=NOW + timedelta(minutes=61))
     res = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "resolution"][0]
     assert res["was_stale"] is True
