@@ -1,0 +1,177 @@
+{
+ "spec": "027 (amended 2026-08-17)",
+ "built_at": "2026-08-18T03:34:41.835457+00:00",
+ "pinned_model": "claude-sonnet-5",
+ "model_cutoff": "2026-01-01",
+ "labels": {
+  "series": "cumulative risk_adjusted_pnl_pct by exit_date of backtest_trades_v015_2015_2024.csv",
+  "window_days": 60,
+  "unwind_pctl": 85,
+  "calm_pctl": 50,
+  "overlap": "forbidden, min gap 60d",
+  "pairs": "the four sealed pairs only"
+ },
+ "matching": {
+  "vars": [
+   "trailing_90d_equity_vol",
+   "year\u00b12"
+  ],
+  "vol_tol_rel": 0.5,
+  "replacement": false,
+  "seed": "deterministic sorted iteration, no RNG",
+  "tolerance_misses": 0
+ },
+ "n_windows": 16,
+ "evidence_cohort": {
+  "unwind": 0,
+  "calm": 0,
+  "status": "NO_EVIDENCE_COHORT"
+ },
+ "windows": [
+  {
+   "window_id": "calm-2016-05-09",
+   "label": "calm",
+   "window_start": "2016-05-09",
+   "packet_cutoff_ts": "2016-05-09",
+   "forward_drawdown": 6.4e-05,
+   "trailing_vol": 0.000106,
+   "cohort": "development"
+  },
+  {
+   "window_id": "unwind-2016-05-24",
+   "label": "unwind",
+   "window_start": "2016-05-24",
+   "packet_cutoff_ts": "2016-05-24",
+   "forward_drawdown": 0.000277,
+   "trailing_vol": 0.000102,
+   "cohort": "development"
+  },
+  {
+   "window_id": "calm-2017-05-09",
+   "label": "calm",
+   "window_start": "2017-05-09",
+   "packet_cutoff_ts": "2017-05-09",
+   "forward_drawdown": 0.0,
+   "trailing_vol": 6.8e-05,
+   "cohort": "development"
+  },
+  {
+   "window_id": "calm-2017-09-11",
+   "label": "calm",
+   "window_start": "2017-09-11",
+   "packet_cutoff_ts": "2017-09-11",
+   "forward_drawdown": 6.1e-05,
+   "trailing_vol": 8.5e-05,
+   "cohort": "development"
+  },
+  {
+   "window_id": "unwind-2017-12-11",
+   "label": "unwind",
+   "window_start": "2017-12-11",
+   "packet_cutoff_ts": "2017-12-11",
+   "forward_drawdown": 0.00031,
+   "trailing_vol": 7.3e-05,
+   "cohort": "development"
+  },
+  {
+   "window_id": "unwind-2019-02-04",
+   "label": "unwind",
+   "window_start": "2019-02-04",
+   "packet_cutoff_ts": "2019-02-04",
+   "forward_drawdown": 0.000643,
+   "trailing_vol": 8.2e-05,
+   "cohort": "development"
+  },
+  {
+   "window_id": "calm-2020-05-11",
+   "label": "calm",
+   "window_start": "2020-05-11",
+   "packet_cutoff_ts": "2020-05-11",
+   "forward_drawdown": 0.0,
+   "trailing_vol": 0.000101,
+   "cohort": "development"
+  },
+  {
+   "window_id": "calm-2022-03-14",
+   "label": "calm",
+   "window_start": "2022-03-14",
+   "packet_cutoff_ts": "2022-03-14",
+   "forward_drawdown": 9e-05,
+   "trailing_vol": 9.2e-05,
+   "cohort": "development"
+  },
+  {
+   "window_id": "unwind-2022-06-23",
+   "label": "unwind",
+   "window_start": "2022-06-23",
+   "packet_cutoff_ts": "2022-06-23",
+   "forward_drawdown": 0.000518,
+   "trailing_vol": 9.3e-05,
+   "cohort": "development"
+  },
+  {
+   "window_id": "unwind-2022-08-22",
+   "label": "unwind",
+   "window_start": "2022-08-22",
+   "packet_cutoff_ts": "2022-08-22",
+   "forward_drawdown": 0.000423,
+   "trailing_vol": 0.000107,
+   "cohort": "development"
+  },
+  {
+   "window_id": "unwind-2023-09-07",
+   "label": "unwind",
+   "window_start": "2023-09-07",
+   "packet_cutoff_ts": "2023-09-07",
+   "forward_drawdown": 0.000264,
+   "trailing_vol": 0.000106,
+   "cohort": "development"
+  },
+  {
+   "window_id": "calm-2023-10-09",
+   "label": "calm",
+   "window_start": "2023-10-09",
+   "packet_cutoff_ts": "2023-10-09",
+   "forward_drawdown": 0.000113,
+   "trailing_vol": 0.000114,
+   "cohort": "development"
+  },
+  {
+   "window_id": "calm-2024-03-11",
+   "label": "calm",
+   "window_start": "2024-03-11",
+   "packet_cutoff_ts": "2024-03-11",
+   "forward_drawdown": 0.000118,
+   "trailing_vol": 5.5e-05,
+   "cohort": "development"
+  },
+  {
+   "window_id": "unwind-2024-04-11",
+   "label": "unwind",
+   "window_start": "2024-04-11",
+   "packet_cutoff_ts": "2024-04-11",
+   "forward_drawdown": 0.000273,
+   "trailing_vol": 5.9e-05,
+   "cohort": "development"
+  },
+  {
+   "window_id": "unwind-2024-07-12",
+   "label": "unwind",
+   "window_start": "2024-07-12",
+   "packet_cutoff_ts": "2024-07-12",
+   "forward_drawdown": 0.000338,
+   "trailing_vol": 0.000105,
+   "cohort": "development"
+  },
+  {
+   "window_id": "calm-2024-10-07",
+   "label": "calm",
+   "window_start": "2024-10-07",
+   "packet_cutoff_ts": "2024-10-07",
+   "forward_drawdown": 0.0,
+   "trailing_vol": 0.000101,
+   "cohort": "development"
+  }
+ ],
+ "manifest_sha256": "f14fd96b8a12662ddece155033c1afff06a207ffb85eee2e6d60bfe9927a36e5"
+}

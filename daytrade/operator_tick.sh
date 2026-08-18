@@ -37,24 +37,9 @@ RES_RC=$?
 if [[ $RES_RC -ne 0 ]]; then
   echo "!! RESOLVER FAILED (exit $RES_RC)"
 fi
-# --- daily dashboard publish (spec 024 dashboard) — at most once per ET day,
-# on the last tick(s) of the window. Stamp written only after a successful
-# build; commit skipped when data is unchanged; a push failure echoes and
-# never affects the run/resolve exit accounting.
-STAMP="$REPO/data/daytrade/operator/.dashboard_published"
-ET_DATE=$(TZ=America/New_York date +%F)
-if [[ $ET_HM -ge 1625 && "$(cat "$STAMP" 2>/dev/null)" != "$ET_DATE" ]]; then
-  if python3 "$REPO/daytrade/build_dashboard_data.py"; then
-    echo "$ET_DATE" > "$STAMP"
-    ( cd "$REPO" \
-      && git add docs/data.json \
-      && { git diff --cached --quiet \
-           || { git commit -m "dashboard: $ET_DATE post-close data refresh" \
-                && git push origin main; }; } ) \
-      || echo "!! DASHBOARD PUBLISH FAILED (git) — data built, push did not land"
-  else
-    echo "!! DASHBOARD BUILD FAILED — not publishing"
-  fi
-fi
+# Dashboard publishing moved to its own scheduled job (2nd review): a
+# market-session tick must not mutate remote git state as a side effect.
+# See ~/Library/LaunchAgents/com.alta.dashboard-publish.plist ->
+# daytrade/dashboard_publish.sh (16:40 ET weekdays).
 
 exit $(( RUN_RC || RES_RC ))
