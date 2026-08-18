@@ -1075,6 +1075,39 @@ def grade(model: str) -> int:
     for k, v in rep.to_dict().items():
         print(f"  {k:24s} {v}")
 
+    # Honesty re-cut (2026-08-17 review): pooled Brier at small n and fused
+    # direction/abstention statistics are uninterpretable. Report decisive
+    # calls separately, abstention rate as its own line, and refuse to print
+    # sub-sample metrics under n=30 as anything but "insufficient".
+    rows = _read_jsonl(FC_LOG)
+    fs = {r["forecast_id"]: r for r in rows if r["kind"] == "forecast"}
+    res = [r for r in rows if r["kind"] == "resolution"
+           and fs.get(r["forecast_id"], {}).get("model_version", "").endswith(model)]
+    if res:
+        recs = {r["forecast_id"]: r for r in _read_jsonl(RECORDS)}
+        decisive = [r for r in res
+                    if recs.get(r["forecast_id"], {}).get("verdict") != "ABSTAIN"
+                    and fs[r["forecast_id"]]["direction"] != "flat"]
+        n_dec = len(decisive)
+        abst_rate = 1 - n_dec / len(res)
+        print(f"  {'abstention_rate':24s} {abst_rate:.0%} "
+              f"({len(res) - n_dec}/{len(res)} resolved calls non-decisive)")
+        if n_dec >= 30:
+            hits = sum(1 for r in decisive
+                       if fs[r['forecast_id']]['direction'] == r['outcome_direction'])
+            print(f"  {'decisive_dir_accuracy':24s} {hits}/{n_dec}")
+        else:
+            print(f"  {'decisive_dir_accuracy':24s} insufficient (n={n_dec} < 30) "
+                  "— no number is quotable")
+        # honest promotion date: 50 DECISIVE resolved calls at the observed rate
+        days_so_far = len({fs[r['forecast_id']]['as_of'][:10] for r in res})
+        dec_per_day = n_dec / max(days_so_far, 1)
+        if dec_per_day > 0:
+            print(f"  {'promotion_horizon':24s} ~{50 / dec_per_day:.0f} trading days "
+                  f"to 50 decisive calls at {dec_per_day:.1f}/day")
+        else:
+            print(f"  {'promotion_horizon':24s} unbounded — zero decisive calls so far")
+
     # Pre-registration scoreboard (spec 024): the number, vs the number.
     scores = [r for r in _read_jsonl(FC_LOG) if r["kind"] == "prereg_score"]
     banded = [s for s in scores if s["r_in_band"] is not None]

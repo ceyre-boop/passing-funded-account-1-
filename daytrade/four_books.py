@@ -41,14 +41,22 @@ from sovereign.intelligence.execution_ledger import realized_r_multileg  # noqa:
 import bars as bars_mod                                        # noqa: E402
 import alpha_operator as ao                                    # noqa: E402
 
-BOOKS = ("baseline", "veto", "select", "full")
+BOOKS = ("baseline", "veto", "random_veto", "select", "full")
 
 # Referee-first doctrine (spec 024): a system that can only abstain/tighten/
 # exit has bounded downside and gives the cleanest signal on whether the
 # discretion has any edge. Veto is the book of record; full stays unbuilt
 # until an ENTER schema is ratified.
-ROLES = {"veto": "primary", "baseline": "reference",
-         "select": "experimental", "full": "unbuilt"}
+#
+# random_veto (MANDATORY CONTROL, 2026-08-17 review): a veto overlay on a
+# weak-expectancy entry improves measured R by trading less of something
+# bad, information or not. This arm vetoes at AlphaZero's REALIZED veto rate
+# with zero information — deterministic per session (seeded on session date +
+# bars fingerprint, so reruns reproduce). AlphaZero has edge ONLY if the veto
+# book beats THIS arm, never merely the baseline. Without it the soak is
+# uninterpretable.
+ROLES = {"veto": "primary", "random_veto": "CONTROL — the bar to beat",
+         "baseline": "reference", "select": "experimental", "full": "unbuilt"}
 
 
 class HarnessError(RuntimeError):
@@ -76,6 +84,17 @@ def active_records(records: list[dict], symbol: str, ts: datetime,
         if _aware(r["ts"]) <= ts < _aware(r["expires_at"]):
             out.append(r)
     return out
+
+
+def _realized_veto_rate(records: list[dict], symbol: str, ts) -> float:
+    """AlphaZero's realized veto rate over this symbol's records sealed
+    at-or-before the entry — the rate the random arm must match. No records
+    = rate 0 = the control degenerates to baseline, correctly."""
+    seen = [r for r in records if r["symbol"] == symbol
+            and _aware(r["ts"]) <= ts]
+    if not seen:
+        return 0.0
+    return sum(1 for r in seen if r["verdict"] in ("TIGHTEN", "EXIT")) / len(seen)
 
 
 def _entry_bar(df, plan: dict):
@@ -113,6 +132,18 @@ def run_book(book: str, df, plan: dict, records: list[dict],
                     "bars_fingerprint": fp,
                     "why": f"vetoed by {blocking[0]['record_id']} "
                            f"({blocking[0]['verdict']})"}
+    if book == "random_veto":
+        # Rate-matched to AlphaZero's realized veto behavior on this session's
+        # records; the coin is a deterministic hash of (session, fingerprint),
+        # so it carries zero information and reruns reproduce exactly.
+        veto_rate = _realized_veto_rate(records, symbol, ts_utc)
+        coin = int(hashlib.sha256(f"{df.index[0].date()}|{fp}".encode())
+                   .hexdigest(), 16) % 10_000 / 10_000
+        if coin < veto_rate:
+            return {"book": book, "entered": False, "r": 0.0, "legs": [],
+                    "bars_fingerprint": fp,
+                    "why": f"random veto (rate-matched {veto_rate:.0%}, "
+                           f"coin {coin:.3f} — no information)"}
     if book == "select":
         allowing = active_records(records, symbol, ts_utc, ("ALLOW_BASELINE",))
         if not allowing:
@@ -128,7 +159,7 @@ def run_book(book: str, df, plan: dict, records: list[dict],
 
     for ts, row in after.iterrows():
         s.price = float(row["Close"])
-        if book == "baseline":
+        if book in ("baseline", "random_veto"):
             s.urgent = None
         else:
             act = active_records(records, symbol, ts.tz_convert(timezone.utc),
@@ -187,6 +218,7 @@ def run_session(symbol: str, df, plan: dict, records: list[dict]) -> dict:
             "note_full_book": "v1: full == veto until an entry-proposal "
                               "schema is ratified (spec 023)",
             "yield_delta_r": round(results["veto"]["r"] - results["baseline"]["r"], 4),
+            "edge_vs_random_r": round(results["veto"]["r"] - results["random_veto"]["r"], 4),
             "books": results}
 
 
@@ -219,7 +251,7 @@ def main(argv=None) -> int:
     print(f"\n  {a.symbol} {out['session']}   bars {out['bars_fingerprint']}   "
           f"operator records {out['n_records']}")
     print(f"  {'book':10s} {'role':13s} {'entered':8s} {'R':>8s}   why")
-    for book in ("veto", "baseline", "select", "full"):   # referee first
+    for book in ("veto", "random_veto", "baseline", "select", "full"):   # referee, then its bar
         b = out["books"][book]
         print(f"  {book:10s} {ROLES[book]:13s} {str(b['entered']):8s} "
               f"{b['r']:>+8.3f}   {b['why']}")

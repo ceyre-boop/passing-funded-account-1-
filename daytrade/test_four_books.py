@@ -149,3 +149,34 @@ def test_open_position_is_flattened_at_session_close_and_reconciles():
 def test_unknown_book_raises():
     with pytest.raises(fb.HarnessError, match="unknown book"):
         fb.run_book("shadow", _df(WIN), _plan(), [], "NVDA")
+
+
+# ---------------------------------------- random-veto control arm (review)
+
+def test_random_arm_rate_matched_and_deterministic():
+    """With a 100% realized veto rate the coin always loses -> always vetoed;
+    with 0% (no records) it equals baseline; and reruns reproduce exactly."""
+    all_veto = [_record("TIGHTEN", rid=f"op-{i}") for i in range(5)]
+    a = fb.run_book("random_veto", _df(WIN), _plan(), all_veto, "NVDA")
+    b = fb.run_book("random_veto", _df(WIN), _plan(), all_veto, "NVDA")
+    assert a == b                              # deterministic
+    assert a["entered"] is False and "random veto" in a["why"]
+    none = fb.run_book("random_veto", _df(WIN), _plan(), [], "NVDA")
+    base = fb.run_book("baseline", _df(WIN), _plan(), [], "NVDA")
+    assert none["entered"] is True and none["r"] == base["r"]
+
+
+def test_random_arm_ignores_verdict_content():
+    """The coin must not depend on WHICH records exist, only the rate: same
+    rate, different record ids -> identical outcome (zero information)."""
+    r1 = [_record("TIGHTEN", rid="op-x"), _record("ALLOW_BASELINE", rid="op-y")]
+    r2 = [_record("EXIT", rid="op-z"), _record("ALLOW_BASELINE", rid="op-w")]
+    a = fb.run_book("random_veto", _df(WIN), _plan(), r1, "NVDA")
+    b = fb.run_book("random_veto", _df(WIN), _plan(), r2, "NVDA")
+    assert a["entered"] == b["entered"]
+
+
+def test_session_artifact_carries_edge_vs_random():
+    out = fb.run_session("NVDA", _df(WIN), _plan(), [])
+    assert "edge_vs_random_r" in out
+    assert out["books"]["random_veto"]["role"].startswith("CONTROL")
