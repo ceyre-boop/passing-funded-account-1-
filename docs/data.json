@@ -103,11 +103,11 @@
    "flat": 9,
    "up": 1
   },
-  "open": 5,
+  "open": 4,
   "prereg_in_band": 0,
   "prereg_in_band_rate": null,
-  "prereg_scored": 9,
-  "resolved": 12,
+  "prereg_scored": 10,
+  "resolved": 13,
   "total": 17
  },
  "four_books": {
@@ -149,36 +149,36 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-18T20:41:37.107443+00:00",
+ "generated_at": "2026-08-19T20:50:53.303346+00:00",
  "latest_judgment": {
   "abstention": {
-   "detail": "newest bar 59 min old (> 15)",
-   "issued_at": "2026-08-18T18:23:50.221052+00:00",
+   "detail": "newest bar 968 min old (> 15)",
+   "issued_at": "2026-08-19T12:02:28.633799+00:00",
    "model_version": "alpha-operator-v1/stale-gate",
    "reason": "STALE_CONTEXT"
   },
   "available": true,
-  "bar_age_min": 58.8,
+  "bar_age_min": 967.5,
   "both_sides": null,
   "confidence": 0.0,
   "cost_usd": 0.0,
   "emission_refused": null,
   "invalidators": [],
   "model_version": "alpha-operator-v1/stale-gate",
-  "packet_as_of": "2026-08-18T18:23:50.221052+00:00",
-  "packet_max_data_ts": "2026-08-18T17:25:00+00:00",
+  "packet_as_of": "2026-08-19T12:02:28.633799+00:00",
+  "packet_max_data_ts": "2026-08-19T09:06:00+00:00",
   "pre_registration": null,
-  "record_id": "op-20260818-182350-221052-NVDA",
+  "record_id": "op-20260819-120228-633799-NVDA",
   "trigger": "news",
-  "ts": "2026-08-18T18:23:50.221052+00:00",
+  "ts": "2026-08-19T12:02:28.633799+00:00",
   "verdict": "ABSTAIN"
  },
  "session": {
   "available": true,
-  "last_record_ts": "2026-08-18T18:23:50.221052+00:00",
+  "last_record_ts": "2026-08-19T12:02:28.633799+00:00",
   "last_trigger": "news",
   "mode": "SHADOW SOAK",
-  "records_total": 21,
+  "records_total": 22,
   "shadow": true,
   "symbol": "NVDA"
  },
@@ -214,10 +214,10 @@
   "abstain_reasons": {
    "DATA_INCOMPLETE": 2,
    "NO_OPINION": 3,
-   "STALE_CONTEXT": 6
+   "STALE_CONTEXT": 7
   },
   "counts": {
-   "ABSTAIN": 11,
+   "ABSTAIN": 12,
    "ALLOW_BASELINE": 7,
    "EXIT": 0,
    "TIGHTEN": 3
@@ -347,6 +347,12 @@
     "confidence": 0.0,
     "shadow": true,
     "ts": "2026-08-18T18:23:50.221052+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-19T12:02:28.633799+00:00",
     "verdict": "ABSTAIN"
    }
   ]
