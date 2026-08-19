@@ -1,0 +1,47 @@
+{
+ "spec": "028",
+ "seals": [
+  {
+   "path": "data/proof/backtest_trades_v015_2015_2024.csv",
+   "sha256": "764446112c8c80d6688ad8761f623981b39cc547d06788a17957bfa866cf3050",
+   "sealed_at": "2026-08-19T02:06:38.046220+00:00",
+   "sealed_by": "taboost",
+   "unseal_condition": "never \u2014 sealed evidence, read-only forever",
+   "status": "sealed"
+  },
+  {
+   "path": "data/proof/carry_hypothesis_lineage.json",
+   "sha256": "bbcacd4617bff371c722b6d5fadd47bbf3b8d2966ef4268de48aec15f9f93a42",
+   "sealed_at": "2026-08-19T02:06:38.108262+00:00",
+   "sealed_by": "taboost",
+   "unseal_condition": "never \u2014 sealed provenance",
+   "status": "sealed"
+  },
+  {
+   "path": "data/daytrade/sentinel/manifest.json",
+   "sha256": "c3ef4260f9debbc8138ad14523f2a495dfbddc641041ba53cce7cf02b69401f6",
+   "sealed_at": "2026-08-19T02:06:38.161671+00:00",
+   "sealed_by": "taboost",
+   "unseal_condition": "spec 027 Phase 2: an evidence cohort exists (post-cutoff windows mature live-forward), or the manifest is rebuilt BEFORE any scored call was ever made",
+   "status": "sealed"
+  },
+  {
+   "path": "data/daytrade/FROZEN_FUTURES_EXIT_CANDIDATE.json",
+   "sha256": null,
+   "sealed_at": "2026-08-17",
+   "sealed_by": "taboost",
+   "unseal_condition": "was: one-shot sealed read (fired 2026-08-17, NOT_VALIDATED)",
+   "status": "retired",
+   "note": "the completed seal lifecycle: frozen -> read once under logged reason -> retired"
+  },
+  {
+   "path": null,
+   "sha256": null,
+   "sealed_at": "2026-08-03",
+   "sealed_by": "taboost",
+   "unseal_condition": "per-rule_version one-shot via splits.sealed_sessions(unseal_reason=, rule_version=) with rules committed and standing",
+   "status": "sealed",
+   "note": "BOUNDARY SEAL: the 20-session holdout after TUNE_END 2026-07-06 (daytrade/splits.py) \u2014 enforced in code, not hashable"
+  }
+ ]
+}

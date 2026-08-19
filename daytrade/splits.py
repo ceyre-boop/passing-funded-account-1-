@@ -113,6 +113,16 @@ def _log_unseal(reason: str, rule_version: str, forced: bool) -> None:
         tag = "FORCED\t" if forced else ""
         fh.write(f"{datetime.now(timezone.utc).isoformat()}\t{rule_version}\t"
                  f"{tag}{reason}\n")
+    # spec 028: mirror into the unified intent log (holdout_unseals.log
+    # stays as history; both are append-only)
+    try:
+        import seals as _seals
+        _seals._append_intent({"ts": datetime.now(timezone.utc).isoformat(),
+                               "path": "<holdout-boundary>", "reason": reason,
+                               "by": rule_version, "event": "HOLDOUT_READ",
+                               "forced": forced})
+    except Exception as e:                 # mirroring must never block the read
+        print(f"  !! intent-log mirror failed ({e}) — holdout log still written")
     n = sum(1 for _ in SEAL_LOG.open())
     if n > 1:
         print(f"  !! HOLDOUT READ #{n}. It was designed to be read once. Every "
