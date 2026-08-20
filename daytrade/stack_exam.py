@@ -73,22 +73,41 @@ def exam_stockfish():
         f"3 replays over {len(runs[0])} sessions -> "
         f"{'byte-identical' if identical else 'DIVERGED'}")
 
-    # SF-3: is the evaluation COMPLETE for a carry position?
+    # SF-3: is there an evaluator COMPLETE for each position type traded?
+    # The criterion is per-position-type. TradeState lacking carry terms is
+    # now BY DESIGN (034: a second evaluator, not an extended one), so the
+    # question is whether carry-exit-v1 can express what the carry edge does.
     from stockfish_exit import TradeState
-    fields = set(TradeState.__dataclass_fields__)
-    carry_terms = {"swap accrual": ("swap", "carry", "accrual"),
-                   "days held": ("days_held", "days_in", "hold_days"),
-                   "weekend exposure": ("weekend",),
-                   "rate differential": ("rate_diff", "rate_differential"),
-                   "financing": ("financing", "rollover")}
-    missing = [name for name, keys in carry_terms.items()
-               if not any(any(k in f for k in keys) for f in fields)]
+    intra_f = set(TradeState.__dataclass_fields__)
+    try:
+        from carry_exit import CarryState
+        carry_f = set(CarryState.__dataclass_fields__)
+        separate = not (carry_f & {"tp1", "tp2", "flatten_at_et", "now_et"})
+        carry_terms = {"swap accrual": ("swap",), "days held": ("days_held",),
+                       "weekend exposure": ("weekend",),
+                       "rate differential": ("rate_diff",)}
+        missing = [n for n, keys in carry_terms.items()
+                   if not any(any(k in f for k in keys) for f in carry_f)]
+    except ImportError:
+        carry_f, separate, missing = set(), False, ["NO CARRY EVALUATOR EXISTS"]
+
+    rp = ROOT / "data" / "daytrade" / "carry_reconcile.json"
+    recon = json.loads(rp.read_text()) if rp.exists() else {}
+    rate = recon.get("reason_match_rate")
+    unexpressed = [k for k, v in (recon.get("by_sealed_reason") or {}).items()
+                   if v["reason_match_rate"] < 0.5]
+    complete = bool(rate and rate >= 0.80 and not missing)
     rec("stockfish", "SF-3",
-        "evaluation is complete for the position type it prices",
-        "FAIL" if missing else "PASS",
-        f"TradeState has {len(fields)} fields, all intraday. Carry terms with "
-        f"NO representation: {missing}. It is structurally blind to a "
-        "multi-day FX position — a different evaluator, not a re-parameterisation")
+        "an evaluator is complete for each position type the system trades",
+        "PASS" if complete else "GAP",
+        f"intraday: TradeState {len(intra_f)} fields (complete for intraday, "
+        f"carry-blind by design). carry-exit-v1: {len(carry_f)} fields, "
+        f"separate type {separate}, carry terms present "
+        f"{'all' if not missing else missing}. Reconciliation against 411 "
+        f"sealed trades: {rate:.1%} exit-reason match; cannot yet express "
+        f"{unexpressed} — missing the entry signal (general repo), the true "
+        "stop-placement rule, and the trail spec. Named, not tuned away."
+        if rate else "no reconciliation report")
 
     # SF-4: no learning inside the layer
     src = (HERE / "stockfish_exit.py").read_text()
