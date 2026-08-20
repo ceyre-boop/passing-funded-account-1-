@@ -1,77 +1,123 @@
-# STOCKFISH × ALPHAZERO Dashboard — static GitHub Pages from main
+# Spec 029 — The Mechanism Ledger
 
 ## Context
 
-Colin wants a finished (not draft) single-page dashboard showing off exactly
-what this session built — the spec-023 operator and spec-024 discipline layer
-— deployed as GitHub Pages from main. Repo is already public
-(`ceyre-boop/passing-funded-account-1-`), so Pages works directly. Refresh
-decision (asked, answered): **auto-push once after each session close** via
-the existing launchd tick lane.
+Parameter search is linear in data and decays under regime shift; a killed
+mechanism removes hypothesis-space volume permanently and a confirmed one
+compounds across everything traded. This repo has spent a weekend proving
+the first half of that: six pre-registered rejections, every one a
+parameter-level null, none of which left behind a reusable statement about
+*why*. The ledger fixes that — every claim carries a causal reason and a
+prediction about where else that reason must hold, and the predictor's own
+optimism becomes a scored, decaying quantity.
+
+**Premise correction from the survey (before anything is built):** there is
+no "G2 thirty trades" in the live system. G2 is the carry lane's
+reproduction-forensics gate — already GREEN, yields no trades. The
+thirty-trade G2 lives only in `sovereign/propfirm/deployment_checklist.py`,
+which is ICT-lane legacy that CLAUDE.md marks **never read**. The live
+equivalent is **G5: 80 paper carry trades, currently 0/80, never started**
+(`scripts/paper_carry_log.py`, `G5_MIN_N = 80`). Colin confirmed the carry
+paper sprint is the intended stream. So: built out of **G5's eighty**.
+
+**Ruling compliance (CLAUDE.md non-negotiable 1, "no new hypotheses get
+generated here"):** 029 is discipline infrastructure over results this repo
+already produced. It records mechanisms behind existing findings, demands
+transfer predictions for tests already permitted here (exit-parameter sweeps
+under 003/008), and scores predictors. When a confirmed mechanism implies a
+genuinely NEW edge, the ledger emits it as a candidate **for the general
+repo's ledger** — it is never tested here. Earned axes are limited to
+tuning space for the already-proven edge.
 
 ## Deliverables
 
-1. **`daytrade/build_dashboard_data.py`** (new, stdlib-only) — aggregates
-   `records.jsonl`, `forecasts.jsonl`, `yield.jsonl`, latest `books-*.json`,
-   `llm_spend.jsonl` into one `docs/data.json` (atomic write). Fail loud on
-   corrupt lines (SystemExit naming file:line — I10 doctrine); absent files
-   render `"available": false` honest empty states, never fake zeros. Static
-   `DISCIPLINES` (7 cards w/ mechanism + invariant/mutation chips) and
-   `VERIFICATION` (290 tests, 26/26 mutations, 7-gate map) constants live in
-   the generator so the page stays dumb.
+1. **`specs/029_MECHANISM_LEDGER.md`** — spec first: the ruling-compliance
+   paragraph above, the entry contract, the pre-registered transfer test,
+   the calibration rule, and the two evidence channels.
 
-2. **`docs/index.html`** (new, fully self-contained: inline CSS/JS, hand-
-   rolled SVG charts, zero CDNs) + `docs/.nojekyll`. Dark trading-terminal
-   aesthetic: bg `#07090c`, panels `#0d1117`, phosphor green `#3fdc97` /
-   amber `#e8b44a` / ice blue `#58a6ff`, monospace numerals with
-   tabular-nums, 12-col grid collapsing at 760px, scanline hero texture,
-   pulsing status dot, stroke-only glowing SVG. Model text rendered via
-   `textContent` only (untrusted). Section order:
-   - **Hero**: "PASSING A FUNDED ACCOUNT" / "STOCKFISH × ALPHAZERO —
-     mechanics decide, meaning advises"; pulsing `● SHADOW SOAK` chip; stat
-     strip `290 TESTS · 26/26 MUTATIONS KILLED · 0 DIRECTIVES EMITTED ·
-     $x/$5.00` — containment is the hero metric.
-   - **Latest judgment**: verdict badge + confidence bar; bull/base/bear
-     triptych; invalidators; pre-registration band on a [-5,+5] axis bar;
-     packet_as_of / max_data_ts proof line.
-   - **Telemetry row**: verdict donut · spend meter + per-day bars ·
-     forecasts open/resolved + prereg in-band dial.
-   - **Four books table**: veto highlighted as BOOK OF RECORD; yield callout;
-     fingerprint footnote.
-   - **Yield sparkline** (honest dashed empty state until rows exist).
-   - **Discipline layer**: 7 cards with invariant (I11–I22) and mutation
-     (M17–M26) chips + status pills.
-   - **Verification scoreboard**: 26-square mutation kill grid (M9/M26 amber
-     outline + tooltip for the survived/false-kill stories); gates pipeline.
-   - **Footer**: generated_at + honesty line ("shadow soak; no live fills;
-     single-seat, certification owed") + repo link.
+2. **`MECHANISMS.json`** (root, matching `SEALS.json` convention) — entries
+   require, and are refused without:
+   - `claim` — the causal reason, one sentence, mechanism not parameter
+   - `transfer_prediction` — sign pattern over asset classes: where it must
+     HELP, be NEUTRAL, and (best) where it must HURT. No transfer
+     prediction = not a mechanism = refused.
+   - `predicted_effect_r` + band, `predicted_by` — logged blind, sealed via
+     `seals.py` before any test runs
+   - `status`: proposed | confirmed | killed | narrowed
+   - **`structural_vs_lever`** — HYP-059's best idea, promoted from ad-hoc
+     prose to a required field: a structural fact can be true while the
+     deployable lever is refuted (`carry_hypothesis_lineage.json:150,167`).
+   - kills record the dead `axis × class × direction` + evidence
 
-3. **`operator_tick.sh` post-close publish block** — inside the existing
-   `set +e` region: at `ET_HM >= 1625`, if `.dashboard_published` stamp
-   (in `data/daytrade/operator/`, never shipped) ≠ today, run the generator;
-   on success stamp, `git add docs/data.json`, commit only if changed, push.
-   At most one publish per ET day; a push failure echoes, never kills the
-   resolver exit accounting.
+3. **`daytrade/mechanisms.py`** — `propose` (refuses missing transfer
+   prediction / numeric band; seals it), `test` (runs the transfer test),
+   `calibrate` (per-predictor curve → shrinkage factor), `axes` (live /
+   dead / earned), `check` (ledger integrity, suite-enforced like seals).
 
-4. **Pages enablement (one-time)**:
-   `gh api -X POST repos/ceyre-boop/passing-funded-account-1-/pages -f "source[branch]=main" -f "source[path]=/docs"`
-   (PUT if it already exists), then verify `.html_url`.
+4. **Transfer test** — statistical design finalized from the adversarial
+   review now running. Fixed constraints inherited: paired per-entry deltas
+   (config ON vs OFF) to remove the entry-quality confound; **permutation
+   grouped WITHIN calendar day** (`specs/025:26-29` — same-day cross-symbol
+   entries are nearly one bet; the ungrouped version is the exact error
+   `specs/026:60-64` admits). Prior art to cite and generalize:
+   `exit_evaluator.py:176-188`'s "≥2 of 3 classes including FUTURES".
 
-## data.json contract (abridged)
+5. **Calibration ledger** — the closest thing to a verifier Colin didn't
+   select: predicted effect vs realized, per predictor, robust ratio →
+   shrinkage applied to future proposals. A proposal whose *shrunk* effect
+   no longer clears the minimum detectable effect is refused as not worth
+   running. Seeds are real and already on the record: the reviewer's
+   pre-registered 0.15–0.30 → −0.028 (`oracle_audit.py:28-31`), and my
+   +0.67 "prize" → realizable ≈ 0. Both overconfident, both logged.
 
-Keys: `generated_at`, `session` (mode/shadow/last_record_ts/records_total),
-`verdicts` (counts, abstain_reasons, series), `latest_judgment` (both_sides,
-invalidators, pre_registration, abstention, emission_refused, packet proof),
-`spend` (cap 5.0, total, by_day), `forecasts` (open/resolved/prereg rates),
-`yield_curve`, `four_books` (roles, yield_delta_r), `disciplines[7]`,
-`verification` (tests/mutations/gates), `containment`
-(directives_emitted — expected 0 in soak; non-zero renders as an alert).
+6. **Live tagging (the G5 link)** — `scripts/paper_carry_log.py` gains
+   `--mechanisms MECH-00x,...` on `open`, carried into the existing
+   `signal_layers` / decision-logger `extra`. Note honestly in the spec:
+   the 80 carry trades are **one asset class**, so they supply
+   *live-forward replication* evidence, not transfer evidence. Two channels,
+   never conflated.
+
+7. **Tests + mutation rows** (`daytrade/test_mechanisms.py`): refusal
+   without transfer prediction, refusal without numeric band, dead-axis
+   re-sweep refusal, shrinkage arithmetic, permutation grouping (a
+   day-ungrouped null must fail a named test), ledger drift caught by the
+   suite.
+
+8. **`specs/README.md`** — add 029 and backfill the missing 025/026/027/028
+   rows the survey found absent.
+
+## Seed inventory (this weekend, honestly stated)
+
+Killed: wide-trail tail capture (measured twice); futures early-protection
++ noon flatten (sealed read NOT_VALIDATED); AlphaZero interrupt timing (~0
+in 11/12 cells); mechanical per-day config selection (−0.028 OOF).
+Open: narrative-not-in-feature-columns for carry unwinds (027, evidence
+live-forward only); veto-beats-rate-matched-random (soak).
+Structural-vs-lever example to import: HYP-059's trailing exit.
+
+## Reused
+
+`daytrade/seals.py` (blind pre-registration + suite-enforced integrity),
+`stockfish_tune.py` CLASSES/`slice_rows`/`class_report` (per-class slices at
+zero sim cost), `oracle_audit.py` (permutation discipline + its documented
+error), `forecast.py` calibration binning, `_append_jsonl` fsync writer.
+
+## Out of scope
+
+Generating new trading hypotheses here (general repo's job); changing any
+existing seal, gate, or verdict; touching the ICT-lane legacy checklist;
+retro-fitting `carry_hypothesis_lineage.json` (it stays as history — 029
+links to its IDs, never rewrites them).
 
 ## Verification
 
-1. Run generator against real data; inspect `docs/data.json`.
-2. `python3 -m http.server -d docs` + Interceptor screenshot — verify hero,
-   charts, honest empty states, and the containment stat reading 0.
-3. Full pytest suite still green (generator has no operator imports).
-4. Simulate the tick publish guard (stamp logic) without pushing; then real
-   commit + push + Pages enablement + `curl` the live URL until it serves.
+1. `python3 daytrade/mechanisms.py check` green on the seeded ledger.
+2. Refusals fire: propose without a transfer prediction, without a band, and
+   re-sweep a dead axis → all refused with the reason printed.
+3. Transfer test on a SEEDED KILLED mechanism reproduces its kill (the
+   framework must re-derive a known negative before it is trusted on a
+   positive).
+4. Permutation guard: a deliberately day-ungrouped null fails its test.
+5. `calibrate` reproduces the two seed data points and prints a shrinkage
+   factor < 1.
+6. Full suite green; explicit-path commit; mutation rows appended.

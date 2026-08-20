@@ -100,9 +100,14 @@ def cmd_open(args):
             f"Difference {rel_diff:.1%} exceeds 1% tolerance. Check --qty."
         )
     trade_id = uuid.uuid4().hex[:10]
+    # spec 029: which MECHANISMS this trade rests on. Live-forward
+    # REPLICATION evidence for those claims — never transfer evidence, since
+    # all 80 sprint trades are one asset class (FX carry).
+    mechs = [m.strip() for m in (getattr(args, "mechanisms", None) or "").split(",")
+             if m.strip()]
     rec = dict(id=trade_id, status="open", pair=args.pair, direction=args.direction,
                entry=args.entry, stop=args.stop, risk_pct=args.risk, qty=args.qty,
-               entry_date=args.date, R=None)
+               entry_date=args.date, R=None, mechanisms=mechs)
     records = _read()
     records.append(rec)
     _write(records)
@@ -110,8 +115,9 @@ def cmd_open(args):
     log_forex_decision(pair=args.pair, direction=args.direction,
                        entry_level=args.entry, stop_loss=args.stop,
                        hold_days=0, risk_pct=args.risk,
-                       signal_layers=["paper_carry_sprint_021"],
-                       extra=dict(paper_trade_id=trade_id, qty=args.qty))
+                       signal_layers=["paper_carry_sprint_021"] + mechs,
+                       extra=dict(paper_trade_id=trade_id, qty=args.qty,
+                                  mechanisms=mechs))
     print(f"opened {trade_id}: {args.pair} {args.direction} @ {args.entry} "
           f"stop {args.stop} qty {args.qty} risk {args.risk:.2%} on {args.date}")
 
@@ -163,6 +169,9 @@ def main():
     o.add_argument("--stop", type=float, required=True)
     o.add_argument("--risk", type=float, required=True)
     o.add_argument("--qty", type=float, required=True, help="position size (units/contracts)")
+    o.add_argument("--mechanisms", default=None,
+                   help="spec 029: comma-separated MECH-ids this trade rests on "
+                        "(live-forward replication evidence, not transfer)")
     o.add_argument("--firm", default="cti_1step",
                    help="contract supplying account_size for the risk reconciliation")
     o.add_argument("--date", default=date.today().isoformat())

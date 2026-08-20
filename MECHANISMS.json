@@ -1,0 +1,252 @@
+{
+ "spec": "029",
+ "note": "Mechanisms behind results this repo already produced. Entries marked recorded_retrospectively were NOT pre-registered at the time; they are history, and they do not feed calibration. Only blind, pre-registered predictions calibrate a predictor.",
+ "calibration_seeds": [
+  {
+   "id": "CAL-001",
+   "predicted_by": "reviewer",
+   "claim": "information-limited shortlist oracle lands 0.15-0.30 R/trade",
+   "predicted_effect_r": 0.225,
+   "realized_effect_r": -0.028,
+   "pre_registered": true,
+   "source": "daytrade/oracle_audit.py:28-31 (committed before the run); result specs/026 addendum"
+  },
+  {
+   "id": "CAL-002",
+   "predicted_by": "claude",
+   "claim": "the per-day config-selection prize is +0.67 R/trade",
+   "predicted_effect_r": 0.67,
+   "realized_effect_r": -0.028,
+   "pre_registered": false,
+   "source": "specs/026 headline, withdrawn same night after the oracle audit; flagged not-pre-registered so it is history, not calibration"
+  }
+ ],
+ "mechanisms": [
+  {
+   "id": "MECH-001",
+   "claim": "A wider trailing stop captures more of the winning tail, so trailing beats a static stop wherever trends persist intraday.",
+   "transfer_prediction": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "help",
+    "FUTURES": "help"
+   },
+   "flags": [
+    "unfalsifiable_shape: predicts no class where it must HURT \u2014 this is exactly the shape the ledger exists to catch, kept as the worked example"
+   ],
+   "predicted_effect_r": 0.15,
+   "band": "0.05 to 0.30",
+   "calibrated_effect_r": 0.15,
+   "shrinkage_applied": 1.0,
+   "n_prior_predictions": 0,
+   "predicted_by": "claude",
+   "proposed_at": "2026-08-19T00:00:00+00:00",
+   "structural_vs_lever": {
+    "structural": "unknown",
+    "lever": "unknown"
+   },
+   "status": "killed",
+   "config_on": {
+    "trail_mult": 1.5,
+    "be_arm_frac": 1.0,
+    "partial_frac": 0.5,
+    "flatten_et": null,
+    "hold_past_tp2": true
+   },
+   "config_off": {
+    "trail_mult": null,
+    "be_arm_frac": 1.0,
+    "partial_frac": 0.5,
+    "flatten_et": null,
+    "hold_past_tp2": true
+   },
+   "prior_evidence": "two furnace runs ranked every tmNone config above its trailing counterpart (data/daytrade/stockfish_tune_report.json); this entry re-derives that as a MECHANISM test rather than a leaderboard observation",
+   "tested_at": "2026-08-20T00:31:30.915808+00:00",
+   "n_entries": 336,
+   "n_day_clusters": 39,
+   "per_class_mean_delta": {
+    "SINGLE_NAME": -0.0469,
+    "CASH_INDEX": 0.0445,
+    "FUTURES": 0.0212
+   },
+   "contrast": 0.0187,
+   "p_value": 0.1159,
+   "sign_pattern_matched": false,
+   "per_day_sigma": 0.2051,
+   "minimum_detectable_effect_r": 0.0817,
+   "realized_effect_r": 0.0187,
+   "verdict": "KILLED",
+   "dead_axes": [
+    {
+     "axis": "trail_mult",
+     "classes": [
+      "SINGLE_NAME",
+      "CASH_INDEX",
+      "FUTURES"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "MECH-002",
+   "claim": "Futures OR-breaks resolve fast or die, so protection earlier than TP1 plus a hard midday deadline beats riding the full session.",
+   "transfer_prediction": {
+    "FUTURES": "help",
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "neutral"
+   },
+   "predicted_effect_r": 0.086,
+   "band": "the tune-split margin over TRAIL_WIDE",
+   "calibrated_effect_r": 0.086,
+   "shrinkage_applied": 1.0,
+   "n_prior_predictions": 0,
+   "predicted_by": "claude",
+   "proposed_at": "2026-08-17T00:00:00+00:00",
+   "structural_vs_lever": {
+    "structural": "unknown",
+    "lever": "REFUTED"
+   },
+   "status": "killed",
+   "recorded_retrospectively": true,
+   "config_on": {
+    "trail_mult": null,
+    "be_arm_frac": 0.25,
+    "partial_frac": 0.75,
+    "flatten_et": "12:00",
+    "hold_past_tp2": true
+   },
+   "config_off": {
+    "trail_mult": 1.5,
+    "be_arm_frac": 1.0,
+    "partial_frac": 0.5,
+    "flatten_et": null,
+    "hold_past_tp2": true
+   },
+   "realized_effect_r": -0.107,
+   "dead_axes": [
+    {
+     "axis": "be_arm_frac+flatten_et (early-protection package)",
+     "classes": [
+      "FUTURES"
+     ]
+    }
+   ],
+   "prior_evidence": "sealed holdout read 2026-08-17: candidate -0.107 R/trade on 98 sealed entries vs +0.114 on the tune split. NOT_VALIDATED, retired by its own pre-registration (data/daytrade/sealed_read_futures_v1.json). The tune-split half-decay +0.214 -> +0.003 was the early warning."
+  },
+  {
+   "id": "MECH-003",
+   "claim": "AlphaZero adds value by timing interrupts \u2014 a well-timed tighten or exit at shock onset protects R the fixed policy would give back.",
+   "transfer_prediction": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "help",
+    "FUTURES": "help"
+   },
+   "predicted_effect_r": 0.3,
+   "band": "unstated at the time",
+   "calibrated_effect_r": 0.3,
+   "shrinkage_applied": 1.0,
+   "n_prior_predictions": 0,
+   "predicted_by": "claude",
+   "proposed_at": "2026-08-15T00:00:00+00:00",
+   "structural_vs_lever": {
+    "structural": "TRUE (shocks are real and detectable)",
+    "lever": "REFUTED (the interrupt channel cannot monetise them)"
+   },
+   "status": "killed",
+   "recorded_retrospectively": true,
+   "realized_effect_r": 0.0,
+   "dead_axes": [
+    {
+     "axis": "urgency channel (tighten/exit interrupts)",
+     "classes": [
+      "SINGLE_NAME",
+      "CASH_INDEX",
+      "FUTURES"
+     ]
+    }
+   ],
+   "prior_evidence": "specs/026: perfect-hindsight tighten ~0 uplift in every cell, perfect exit ~0 in 11/12. Channel retired in code (alpha_operator.EMISSION_MODE='log-only'). The clean structural/lever split: shocks ARE detectable; the interrupt channel still cannot pay."
+  },
+  {
+   "id": "MECH-004",
+   "claim": "The right exit configuration is knowable from entry-time price features, so a per-day config choice beats one fixed policy.",
+   "transfer_prediction": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "help",
+    "FUTURES": "help"
+   },
+   "predicted_effect_r": 0.225,
+   "band": "0.15 to 0.30 (reviewer, pre-registered)",
+   "calibrated_effect_r": 0.225,
+   "shrinkage_applied": 1.0,
+   "n_prior_predictions": 0,
+   "predicted_by": "reviewer",
+   "proposed_at": "2026-08-17T00:00:00+00:00",
+   "structural_vs_lever": {
+    "structural": "TRUE (a hindsight oracle does gain; the ceiling is real)",
+    "lever": "REFUTED (no entry-time feature set reaches it)"
+   },
+   "status": "killed",
+   "recorded_retrospectively": true,
+   "realized_effect_r": -0.028,
+   "dead_axes": [
+    {
+     "axis": "entry-time-feature config selection (tree/GBM over price features)",
+     "classes": [
+      "SINGLE_NAME",
+      "CASH_INDEX",
+      "FUTURES"
+     ]
+    }
+   ],
+   "prior_evidence": "daytrade/oracle_audit.py: info-limited depth-3 tree, day-grouped OOF, -0.028 vs always-NOON_FLAT; OOF oracle-agreement 46% vs 51% majority class. DRAWER."
+  },
+  {
+   "id": "MECH-005",
+   "claim": "Carry unwinds are driven by narrative and positioning that never appear in a price feature column, so a language model reading news and calendars can flag elevated unwind risk before the drawdown.",
+   "transfer_prediction": {
+    "FUTURES": "neutral",
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "neutral"
+   },
+   "flags": [
+    "not testable by the furnace transfer test \u2014 evidence channel is live-forward carry only (spec 027). Transfer prediction is stated as neutral-elsewhere precisely because the claim is carry-specific."
+   ],
+   "predicted_effect_r": null,
+   "band": "0.20 to 0.60; scored only on post-cutoff windows (spec 027)",
+   "predicted_by": "reviewer",
+   "proposed_at": "2026-08-17T00:00:00+00:00",
+   "structural_vs_lever": {
+    "structural": "unknown",
+    "lever": "unknown"
+   },
+   "status": "proposed",
+   "prior_evidence": "spec 027, amended: NO_EVIDENCE_COHORT \u2014 all sealed carry history predates the model cutoff, so historical windows are prompt-development only. Evidence accrues live-forward.",
+   "predicted_effect": 0.4,
+   "effect_metric": "flag_rate_difference (elevated/severe rate on true-unwind windows minus calm windows)"
+  },
+  {
+   "id": "MECH-006",
+   "claim": "AlphaZero's entry veto carries information a rate-matched coin does not: the days it refuses are worse than average, not merely fewer.",
+   "transfer_prediction": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "neutral",
+    "FUTURES": "neutral"
+   },
+   "predicted_effect_r": null,
+   "band": "0.03 to 0.20",
+   "predicted_by": "claude",
+   "proposed_at": "2026-08-18T00:00:00+00:00",
+   "structural_vs_lever": {
+    "structural": "unknown",
+    "lever": "unknown"
+   },
+   "status": "proposed",
+   "flags": [
+    "measured against expected_rate_random_veto (four_books), NOT baseline \u2014 a veto on a weak-expectancy entry improves measured R without information"
+   ],
+   "prior_evidence": "soak running since 2026-08-17; control arm added before day two accumulated. Stratified exactly-K-of-N replacement still required before any verdict.",
+   "predicted_effect": 0.1,
+   "effect_metric": "R_per_trade edge over expected_rate_random_veto (NOT over baseline)"
+  }
+ ]
+}
