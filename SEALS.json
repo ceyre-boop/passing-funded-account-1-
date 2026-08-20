@@ -42,6 +42,14 @@
    "unseal_condition": "per-rule_version one-shot via splits.sealed_sessions(unseal_reason=, rule_version=) with rules committed and standing",
    "status": "sealed",
    "note": "BOUNDARY SEAL: the 20-session holdout after TUNE_END 2026-07-06 (daytrade/splits.py) \u2014 enforced in code, not hashable"
+  },
+  {
+   "path": "specs/031_CARRY_GRADING_REREGISTRATION.md",
+   "sha256": "dd2ad0aa7f4225c40b666f28bc43f108962e3a62237838575c54984928f7e6b5",
+   "sealed_at": "2026-08-20T20:51:43.083702+00:00",
+   "sealed_by": "taboost",
+   "unseal_condition": "ratification: Colin records a decision in the file, then it is re-sealed. Any edit before that is a goalpost move and must be visible.",
+   "status": "sealed"
   }
  ]
 }
