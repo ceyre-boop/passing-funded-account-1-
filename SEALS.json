@@ -50,6 +50,14 @@
    "sealed_by": "taboost",
    "unseal_condition": "ratification: Colin records a decision in the file, then it is re-sealed. Any edit before that is a goalpost move and must be visible.",
    "status": "sealed"
+  },
+  {
+   "path": "data/daytrade/SF_FROZEN_001.json",
+   "sha256": "cc8222f9313cfc61b837fcb161339093d15cd40fbfa31618fb6da5cac845c24b",
+   "sealed_at": "2026-08-20T21:30:02.488259+00:00",
+   "sealed_by": "taboost",
+   "unseal_condition": "never \u2014 a pinned checkpoint is the fixed opponent every measurement was compared against; a new opponent requires a NEW checkpoint id, never an edit",
+   "status": "sealed"
   }
  ]
 }
