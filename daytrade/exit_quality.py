@@ -34,15 +34,14 @@ from stockfish_tune import CLASSES                                 # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "daytrade" / "exit_quality.json"
-SHIPPED = {"SINGLE_NAME": {"trail_mult": None, "be_arm_frac": 1.0,
-                           "partial_frac": 0.5, "flatten_et": None,
-                           "hold_past_tp2": True},
-           "CASH_INDEX": {"trail_mult": 1.5, "be_arm_frac": 1.0,
-                          "partial_frac": 0.5, "flatten_et": None,
-                          "hold_past_tp2": True},
-           "FUTURES": {"trail_mult": 1.5, "be_arm_frac": 1.0,
-                       "partial_frac": 0.5, "flatten_et": None,
-                       "hold_past_tp2": True}}
+# The comparison target is the PINNED checkpoint (SF-FROZEN-001), never an
+# inline dict — stack exam LL-2. If the engine or the pinned params drift,
+# frozen_policy.policy() refuses rather than quietly re-baselining.
+import frozen_policy
+
+
+def SHIPPED_FOR(cls: str) -> dict:
+    return frozen_policy.policy(cls)
 
 
 def mfe_r(session, e) -> float:
@@ -70,7 +69,7 @@ def main() -> int:
             e = find_entry(sess)
             if e is None:
                 continue
-            realized = simulate(sess, e, dict(SHIPPED[cls]))
+            realized = simulate(sess, e, SHIPPED_FOR(cls))
             oracle = max(simulate(sess, e, dict(c)) for c in grid)
             mfe = mfe_r(sess, e)
             rows.append({
@@ -95,6 +94,7 @@ def main() -> int:
 
     summary = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "compared_against": frozen_policy.CHECKPOINT_ID,
         "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are "
                              "NOT achievable; they are the yardstick, never a target",
         "n_sessions": len(rows),

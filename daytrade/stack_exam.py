@@ -42,15 +42,13 @@ def exam_stockfish():
     print("\nSTOCKFISH — determinism / current-state evaluation")
 
     # SF-1: exactly one decide_exit, and every caller imports it
-    # exclude this exam file: it contains the search string itself, and an
-    # audit that counts its own source is measuring the wrong thing
-    def _grep(pat):
-        return [h for h in subprocess.run(["grep", "-rl", pat, str(HERE)],
-                capture_output=True, text=True).stdout.split()
-                if not h.endswith("stack_exam.py")]
-    hits = _grep("def decide_exit")
-    callers = _grep("decide_exit")
-    reimpl = [h for h in hits if not h.endswith("stockfish_exit.py")]
+    # measure.grep_sources ASSERTS that this file was present and removed —
+    # a silent no-op filter is exactly how the SF-1 error survived once
+    import measure
+    me = Path(__file__).resolve()
+    hits = measure.grep_sources("def decide_exit", HERE, self_path=me)
+    callers = measure.grep_sources("decide_exit", HERE, self_path=me)
+    reimpl = [h for h in hits if h.name != "stockfish_exit.py"]
     rec("stockfish", "SF-1",
         "one decide_exit implementation, called identically everywhere",
         "PASS" if len(hits) == 1 and not reimpl else "FAIL",

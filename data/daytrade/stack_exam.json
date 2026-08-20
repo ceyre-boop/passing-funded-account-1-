@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-20T21:16:30.257482+00:00",
+ "generated_at": "2026-08-20T21:27:08.665622+00:00",
  "tally": {
   "PASS": 10,
   "FAIL": 1,
@@ -12,7 +12,7 @@
    "id": "SF-1",
    "claim": "one decide_exit implementation, called identically everywhere",
    "status": "PASS",
-   "evidence": "1 definition(s); 37 files reference it; re-implementations: none"
+   "evidence": "1 definition(s); 39 files reference it; re-implementations: none"
   },
   {
    "layer": "stockfish",
