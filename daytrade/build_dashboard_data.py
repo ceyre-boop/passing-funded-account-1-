@@ -229,6 +229,13 @@ def build_alphazero(records: list[dict], fc_rows: list[dict]) -> dict:
     }
 
 
+def _age_hours(path: Path):
+    if not path.exists():
+        return None
+    return round((datetime.now(timezone.utc).timestamp()
+                  - path.stat().st_mtime) / 3600, 1)
+
+
 def build_stockfish() -> dict:
     """Exit quality judged by lookback — what the shipped policy kept of what
     was reachable, and how often the ENTRY made the exit irrelevant."""
@@ -237,6 +244,8 @@ def build_stockfish() -> dict:
         return {"available": False}
     q = json.loads(path.read_text())
     q["available"] = True
+    q["age_hours"] = _age_hours(path)
+    q["stale"] = (q["age_hours"] or 0) > 30      # daily job + slack
     return q
 
 
@@ -261,7 +270,9 @@ def main() -> int:
         "latest_judgment": build_latest(records),
         "spend": build_spend(load_jsonl(SPEND)),
         "forecasts": build_forecasts(load_jsonl(FC_LOG)),
-        "alphazero": build_alphazero(records, load_jsonl(FC_LOG)),
+        "alphazero": {**build_alphazero(records, load_jsonl(FC_LOG)),
+                      "age_hours": _age_hours(FC_LOG),
+                      "stale": (_age_hours(FC_LOG) or 0) > 30},
         "stockfish": build_stockfish(),
         "yield_curve": build_yield(load_jsonl(YIELD_LOG)),
         "four_books": build_books(),

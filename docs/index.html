@@ -126,6 +126,12 @@
   .meter > div { height: 100%; background: var(--green); border-radius: 5px;
                  box-shadow: 0 0 8px rgba(63,220,151,.4); }
 
+  .stale { display: inline-block; font: 700 9px var(--mono); letter-spacing: .1em;
+           color: var(--amber); border: 1px solid rgba(232,180,74,.5);
+           background: rgba(232,180,74,.10); border-radius: 3px;
+           padding: 2px 6px; margin-left: 8px; vertical-align: middle; }
+  .fresh { display: inline-block; font: 700 9px var(--mono); letter-spacing: .1em;
+           color: var(--muted); margin-left: 8px; vertical-align: middle; }
   .empty { border: 1px dashed var(--line-hi); border-radius: 6px;
            padding: 22px; text-align: center; color: var(--muted);
            font-family: var(--mono); font-size: 13px; }
@@ -229,6 +235,12 @@ const el = (tag, cls, text) => {
 };
 const fmtTs = iso => iso ? iso.replace("T", " ").slice(0, 16) + " UTC" : "—";
 const VP = { ABSTAIN: "abstain", ALLOW_BASELINE: "allow", TIGHTEN: "tighten", EXIT: "exit" };
+function ageBadge(o) {
+  const b = el("span", o.stale ? "stale" : "fresh",
+    o.age_hours === null || o.age_hours === undefined ? "AGE UNKNOWN"
+      : o.stale ? `STALE ${o.age_hours}h` : `fresh ${o.age_hours}h`);
+  return b;
+}
 
 function stat(value, key, cls) {
   const s = el("div", "stat");
@@ -346,7 +358,9 @@ function render(d) {
 
   // ---------------- AlphaZero scoreboard ----------------
   const a = $("azScore");
-  a.appendChild(el("div", "label", "Accuracy vs chance"));
+  const azLab = el("div", "label", "Accuracy vs chance");
+  azLab.appendChild(ageBadge(az));
+  a.appendChild(azLab);
   a.appendChild(el("div", "big " + (az.n_resolved < 30 ? "amber" : ""), accTxt));
   a.appendChild(el("div", "mono muted",
     `direction: ${az.direction_hits}/${az.n_resolved} resolved`)).style.fontSize = "11px";
@@ -394,7 +408,9 @@ function render(d) {
 
   // ---------------- Stockfish scoreboard ----------------
   const sfs = $("sfScore");
-  sfs.appendChild(el("div", "label", "Kept vs reachable"));
+  const sfLab = el("div", "label", "Kept vs reachable");
+  if (sf.available) sfLab.appendChild(ageBadge(sf));
+  sfs.appendChild(sfLab);
   if (!sf.available) {
     sfs.appendChild(el("div", "empty", "no exit-quality report yet"));
   } else {

@@ -12,6 +12,11 @@ STAMP="$REPO/data/daytrade/operator/.dashboard_published"
 ET_DATE=$(TZ=America/New_York date +%F)
 [[ "$(cat "$STAMP" 2>/dev/null)" == "$ET_DATE" ]] && exit 0
 
+# Recompute the Stockfish exit-quality report first — otherwise the panel
+# silently serves whatever it was when someone last ran the script by hand.
+python3 "$REPO/daytrade/exit_quality.py" \
+  || echo "!! exit_quality failed — panel will publish with a STALE badge"
+
 if python3 "$REPO/daytrade/build_dashboard_data.py"; then
   echo "$ET_DATE" > "$STAMP"
   cd "$REPO" \

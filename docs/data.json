@@ -1,6 +1,7 @@
 {
  "alphazero": {
   "abstain_rate": 0.615,
+  "age_hours": 33.0,
   "chance_scenario": 0.2,
   "decisive_accuracy_quotable": false,
   "direction_accuracy": 0.308,
@@ -369,7 +370,8 @@
    }
   ],
   "scenario_accuracy": 0.308,
-  "scenario_hits": 4
+  "scenario_hits": 4,
+  "stale": true
  },
  "containment": {
   "clean": true,
@@ -521,7 +523,7 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-20T20:48:28.700640+00:00",
+ "generated_at": "2026-08-20T20:59:31.763026+00:00",
  "latest_judgment": {
   "abstention": {
    "detail": "newest bar 119 min old (> 15)",
@@ -583,6 +585,7 @@
   "total_usd": 0.9491
  },
  "stockfish": {
+  "age_hours": 0.2,
   "available": true,
   "by_class": {
    "CASH_INDEX": {
@@ -1280,7 +1283,8 @@
     "session": "2026-07-06",
     "symbol": "CL=F"
    }
-  ]
+  ],
+  "stale": false
  },
  "verdicts": {
   "abstain_reasons": {
