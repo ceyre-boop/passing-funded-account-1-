@@ -130,3 +130,69 @@ eighty.
 New hypothesis generation (general repo); changing any existing seal, gate,
 or verdict; the ICT-lane legacy checklist; rewriting
 `carry_hypothesis_lineage.json` (029 links to its IDs, never edits them).
+
+---
+
+## Amendment 2026-08-19 — adversarial statistical review + the FPR harness
+
+An adversarial review of the statistical core landed after the first build.
+Its central claim: the three-class sign contrast confirms noise, because the
+predicted pattern is generic. Rather than argue, the framework was pointed at
+itself (`daytrade/mechanism_fpr_harness.py`): 20 NULL mechanisms — random
+lever perturbations with RANDOMLY ASSIGNED sign patterns, so any pass is by
+construction false.
+
+**Measured result: 0/20 false CONFIRMED at nominal α=5%.** The reviewer
+predicted 30–60%. The gap is explained by their own Defect-2 table: their
+figure came from a FREE ENTRY permutation (NOON_FLATTEN p=0.092); the
+day-blocked null this spec already mandated gives p=0.148 on the same
+mechanism. Day-blocking was doing the work.
+
+**But the review's mechanism diagnosis is confirmed by the same harness, and
+it is the more important half.** Among the 20 nulls, patterns containing
+`SINGLE_NAME: hurt` systematically produced positive contrasts, and the
+single largest contrast of all 20 (+0.250) went to `SN:hurt, FUT:help` — the
+textbook generic pattern. **45% of random claims drew a "supportive" read**
+under the original NARROWED state. Sign-pattern matching alone carries
+almost no information.
+
+### Corrections adopted (all in code, this session)
+
+1. **NARROWED is abolished.** Underpowered results are `INDETERMINATE`:
+   neither support nor a kill, and they write NO dead axis
+   (`G_KILL_REQUIRES_POWER`). Killing a live hypothesis on noise is the more
+   expensive error.
+2. **The tune split can never CONFIRM.** Its best verdict is
+   `CONFIRMED_CANDIDATE`; confirmation requires out-of-sample data.
+3. **A kill now requires power**: p > 0.50 AND the observed effect excluding
+   the registered prediction by more than the MDE. Merely failing to reject
+   zero is not a kill.
+4. **`G_DEDUPE`**: SPY/ES=F (δ-corr 0.714), QQQ/NQ=F (0.902), IWM/RTY=F
+   (0.790) are the same markets in two wrappers, 100% direction agreement.
+   Effective independent instruments = **8.7, not 16**; the split holds
+   **39 independent days, not ~90** (FUTURES: 19). Results report complex
+   count, and "confirmed in CASH_INDEX and FUTURES" is one market twice.
+5. **`G_PLACEBO_FLOOR`**: the reportable statistic is EXCESS over a
+   bite-matched ensemble, because ~99% of the vocabulary produces the generic
+   pattern for tail-shape reasons that have nothing to do with any mechanism.
+
+### First casualty of the correction — recorded, not buried
+
+MECH-001 was reported `KILLED` on the first run. Re-run under the corrected
+rules: **`INDETERMINATE`**. Contrast +0.019 against an MDE of 0.082, p=0.116.
+The claim is *untested at this power*, not refuted. **Its dead axis has been
+withdrawn from the ledger.** The framework overturned its own first published
+verdict within a day, which is the behaviour the ledger exists to produce.
+
+### Still owed (registered here, not silently dropped)
+
+- **Alpha wealth budget** (`G_ALPHA_WEALTH`): this tune split has already
+  absorbed ~3,000+ config-level comparisons and 4 holdout reads. Nominal α on
+  it is fiction. Generalized alpha-investing with `W₀ = 0.20` gives roughly
+  **7 tests before the split is exhausted** — to be enforced in the ledger.
+- **The replacement statistic**: residualized rank-transfer over held-out
+  instrument complexes (Spearman on 6 held-out complexes, exact null, p-floor
+  1/720) instead of a 3-cell sign contrast whose floor is 1/8.
+- **The most valuable holdout we own**: metals/FX (GC=F, SI=F, YM=F) were
+  excluded for vendor gaps — which makes them uncontaminated, and therefore
+  the only instruments nobody has looked at.

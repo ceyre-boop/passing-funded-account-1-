@@ -44,7 +44,7 @@
     "structural": "unknown",
     "lever": "unknown"
    },
-   "status": "killed",
+   "status": "proposed",
    "config_on": {
     "trail_mult": 1.5,
     "be_arm_frac": 1.0,
@@ -60,7 +60,7 @@
     "hold_past_tp2": true
    },
    "prior_evidence": "two furnace runs ranked every tmNone config above its trailing counterpart (data/daytrade/stockfish_tune_report.json); this entry re-derives that as a MECHANISM test rather than a leaderboard observation",
-   "tested_at": "2026-08-20T00:31:30.915808+00:00",
+   "tested_at": "2026-08-20T00:42:47.073352+00:00",
    "n_entries": 336,
    "n_day_clusters": 39,
    "per_class_mean_delta": {
@@ -74,17 +74,10 @@
    "per_day_sigma": 0.2051,
    "minimum_detectable_effect_r": 0.0817,
    "realized_effect_r": 0.0187,
-   "verdict": "KILLED",
-   "dead_axes": [
-    {
-     "axis": "trail_mult",
-     "classes": [
-      "SINGLE_NAME",
-      "CASH_INDEX",
-      "FUTURES"
-     ]
-    }
-   ]
+   "verdict": "INDETERMINATE",
+   "n_complexes": 13,
+   "k_eff_registered": 8.7,
+   "correction_2026-08-19": "First run reported KILLED under the original verdict rules. Re-run under the corrected rules (G_KILL_REQUIRES_POWER): INDETERMINATE. Contrast +0.019 sits well under the MDE 0.082 and p=0.116 is not significant, so the claim is UNTESTED at this power, not refuted. The dead axis this test wrote has been withdrawn \u2014 killing a live hypothesis on noise is the more expensive error (failure mode F10, dead-list poisoning)."
   },
   {
    "id": "MECH-002",

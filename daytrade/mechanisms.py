@@ -35,6 +35,15 @@ LEDGER = ROOT / "MECHANISMS.json"
 
 CLASS_NAMES = ("SINGLE_NAME", "CASH_INDEX", "FUTURES")
 WEIGHTS = {"help": 1.0, "neutral": 0.0, "hurt": -1.0}
+# G_DEDUPE (adversarial review 2026-08-19): SPY/ES=F delta-correlation 0.714,
+# QQQ/NQ=F 0.902, IWM/RTY=F 0.790, 100% direction agreement. "Confirmed in
+# CASH_INDEX and FUTURES" is ONE market counted twice. Effective independent
+# instruments measured at 8.7, not 16 — carried here so no result can quote a
+# breadth it does not have.
+COMPLEXES = {"SPY": "SP", "ES=F": "SP", "QQQ": "NDX", "NQ=F": "NDX",
+             "IWM": "RUT", "RTY=F": "RUT"}
+K_EFF = 8.7
+
 N_PERM = 1000
 ALPHA = 0.05
 Z_ALPHA, Z_POWER = 1.645, 0.842          # one-sided 95%, 80% power
@@ -181,6 +190,23 @@ def permutation_p(rows: list[tuple], pattern: dict, observed: float,
     return (hits + 1) / (n_perm + 1)
 
 
+def placebo_excess(rows_by_cfg: dict, pattern: dict, bite: float,
+                   observed: float) -> tuple[float, int]:
+    """G_PLACEBO_FLOOR. ~99% of the exit vocabulary produces the sign pattern
+    'hurts single names, helps index/futures' — single names carry the fattest
+    right tail and every config caps upside, so the pattern is a property of
+    the INSTRUMENTS, not of any mechanism. The reportable statistic is
+    therefore the EXCESS over what a mechanism-free perturbation of the same
+    bite rate delivers. Confirmed empirically by the FPR harness: the largest
+    contrast among 20 random null mechanisms (+0.250) went to exactly that
+    generic pattern."""
+    ref = [contrast(bc, pattern) for b, bc in rows_by_cfg.values()
+           if abs(b - bite) <= 0.06]
+    if not ref:
+        return observed, 0
+    return observed - (sum(ref) / len(ref)), len(ref)
+
+
 def run_transfer_test(m: dict, symbols: list[str] | None = None) -> dict:
     """Paired per-entry deltas (config ON vs OFF) over the tune split,
     scored against the pre-registered sign pattern."""
@@ -195,6 +221,7 @@ def run_transfer_test(m: dict, symbols: list[str] | None = None) -> dict:
 
     rows, by_class = [], defaultdict(list)
     per_day: dict[str, list[float]] = defaultdict(list)
+    syms_seen: set = set()
     for sym in syms:
         try:
             sessions = tune_sessions(load_sessions(sym, "5m", allow_fetch=False))
@@ -211,6 +238,7 @@ def run_transfer_test(m: dict, symbols: list[str] | None = None) -> dict:
             rows.append((str(s.day), cls, d))
             by_class[cls].append(d)
             per_day[str(s.day)].append(d)
+            syms_seen.add(sym)
 
     if not rows:
         raise MechanismError("no entries — nothing to test")
@@ -233,16 +261,28 @@ def run_transfer_test(m: dict, symbols: list[str] | None = None) -> dict:
     sigma = statistics.pstdev(day_means) if len(day_means) > 1 else 0.0
     detectable = mde(sigma, len(per_day))
 
-    if p < ALPHA and sign_ok:
-        verdict = "CONFIRMED"
+    # Verdicts, corrected 2026-08-19 after the FPR harness. Measured on 20
+    # NULL mechanisms with random sign patterns: 0/20 false CONFIRMED (the
+    # day-blocked null held), but 45% drew a "supportive" read under the old
+    # NARROWED state — sign-pattern matching alone carries almost no
+    # information. NARROWED is therefore gone: an underpowered result is
+    # INDETERMINATE, which is neither support nor a kill and writes no dead
+    # axis (G_KILL_REQUIRES_POWER — killing a live hypothesis on noise is the
+    # more expensive error).
+    pred = predicted_of(m)
+    powered = abs(observed) >= detectable
+    if p < ALPHA and sign_ok and powered:
+        verdict = "CONFIRMED_CANDIDATE"     # tune split can never CONFIRM
+    elif p > 0.50 and pred is not None and abs(observed - pred) > detectable:
+        verdict = "KILLED"                  # CI excludes the registered effect
     elif p < ALPHA and not sign_ok:
-        verdict = "KILLED"          # something real, but not the stated claim
-    elif sign_ok:
-        verdict = "NARROWED"
+        verdict = "KILLED"                  # real, but not the stated claim
     else:
-        verdict = "KILLED"
+        verdict = "INDETERMINATE"
 
+    complexes = {COMPLEXES.get(sym, sym) for sym in syms_seen}
     return {"tested_at": _now(), "n_entries": len(rows),
+            "n_complexes": len(complexes), "k_eff_registered": K_EFF,
             "n_day_clusters": len(per_day),
             "per_class_mean_delta": {c: (round(v, 4) if v is not None else None)
                                      for c, v in realized.items()},
@@ -402,8 +442,10 @@ def test(args) -> int:
               "distinguish the claim from noise. Recorded as UNMEASURABLE.")
         result["verdict"] = "UNMEASURABLE"
     m.update(result)
-    m["status"] = {"CONFIRMED": "confirmed", "KILLED": "killed",
-                   "NARROWED": "narrowed",
+    # INDETERMINATE and UNMEASURABLE leave the mechanism PROPOSED: neither is
+    # support, neither is a kill, and neither may write a dead axis.
+    m["status"] = {"CONFIRMED_CANDIDATE": "candidate", "KILLED": "killed",
+                   "INDETERMINATE": "proposed",
                    "UNMEASURABLE": "proposed"}[result["verdict"]]
     if result["verdict"] == "KILLED":
         m["dead_axes"] = [{"axis": k, "classes": [c for c, w in
@@ -466,7 +508,8 @@ def check(quiet: bool = False) -> int:
         sv = m.get("structural_vs_lever")
         if not isinstance(sv, dict) or set(sv) != {"structural", "lever"}:
             bad.append(f"{m['id']}: structural/lever axes missing (I34)")
-        if m["status"] not in ("proposed", "confirmed", "killed", "narrowed"):
+        if m["status"] not in ("proposed", "candidate", "confirmed",
+                               "killed", "narrowed"):
             bad.append(f"{m['id']}: unknown status {m['status']!r}")
     if bad:
         for b in bad:

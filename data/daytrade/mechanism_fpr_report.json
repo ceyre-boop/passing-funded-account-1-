@@ -1,0 +1,251 @@
+{
+ "n_entries": 336,
+ "n_days": 39,
+ "n_null": 20,
+ "false_positive_rate": 0.0,
+ "supportive_rate": 0.45,
+ "nominal_alpha": 0.05,
+ "verdict": "FRAMEWORK_CALIBRATED",
+ "runs": [
+  {
+   "i": 0,
+   "pattern": {
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "hurt",
+    "FUTURES": "hurt"
+   },
+   "contrast": -0.0692,
+   "p": 0.9277,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 1,
+   "pattern": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "hurt",
+    "FUTURES": "hurt"
+   },
+   "contrast": -0.0958,
+   "p": 0.7431,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 2,
+   "pattern": {
+    "SINGLE_NAME": "hurt",
+    "CASH_INDEX": "neutral",
+    "FUTURES": "neutral"
+   },
+   "contrast": 0.0767,
+   "p": 0.1247,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  },
+  {
+   "i": 3,
+   "pattern": {
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "neutral",
+    "FUTURES": "help"
+   },
+   "contrast": 0.0158,
+   "p": 0.2618,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  },
+  {
+   "i": 4,
+   "pattern": {
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "neutral",
+    "FUTURES": "help"
+   },
+   "contrast": 0.0011,
+   "p": 0.1347,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  },
+  {
+   "i": 5,
+   "pattern": {
+    "SINGLE_NAME": "hurt",
+    "CASH_INDEX": "neutral",
+    "FUTURES": "neutral"
+   },
+   "contrast": 0.0961,
+   "p": 0.0748,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  },
+  {
+   "i": 6,
+   "pattern": {
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "hurt",
+    "FUTURES": "help"
+   },
+   "contrast": 0.0359,
+   "p": 0.3716,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 7,
+   "pattern": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "help",
+    "FUTURES": "hurt"
+   },
+   "contrast": -0.0166,
+   "p": 0.7406,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 8,
+   "pattern": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "hurt",
+    "FUTURES": "help"
+   },
+   "contrast": -0.1129,
+   "p": 0.3766,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 9,
+   "pattern": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "help",
+    "FUTURES": "help"
+   },
+   "contrast": -0.2535,
+   "p": 0.202,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 10,
+   "pattern": {
+    "SINGLE_NAME": "hurt",
+    "CASH_INDEX": "hurt",
+    "FUTURES": "neutral"
+   },
+   "contrast": 0.1954,
+   "p": 0.2818,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  },
+  {
+   "i": 11,
+   "pattern": {
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "help",
+    "FUTURES": "help"
+   },
+   "contrast": 0.0196,
+   "p": 0.2045,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  },
+  {
+   "i": 12,
+   "pattern": {
+    "SINGLE_NAME": "hurt",
+    "CASH_INDEX": "neutral",
+    "FUTURES": "help"
+   },
+   "contrast": 0.2499,
+   "p": 0.1247,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  },
+  {
+   "i": 13,
+   "pattern": {
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "help",
+    "FUTURES": "hurt"
+   },
+   "contrast": -0.0164,
+   "p": 0.6584,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 14,
+   "pattern": {
+    "SINGLE_NAME": "hurt",
+    "CASH_INDEX": "hurt",
+    "FUTURES": "help"
+   },
+   "contrast": 0.1304,
+   "p": 0.192,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 15,
+   "pattern": {
+    "SINGLE_NAME": "hurt",
+    "CASH_INDEX": "help",
+    "FUTURES": "neutral"
+   },
+   "contrast": 0.0922,
+   "p": 0.1721,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  },
+  {
+   "i": 16,
+   "pattern": {
+    "SINGLE_NAME": "help",
+    "CASH_INDEX": "help",
+    "FUTURES": "help"
+   },
+   "contrast": -0.0148,
+   "p": 0.3466,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 17,
+   "pattern": {
+    "SINGLE_NAME": "hurt",
+    "CASH_INDEX": "help",
+    "FUTURES": "help"
+   },
+   "contrast": 0.1235,
+   "p": 0.207,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 18,
+   "pattern": {
+    "SINGLE_NAME": "neutral",
+    "CASH_INDEX": "help",
+    "FUTURES": "hurt"
+   },
+   "contrast": -0.0429,
+   "p": 0.7057,
+   "sign_ok": false,
+   "verdict": "KILLED"
+  },
+  {
+   "i": 19,
+   "pattern": {
+    "SINGLE_NAME": "hurt",
+    "CASH_INDEX": "neutral",
+    "FUTURES": "help"
+   },
+   "contrast": 0.0752,
+   "p": 0.1047,
+   "sign_ok": true,
+   "verdict": "NARROWED"
+  }
+ ]
+}

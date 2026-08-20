@@ -72,3 +72,24 @@ This is exactly what the ledger is for: without the mechanism framing, the
 soak would have kept running for weeks and produced a confident-looking
 0.0 edge that was never a measurement at all. `EMPTY_CHANNEL` is a distinct
 verdict from `UNMEASURABLE` for that reason, and a test pins the difference.
+
+## CORRECTION 2026-08-19 — the first-run claim above is WITHDRAWN
+
+The section "First real run — the framework re-derives a known negative"
+reported MECH-001 as `KILLED`. **That verdict was over-claimed and is
+withdrawn.** Re-run under the corrected rules (see the spec's 2026-08-19
+amendment): **INDETERMINATE**. Contrast +0.019 against an MDE of 0.082,
+p=0.116 — the claim is untested at this power, not refuted. The dead axis
+that run wrote (`trail_mult` across all three classes) has been removed from
+the ledger.
+
+What survives from that section: the paired design's power gain (MDE 0.082
+vs ~0.18 unpaired) and the observation that most margins this repo has
+chased sit at or under the detection floor. Both stand. What does not
+survive is calling an underpowered result a kill — failure mode F10,
+dead-list poisoning, committed by me within hours of writing the guard
+against it.
+
+The three remaining dead axes (MECH-002/003/004) rest on OTHER evidence —
+the sealed holdout read, the competence report, the oracle audit — not on
+this test, and are unaffected.
