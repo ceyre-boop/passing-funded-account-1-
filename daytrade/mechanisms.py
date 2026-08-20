@@ -254,6 +254,84 @@ def run_transfer_test(m: dict, symbols: list[str] | None = None) -> dict:
             "verdict": verdict}
 
 
+def run_soak_test(m: dict) -> dict:
+    """The SOAK evidence channel (spec 029): live-forward veto information.
+
+    A veto overlay on a weak-expectancy entry improves measured R by trading
+    less of something bad, information or not — so the comparison is against
+    `expected_rate_random_veto`, NEVER baseline. Sessions are reconstructed
+    with the same OR-break rule the furnace uses, so no new entry logic
+    enters here.
+
+    Reports DIVERGENCE EVENTS as the real sample size: a session where the
+    veto book and the control made the same choice carries no information
+    about the claim, however many bars it contains.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from bars import load_sessions, BarDataError
+    from ceiling import find_entry
+    import four_books as fb
+
+    records = [json.loads(l) for l in (ROOT / "data" / "daytrade" / "operator"
+                                       / "records.jsonl").open() if l.strip()]
+    if not records:
+        raise MechanismError("no operator records — the soak has produced nothing")
+    symbols = sorted({r["symbol"] for r in records})
+    soak_days = sorted({r["ts"][:10] for r in records})
+
+    per_session, diverged = [], 0
+    for sym in symbols:
+        try:
+            sessions = load_sessions(sym, "5m", allow_fetch=False)
+        except BarDataError as e:
+            print(f"  !! {sym}: {e} — excluded loudly")
+            continue
+        for sess in sessions:
+            if str(sess.day) not in soak_days:
+                continue                      # live-forward only, never backfill
+            e = find_entry(sess)
+            if e is None:
+                continue
+            plan = {"symbol": sym, "direction": e.direction, "entry": e.entry,
+                    "sl": e.stop, "qty": 1.0, "tp1": e.tp1, "tp2": e.tp2,
+                    "trail_dist": e.trail_dist, "exit_policy": "DEFAULT",
+                    "risk_per_share": e.risk}
+            veto = fb.run_book("veto", sess.df.copy(), plan, records, sym)
+            ctrl = fb.run_book("expected_rate_random_veto", sess.df.copy(), plan,
+                               records, sym)
+            same = (veto["entered"] == ctrl["entered"])
+            diverged += 0 if same else 1
+            per_session.append({"day": str(sess.day), "symbol": sym,
+                                "veto_r": veto["r"], "control_r": ctrl["r"],
+                                "veto_entered": veto["entered"],
+                                "control_entered": ctrl["entered"],
+                                "diverged": not same})
+
+    n = len(per_session)
+    if n == 0:
+        return {"verdict": "NO_SAMPLE", "n_sessions": 0, "n_divergences": 0,
+                "detail": "no soak-window session produced an OR-break entry — "
+                          "the books never had a decision to disagree about"}
+    edge = sum(s["veto_r"] - s["control_r"] for s in per_session) / n
+    sigma = (statistics.pstdev([s["veto_r"] - s["control_r"] for s in per_session])
+             if n > 1 else 0.0)
+    detectable = mde(sigma, n) if sigma > 0 else float("inf")
+    pred = predicted_of(m) or 0.0
+    sessions_needed = (((Z_ALPHA + Z_POWER) * sigma / pred) ** 2
+                       if sigma > 0 and pred else None)
+
+    verdict = ("EMPTY_CHANNEL" if diverged == 0
+               else "UNMEASURABLE" if abs(edge) < detectable else "MEASURED")
+    return {"verdict": verdict, "tested_at": _now(), "n_sessions": n,
+            "n_divergences": diverged, "edge_vs_control_r": round(edge, 4),
+            "per_session_sigma": round(sigma, 4),
+            "minimum_detectable_effect_r": (round(detectable, 4)
+                                            if detectable != float("inf") else None),
+            "sessions_needed_for_predicted_effect": (round(sessions_needed)
+                                                     if sessions_needed else None),
+            "sessions": per_session}
+
+
 # --------------------------------------------------------------- commands
 
 def propose(args) -> int:
@@ -411,6 +489,7 @@ def main(argv=None) -> int:
                    help="unit of the predicted effect; non-R metrics must be named")
     p.add_argument("--by", default=os.environ.get("USER", "unknown"))
     t = sub.add_parser("test"); t.add_argument("id")
+    ts = sub.add_parser("test-soak"); ts.add_argument("id")
     sub.add_parser("calibrate")
     sub.add_parser("axes")
     sub.add_parser("check")
@@ -420,6 +499,15 @@ def main(argv=None) -> int:
             return propose(a)
         if a.cmd == "test":
             return test(a)
+        if a.cmd == "test-soak":
+            reg = _load(); m = _find(reg, a.id)
+            res = run_soak_test(m)
+            for k, v in res.items():
+                if k != "sessions":
+                    print(f"  {k:38s} {v}")
+            m["soak_evidence"] = {k: v for k, v in res.items() if k != "sessions"}
+            _save(reg)
+            return 0
         if a.cmd == "calibrate":
             return calibrate(a)
         if a.cmd == "axes":

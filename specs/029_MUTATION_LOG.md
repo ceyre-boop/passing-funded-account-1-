@@ -45,3 +45,30 @@ Three things worth keeping:
    futures candidate's +0.086 tune-split margin sat at the detection floor;
    the +0.03 margins were beneath it. The MDE gate now refuses those tests
    before they burn a holdout.
+
+## First soak-channel run — MECH-006, and the structural blocker it exposed
+
+`mechanisms.py test-soak MECH-006` (2026-08-19), veto book vs
+`expected_rate_random_veto` over the live soak window:
+
+```
+verdict EMPTY_CHANNEL · n_sessions 1 · n_divergences 0 · edge 0.0
+```
+
+**The channel is empty for a STRUCTURAL reason, not a sample-size one.**
+All three veto-shaped judgments the soak has ever produced fired between
+13:23 and 13:56 ET. The OR-break entry window is 10:00–11:00 ET. Across the
+entire soak, **zero judgments have landed in the entry window** (records per
+ET hour: 8→1, 9→1, then nothing until 12:00). A veto cannot bite a decision
+the operator was asleep for.
+
+Consequence, stated so no future session re-derives it: at current tick
+coverage MECH-006 accrues **no evidence per day, indefinitely**. More soak
+days add nothing. The unblock condition is coverage during 09:30–11:00 ET;
+root cause is host sleep (`pmset` wake at 07:55 fires, but `caffeinate -s`
+holds only on AC power with the lid open).
+
+This is exactly what the ledger is for: without the mechanism framing, the
+soak would have kept running for weeks and produced a confident-looking
+0.0 edge that was never a measurement at all. `EMPTY_CHANNEL` is a distinct
+verdict from `UNMEASURABLE` for that reason, and a test pins the difference.

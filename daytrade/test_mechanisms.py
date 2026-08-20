@@ -186,3 +186,37 @@ def test_corrupt_ledger_raises(sandbox):
     (sandbox / "MECHANISMS.json").write_text("{not json")
     with pytest.raises(mx.MechanismError, match="not JSON"):
         mx._load()
+
+
+# ------------------------------------------------- soak channel (MECH-006)
+
+def test_soak_reports_empty_channel_when_books_never_diverge(monkeypatch, tmp_path):
+    """Agreement between the veto book and its control is NOT weak evidence —
+    it is NO evidence, and must be reported as EMPTY_CHANNEL rather than a
+    0.0 edge that looks like a measurement."""
+    import four_books as fb
+    recs = tmp_path / "data" / "daytrade" / "operator"
+    recs.mkdir(parents=True)
+    (recs / "records.jsonl").write_text(json.dumps(
+        {"symbol": "NVDA", "verdict": "TIGHTEN", "ts": "2026-08-17T17:23:00+00:00",
+         "expires_at": "2026-08-17T18:08:00+00:00"}) + "\n")
+    monkeypatch.setattr(mx, "ROOT", tmp_path)
+
+    class _S:
+        day = __import__("datetime").date(2026, 8, 17)
+        df = None
+    monkeypatch.setattr(mx, "_now", lambda: "t")
+    import bars, ceiling
+    monkeypatch.setattr(bars, "load_sessions", lambda *a, **k: [_S()])
+    monkeypatch.setattr(ceiling, "find_entry", lambda s: None)   # no entry that day
+    out = mx.run_soak_test({"predicted_effect": 0.1})
+    assert out["verdict"] == "NO_SAMPLE"
+    assert out["n_divergences"] == 0
+
+
+def test_soak_refuses_with_no_records(monkeypatch, tmp_path):
+    (tmp_path / "data" / "daytrade" / "operator").mkdir(parents=True)
+    (tmp_path / "data" / "daytrade" / "operator" / "records.jsonl").write_text("")
+    monkeypatch.setattr(mx, "ROOT", tmp_path)
+    with pytest.raises(mx.MechanismError, match="soak has produced nothing"):
+        mx.run_soak_test({"predicted_effect": 0.1})

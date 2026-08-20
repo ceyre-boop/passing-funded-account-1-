@@ -246,7 +246,19 @@
    ],
    "prior_evidence": "soak running since 2026-08-17; control arm added before day two accumulated. Stratified exactly-K-of-N replacement still required before any verdict.",
    "predicted_effect": 0.1,
-   "effect_metric": "R_per_trade edge over expected_rate_random_veto (NOT over baseline)"
+   "effect_metric": "R_per_trade edge over expected_rate_random_veto (NOT over baseline)",
+   "soak_evidence": {
+    "verdict": "EMPTY_CHANNEL",
+    "tested_at": "2026-08-20T00:36:35.376464+00:00",
+    "n_sessions": 1,
+    "n_divergences": 0,
+    "edge_vs_control_r": 0.0,
+    "per_session_sigma": 0.0,
+    "minimum_detectable_effect_r": null,
+    "sessions_needed_for_predicted_effect": null,
+    "blocking_finding": "EMPTY_CHANNEL is STRUCTURAL, not a sample-size problem. All 3 veto-shaped judgments fired 13:23-13:56 ET; the OR-break entry window is 10:00-11:00 ET. Across the entire soak, ZERO judgments have landed in the entry window (records per ET hour: 8:1, 9:1, then nothing until 12:00). The veto cannot bite an entry decision the operator was asleep for. At current coverage this mechanism stays untestable indefinitely \u2014 more soak days add nothing.",
+    "unblock_condition": "tick coverage during 09:30-11:00 ET. Root cause is host sleep (pmset wake 07:55 fires, but caffeinate -s holds only on AC power with the lid open). Until then MECH-006 accrues no evidence."
+   }
   }
  ]
 }
