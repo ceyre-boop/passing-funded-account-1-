@@ -149,36 +149,36 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-19T20:50:53.303346+00:00",
+ "generated_at": "2026-08-20T20:42:24.714791+00:00",
  "latest_judgment": {
   "abstention": {
-   "detail": "newest bar 968 min old (> 15)",
-   "issued_at": "2026-08-19T12:02:28.633799+00:00",
+   "detail": "newest bar 119 min old (> 15)",
+   "issued_at": "2026-08-20T16:18:52.556613+00:00",
    "model_version": "alpha-operator-v1/stale-gate",
    "reason": "STALE_CONTEXT"
   },
   "available": true,
-  "bar_age_min": 967.5,
+  "bar_age_min": 118.9,
   "both_sides": null,
   "confidence": 0.0,
   "cost_usd": 0.0,
   "emission_refused": null,
   "invalidators": [],
   "model_version": "alpha-operator-v1/stale-gate",
-  "packet_as_of": "2026-08-19T12:02:28.633799+00:00",
-  "packet_max_data_ts": "2026-08-19T09:06:00+00:00",
+  "packet_as_of": "2026-08-20T16:18:52.556613+00:00",
+  "packet_max_data_ts": "2026-08-20T14:20:00+00:00",
   "pre_registration": null,
-  "record_id": "op-20260819-120228-633799-NVDA",
+  "record_id": "op-20260820-161852-556613-NVDA",
   "trigger": "news",
-  "ts": "2026-08-19T12:02:28.633799+00:00",
+  "ts": "2026-08-20T16:18:52.556613+00:00",
   "verdict": "ABSTAIN"
  },
  "session": {
   "available": true,
-  "last_record_ts": "2026-08-19T12:02:28.633799+00:00",
+  "last_record_ts": "2026-08-20T16:18:52.556613+00:00",
   "last_trigger": "news",
   "mode": "SHADOW SOAK",
-  "records_total": 22,
+  "records_total": 23,
   "shadow": true,
   "symbol": "NVDA"
  },
@@ -214,10 +214,10 @@
   "abstain_reasons": {
    "DATA_INCOMPLETE": 2,
    "NO_OPINION": 3,
-   "STALE_CONTEXT": 7
+   "STALE_CONTEXT": 8
   },
   "counts": {
-   "ABSTAIN": 12,
+   "ABSTAIN": 13,
    "ALLOW_BASELINE": 7,
    "EXIT": 0,
    "TIGHTEN": 3
@@ -353,6 +353,12 @@
     "confidence": 0.0,
     "shadow": true,
     "ts": "2026-08-19T12:02:28.633799+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-20T16:18:52.556613+00:00",
     "verdict": "ABSTAIN"
    }
   ]
