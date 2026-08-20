@@ -1,0 +1,116 @@
+{
+ "generated_at": "2026-08-20T21:16:30.257482+00:00",
+ "tally": {
+  "PASS": 10,
+  "FAIL": 1,
+  "UNTESTABLE": 2,
+  "GAP": 2
+ },
+ "criteria": [
+  {
+   "layer": "stockfish",
+   "id": "SF-1",
+   "claim": "one decide_exit implementation, called identically everywhere",
+   "status": "PASS",
+   "evidence": "1 definition(s); 37 files reference it; re-implementations: none"
+  },
+  {
+   "layer": "stockfish",
+   "id": "SF-2",
+   "claim": "zero exit-path divergence: replay reproduces bit-for-bit",
+   "status": "PASS",
+   "evidence": "3 replays over 8 sessions -> byte-identical"
+  },
+  {
+   "layer": "stockfish",
+   "id": "SF-3",
+   "claim": "evaluation is complete for the position type it prices",
+   "status": "FAIL",
+   "evidence": "TradeState has 23 fields, all intraday. Carry terms with NO representation: ['swap accrual', 'days held', 'weekend exposure', 'rate differential', 'financing']. It is structurally blind to a multi-day FX position \u2014 a different evaluator, not a re-parameterisation"
+  },
+  {
+   "layer": "stockfish",
+   "id": "SF-4",
+   "claim": "no learning inside the layer \u2014 frozen and auditable",
+   "status": "PASS",
+   "evidence": "no fit/train/random/sklearn found; module-level containers ['_ORDER', 'ALLOWED_ACTIONS', 'INTENT', 'REQUIRES', 'NOT_AUTO_EMITTABLE', 'CONSERVATISM', 'URGENCY_RANK'] are frozen tables, not state"
+  },
+  {
+   "layer": "alphazero",
+   "id": "AZ-1",
+   "claim": "calibrated: stated probability matches realised frequency",
+   "status": "UNTESTABLE",
+   "evidence": "13 resolved forecasts; calibration needs populated bins (>=30). Any number computed here would have an error bar wider than itself \u2014 the same n=10 error withdrawn on 2026-08-17"
+  },
+  {
+   "layer": "alphazero",
+   "id": "AZ-2",
+   "claim": "it knows when it doesn't know \u2014 abstention is first-class",
+   "status": "PASS",
+   "evidence": "13/23 records abstained (57%), typed reasons ['CONFLICTING_EVIDENCE', 'DATA_INCOMPLETE', 'LOW_CONFIDENCE', 'NO_OPINION', 'STALE_CONTEXT']; an ABSTAIN with no reason raises OperatorError"
+  },
+  {
+   "layer": "alphazero",
+   "id": "AZ-3",
+   "claim": "edge survives the exit machine \u2014 measurable vs the null policy",
+   "status": "UNTESTABLE",
+   "evidence": "MECH-006 verdict EMPTY_CHANNEL: 0 divergences over 1 sessions. The books never disagreed, so there is no comparison to make"
+  },
+  {
+   "layer": "alphazero",
+   "id": "AZ-4",
+   "claim": "never touches exits \u2014 a clean seam, enforced structurally",
+   "status": "PASS",
+   "evidence": "envelope refuses quantity/stop_price/order_type (smuggled: none); EMISSION_MODE='log-only'"
+  },
+  {
+   "layer": "learning",
+   "id": "LL-1",
+   "claim": "writes only to priors and the hypothesis queue, never to Stockfish",
+   "status": "PASS",
+   "evidence": "5 learning modules inspected; assignments into stockfish_exit/POLICY_PARAMS: none"
+  },
+  {
+   "layer": "learning",
+   "id": "LL-2",
+   "claim": "improvement verified against a frozen checkpoint, not the current self",
+   "status": "GAP",
+   "evidence": "mechanisms compare against the SHIPPED policy (stable) but no frozen adversarial checkpoint object exists; nothing pins the opponent's version, so 'better' could drift with the baseline"
+  },
+  {
+   "layer": "learning",
+   "id": "LL-3",
+   "claim": "the holdout is non-renewable and every read is a purchase",
+   "status": "PASS",
+   "evidence": "4 log rows across 1 distinct rule_version(s) ['futures-exit-v1']; the rows are per-symbol calls within ONE authorised judgment, each carrying its written reason"
+  },
+  {
+   "layer": "learning",
+   "id": "LL-4",
+   "claim": "generates mechanisms with a cause and a transfer prediction",
+   "status": "PASS",
+   "evidence": "6/6 carry both; 3 killed so far (each removing hypothesis-space volume)"
+  },
+  {
+   "layer": "learning",
+   "id": "LL-5",
+   "claim": "failure mode is visible: a quarter with no mechanism killed",
+   "status": "PASS",
+   "evidence": "3 killed, 3 still open \u2014 the count is queryable, so 'learned nothing' is detectable rather than felt"
+  },
+  {
+   "layer": "stack",
+   "id": "ST-1",
+   "claim": "Stockfish fails LOUDLY (raises, never degrades)",
+   "status": "PASS",
+   "evidence": "a NaN stop raises ValueError at construction rather than producing a quietly wrong exit"
+  },
+  {
+   "layer": "stack",
+   "id": "ST-2",
+   "claim": "the layers are pointed at the market the money is in",
+   "status": "GAP",
+   "evidence": "exit evaluator + operator: intraday equities/futures (40 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10188 rows) but no exit evaluator prices a carry position yet"
+  }
+ ]
+}
