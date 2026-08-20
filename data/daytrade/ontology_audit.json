@@ -1,0 +1,111 @@
+{
+ "generated_at": "2026-08-20T19:19:49.498857+00:00",
+ "n_sessions": 440,
+ "n_perm": 2000,
+ "vocabulary": [
+  "TREND_UP",
+  "TREND_DOWN",
+  "COMPRESSION",
+  "HIGH_VOL",
+  "LOW_VOL",
+  "GAP_UP",
+  "GAP_DOWN",
+  "EVENT_DAY",
+  "UNREADABLE"
+ ],
+ "results": [
+  {
+   "label": "TREND_UP",
+   "n_marked": 185,
+   "n_unmarked": 255,
+   "mean_marked_R": 0.218,
+   "mean_unmarked_R": -0.1434,
+   "separation_R": 0.3614,
+   "p_value": 0.0055,
+   "verdict": "CARVES"
+  },
+  {
+   "label": "TREND_DOWN",
+   "n_marked": 174,
+   "n_unmarked": 266,
+   "mean_marked_R": 0.126,
+   "mean_unmarked_R": -0.0683,
+   "separation_R": 0.1943,
+   "p_value": 0.1579,
+   "verdict": "DECORATION"
+  },
+  {
+   "label": "COMPRESSION",
+   "n_marked": 67,
+   "n_unmarked": 373,
+   "mean_marked_R": 0.1399,
+   "mean_unmarked_R": -0.0151,
+   "separation_R": 0.155,
+   "p_value": 0.4138,
+   "verdict": "DECORATION"
+  },
+  {
+   "label": "HIGH_VOL",
+   "n_marked": 408,
+   "n_unmarked": 32,
+   "mean_marked_R": 0.0465,
+   "mean_unmarked_R": -0.4765,
+   "separation_R": 0.523,
+   "p_value": 0.035,
+   "verdict": "CARVES"
+  },
+  {
+   "label": "LOW_VOL",
+   "n_marked": 67,
+   "n_unmarked": 373,
+   "mean_marked_R": 0.1399,
+   "mean_unmarked_R": -0.0151,
+   "separation_R": 0.155,
+   "p_value": 0.3998,
+   "verdict": "DECORATION"
+  },
+  {
+   "label": "GAP_UP",
+   "n_marked": 104,
+   "n_unmarked": 336,
+   "mean_marked_R": 0.1573,
+   "mean_unmarked_R": -0.0376,
+   "separation_R": 0.1949,
+   "p_value": 0.2099,
+   "verdict": "DECORATION"
+  },
+  {
+   "label": "GAP_DOWN",
+   "n_marked": 87,
+   "n_unmarked": 353,
+   "mean_marked_R": 0.0035,
+   "mean_unmarked_R": 0.0097,
+   "separation_R": 0.0063,
+   "p_value": 0.9755,
+   "verdict": "DECORATION"
+  },
+  {
+   "label": "EVENT_DAY",
+   "n_marked": 28,
+   "n_unmarked": 412,
+   "mean_marked_R": -0.5467,
+   "mean_unmarked_R": 0.0462,
+   "separation_R": 0.593,
+   "p_value": 0.0295,
+   "verdict": "CARVES"
+  },
+  {
+   "label": "UNREADABLE",
+   "n_marked": 213,
+   "n_unmarked": 227,
+   "mean_marked_R": -0.0911,
+   "mean_unmarked_R": 0.1019,
+   "separation_R": 0.193,
+   "p_value": 0.1484,
+   "verdict": "DECORATION"
+  }
+ ],
+ "n_carves": 3,
+ "n_survive_bonferroni": 1,
+ "note": "outcome = OR-break session R under the shipped policy; labels are the union of regimes observed that morning"
+}
