@@ -30,7 +30,7 @@ import decision_ledger as dl                                       # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "daytrade" / "ontology_audit.json"
-N_PERM = 2000
+N_PERM = 40000    # see the MC-error note below
 SEED = 30
 SHIPPED = {"trail_mult": None, "be_arm_frac": 1.0, "partial_frac": 0.5,
            "flatten_et": None, "hold_past_tp2": True}
@@ -95,12 +95,23 @@ def main() -> int:
             if abs(statistics.mean(shuf[:m]) - statistics.mean(shuf[m:])) >= obs:
                 hits += 1
         p = (hits + 1) / (N_PERM + 1)
+        # Monte Carlo error on p itself. The science loop caught the reason
+        # this matters: TREND_UP landed at p=0.0055 against a Bonferroni
+        # threshold of 0.00556, and two runs of the SAME test disagreed about
+        # whether it survived. A verdict inside its own MC error is a coin
+        # flip, and must be reported as one rather than as a finding.
+        mc_se = (p * (1 - p) / N_PERM) ** 0.5
+        bonf = 0.05 / 9
+        boundary = abs(p - bonf) < 2 * mc_se
         results.append({
+            "mc_se": round(mc_se, 5), "bonferroni_threshold": round(bonf, 5),
+            "at_boundary": boundary,
             "label": label, "n_marked": m, "n_unmarked": n - m,
             "mean_marked_R": round(statistics.mean(a), 4),
             "mean_unmarked_R": round(statistics.mean(b), 4),
             "separation_R": round(obs, 4), "p_value": round(p, 4),
-            "verdict": "CARVES" if p < 0.05 else "DECORATION"})
+            "verdict": ("BOUNDARY" if boundary else
+                        "CARVES" if p < 0.05 else "DECORATION")})
 
     print(f"\n  {'label':14s} {'n':>4s} {'marked R':>10s} {'other R':>10s} "
           f"{'sep':>7s} {'p':>7s}   verdict")
@@ -117,9 +128,14 @@ def main() -> int:
     carves = [r for r in tested if r["verdict"] == "CARVES"]
     # 9 labels tested against one outcome: a Bonferroni floor is the honest
     # bar, stated up front rather than after seeing which ones passed.
-    bonf = [r for r in tested if r["p_value"] < 0.05 / max(len(tested), 1)]
+    bonf = [r for r in tested if r["p_value"] < 0.05 / max(len(tested), 1)
+            and not r["at_boundary"]]
+    knife = [r["label"] for r in tested if r["at_boundary"]]
     print(f"\n  {len(carves)}/{len(tested)} labels separate outcomes at p<0.05 "
           f"({len(bonf)} survive Bonferroni over {len(tested)} tests)")
+    if knife:
+        print(f"  !! ON THE KNIFE EDGE (inside their own Monte Carlo error, "
+              f"so the verdict is a coin flip): {knife}")
     print("  A label that does not carve is DECORATION: it invites stories "
           "about a distinction the tape does not make.")
 
@@ -128,6 +144,7 @@ def main() -> int:
         "n_sessions": n, "n_perm": N_PERM,
         "vocabulary": list(dl.REGIMES), "results": results,
         "n_carves": len(carves), "n_survive_bonferroni": len(bonf),
+        "n_at_boundary": len(knife), "labels_at_boundary": knife,
         "note": "outcome = OR-break session R under the shipped policy; "
                 "labels are the union of regimes observed that morning",
     }, indent=1))
