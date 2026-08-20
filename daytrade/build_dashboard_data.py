@@ -173,6 +173,73 @@ def build_books() -> dict:
                       for k in order]}
 
 
+def build_alphazero(records: list[dict], fc_rows: list[dict]) -> dict:
+    """Every prediction it made and whether the tape agreed — the only
+    question that decides whether this component is worth re-pointing at FX."""
+    fs = {r["forecast_id"]: r for r in fc_rows if r["kind"] == "forecast"}
+    res = {r["forecast_id"]: r for r in fc_rows if r["kind"] == "resolution"}
+    prereg = {r["forecast_id"]: r for r in fc_rows if r["kind"] == "prereg_score"}
+    recs = {r["forecast_id"]: r for r in records if r.get("forecast_id")}
+
+    preds = []
+    for fid, f in sorted(fs.items(), key=lambda kv: kv[1]["as_of"]):
+        r = res.get(fid)
+        rec = recs.get(fid, {})
+        top = max(f["scenario_probs"], key=f["scenario_probs"].get)
+        pr = prereg.get(fid, {})
+        preds.append({
+            "as_of": f["as_of"], "symbol": f["symbol"],
+            "verdict": rec.get("verdict"), "confidence": f.get("confidence"),
+            "predicted_direction": f["direction"],
+            "predicted_scenario": top,
+            "top_prob": round(f["scenario_probs"][top], 3),
+            "horizon_min": f["horizon_min"],
+            "expected_r": ((rec.get("pre_registration") or {}).get("expected_r_low"),
+                           (rec.get("pre_registration") or {}).get("expected_r_high")),
+            "outcome_direction": (r or {}).get("outcome_direction"),
+            "outcome_scenario": (r or {}).get("outcome_scenario"),
+            "resolved": r is not None,
+            "direction_hit": (None if r is None
+                              else f["direction"] == r["outcome_direction"]),
+            "scenario_hit": (None if r is None
+                             else top == r["outcome_scenario"]),
+            "realized_r": pr.get("realized_r"), "r_in_band": pr.get("r_in_band"),
+        })
+
+    resolved = [p for p in preds if p["resolved"]]
+    decisive = [p for p in resolved if p["predicted_direction"] != "flat"
+                and p["verdict"] != "ABSTAIN"]
+    dir_hits = sum(1 for p in resolved if p["direction_hit"])
+    scen_hits = sum(1 for p in resolved if p["scenario_hit"])
+    return {
+        "n_predictions": len(preds), "n_resolved": len(resolved),
+        "n_decisive_resolved": len(decisive),
+        "abstain_rate": (round(1 - len(decisive) / len(resolved), 3)
+                         if resolved else None),
+        "direction_hits": dir_hits,
+        "direction_accuracy": (round(dir_hits / len(resolved), 3)
+                               if resolved else None),
+        "scenario_hits": scen_hits,
+        "scenario_accuracy": (round(scen_hits / len(resolved), 3)
+                              if resolved else None),
+        "chance_scenario": 0.2,
+        "decisive_accuracy_quotable": len(decisive) >= 30,
+        "min_n_for_quotable": 30,
+        "predictions": preds[-40:],
+    }
+
+
+def build_stockfish() -> dict:
+    """Exit quality judged by lookback — what the shipped policy kept of what
+    was reachable, and how often the ENTRY made the exit irrelevant."""
+    path = ROOT / "data" / "daytrade" / "exit_quality.json"
+    if not path.exists():
+        return {"available": False}
+    q = json.loads(path.read_text())
+    q["available"] = True
+    return q
+
+
 def build_containment(records: list[dict]) -> dict:
     emitted = sum(1 for r in records if r.get("directive") and not r.get("shadow"))
     suppressed = sum(1 for r in records if r.get("directive") and r.get("shadow"))
@@ -194,6 +261,8 @@ def main() -> int:
         "latest_judgment": build_latest(records),
         "spend": build_spend(load_jsonl(SPEND)),
         "forecasts": build_forecasts(load_jsonl(FC_LOG)),
+        "alphazero": build_alphazero(records, load_jsonl(FC_LOG)),
+        "stockfish": build_stockfish(),
         "yield_curve": build_yield(load_jsonl(YIELD_LOG)),
         "four_books": build_books(),
         "disciplines": DISCIPLINES,

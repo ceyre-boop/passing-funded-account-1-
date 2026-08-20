@@ -198,32 +198,21 @@
 <div class="wrap">
   <div class="card empty" id="err">failed to load data.json — the generator has not published yet</div>
 
+  <div class="sec">AlphaZero — every prediction, and what the tape did</div>
+  <div class="grid">
+    <div class="card s4" id="azScore"></div>
+    <div class="card s8" id="azTable"></div>
+  </div>
+
+  <div class="sec">Stockfish — exit quality, judged by lookback</div>
+  <div class="grid">
+    <div class="card s4" id="sfScore"></div>
+    <div class="card s8" id="sfTable"></div>
+  </div>
+
   <div class="sec">Latest sealed judgment</div>
   <div class="grid">
-    <div class="card s8" id="judgmentCard"></div>
-    <div class="card s4" id="judgmentSide"></div>
-  </div>
-
-  <div class="sec">Session telemetry</div>
-  <div class="grid">
-    <div class="card s4"><div class="label">Verdict breakdown</div><div id="donut"></div></div>
-    <div class="card s4"><div class="label">Spend vs cap</div><div id="spend"></div></div>
-    <div class="card s4"><div class="label">Forecast ledger</div><div id="forecasts"></div></div>
-  </div>
-
-  <div class="sec">Four books — referee first</div>
-  <div class="grid">
-    <div class="card s8" id="books"></div>
-    <div class="card s4"><div class="label">Yield trajectory (veto − baseline)</div><div id="yield"></div></div>
-  </div>
-
-  <div class="sec">The discipline layer</div>
-  <div class="grid" id="disciplines"></div>
-
-  <div class="sec">Verification</div>
-  <div class="grid">
-    <div class="card s6"><div class="label">Mutation kill grid — <span id="mutCount"></span></div><div class="killgrid" id="killgrid"></div></div>
-    <div class="card s6"><div class="label">Gate map</div><div class="gates" id="gates"></div></div>
+    <div class="card s12" id="judgmentCard"></div>
   </div>
 
   <footer id="foot"></footer>
@@ -337,38 +326,137 @@ function bandSVG(lo, hi) {
 }
 
 function render(d) {
-  // hero
-  const s = d.session, c = d.containment;
+  const s = d.session, c = d.containment, az = d.alphazero, sf = d.stockfish;
   $("modeChip").textContent = s.mode + (s.symbol ? " · " + s.symbol : "");
   $("modeDot").style.background = s.shadow ? "#3fdc97" : "#58a6ff";
   $("lastTs").textContent = "last record " + fmtTs(s.last_record_ts);
+
+  // hero: performance, not infrastructure
   const strip = $("statstrip");
-  strip.appendChild(stat(String(d.verification.tests), "tests passing", "green"));
-  strip.appendChild(stat(`${d.verification.mutations_killed}/${d.verification.mutation_rows}`,
-                         "mutations killed", "green"));
+  const accTxt = az.direction_accuracy === null ? "—"
+        : `${(az.direction_accuracy * 100).toFixed(0)}%`;
+  strip.appendChild(stat(accTxt, `AZ direction (n=${az.n_resolved})`,
+                         az.n_resolved < 30 ? "amber" : ""));
+  strip.appendChild(stat(sf.available ? sf.median_efficiency.toFixed(2) : "—",
+                         "SF exit efficiency", "green"));
+  strip.appendChild(stat(sf.available ? `${sf.pct_unwinnable}%` : "—",
+                         "entries no exit could win", "red"));
   strip.appendChild(stat(String(c.directives_emitted), "directives emitted",
                          c.clean ? "green" : "red"));
-  strip.appendChild(stat(`$${d.spend.total_usd.toFixed(2)} / $${d.spend.cap_usd.toFixed(2)}`,
-                         "model spend vs cap",
-                         d.spend.total_usd < d.spend.cap_usd * .8 ? "" : "amber"));
 
-  // latest judgment
-  const j = d.latest_judgment, jc = $("judgmentCard"), js = $("judgmentSide");
-  if (!j.available) {
-    jc.className = "card s8 empty"; jc.textContent = "no data yet";
+  // ---------------- AlphaZero scoreboard ----------------
+  const a = $("azScore");
+  a.appendChild(el("div", "label", "Accuracy vs chance"));
+  a.appendChild(el("div", "big " + (az.n_resolved < 30 ? "amber" : ""), accTxt));
+  a.appendChild(el("div", "mono muted",
+    `direction: ${az.direction_hits}/${az.n_resolved} resolved`)).style.fontSize = "11px";
+  const sc = el("div", "mono");
+  sc.style.marginTop = "10px";
+  sc.appendChild(el("div", "", `scenario: ${az.scenario_hits}/${az.n_resolved} ` +
+    `(${(az.scenario_accuracy * 100).toFixed(0)}% vs ${az.chance_scenario * 100}% chance)`));
+  sc.appendChild(el("div", "muted", `abstained on ${(az.abstain_rate * 100).toFixed(0)}% of resolved calls`));
+  sc.appendChild(el("div", "muted", `${az.n_decisive_resolved} decisive · need ${az.min_n_for_quotable}`));
+  a.appendChild(sc);
+  if (!az.decisive_accuracy_quotable) {
+    const w = el("div", "empty",
+      `n=${az.n_decisive_resolved} decisive calls — below the ${az.min_n_for_quotable} ` +
+      `needed before any accuracy number is quotable. Read the rows, not the rate.`);
+    w.style.marginTop = "12px";
+    a.appendChild(w);
+  }
+
+  const at = $("azTable");
+  at.appendChild(el("div", "label", "Every prediction (newest last)"));
+  if (!az.predictions.length) {
+    at.appendChild(el("div", "empty", "no predictions yet"));
   } else {
-    const head = el("div");
-    const pill = el("span", "pill " + (VP[j.verdict] || "abstain"), j.verdict);
-    head.appendChild(pill);
-    head.appendChild(el("span", "mono muted",
-      `  conf ${(j.confidence ?? 0).toFixed(2)} · trigger ${j.trigger} · ${fmtTs(j.ts)}`));
+    const tb = el("table"), hd = el("tr");
+    ["when", "verdict", "said", "tape did", "hit", "conf", "exp R"].forEach(h =>
+      hd.appendChild(el("th", "", h)));
+    tb.appendChild(hd);
+    az.predictions.forEach(p => {
+      const tr = el("tr");
+      tr.appendChild(el("td", "muted", fmtTs(p.as_of).slice(5, 16)));
+      tr.appendChild(el("td", "", p.verdict || "—"));
+      tr.appendChild(el("td", "", `${p.predicted_direction} / ${p.predicted_scenario.replace(/_/g, " ")}`));
+      tr.appendChild(el("td", "muted", !p.resolved ? "open" :
+        `${p.outcome_direction} / ${p.outcome_scenario.replace(/_/g, " ")}`));
+      const hit = el("td", "", !p.resolved ? "—" : p.direction_hit ? "✓" : "✗");
+      hit.className = "td " + (!p.resolved ? "muted" : p.direction_hit ? "green" : "red");
+      tr.appendChild(hit);
+      tr.appendChild(el("td", "muted", (p.confidence ?? 0).toFixed(2)));
+      tr.appendChild(el("td", "muted", p.expected_r[0] === null ? "—" :
+        `${p.expected_r[0]} → ${p.expected_r[1]}`));
+      tb.appendChild(tr);
+    });
+    at.appendChild(tb);
+  }
+
+  // ---------------- Stockfish scoreboard ----------------
+  const sfs = $("sfScore");
+  sfs.appendChild(el("div", "label", "Kept vs reachable"));
+  if (!sf.available) {
+    sfs.appendChild(el("div", "empty", "no exit-quality report yet"));
+  } else {
+    sfs.appendChild(el("div", "big green", sf.median_efficiency.toFixed(2)));
+    sfs.appendChild(el("div", "mono muted",
+      "median share of the best reachable exit")).style.fontSize = "11px";
+    const g = el("div", "mono");
+    g.style.marginTop = "10px";
+    g.appendChild(el("div", "", `median giveback: ${sf.median_giveback_r} R`));
+    g.appendChild(el("div", "muted",
+      `mean realized ${sf.mean_realized_r >= 0 ? "+" : ""}${sf.mean_realized_r} R`));
+    g.appendChild(el("div", "muted",
+      `vs hindsight oracle ${sf.mean_oracle_r >= 0 ? "+" : ""}${sf.mean_oracle_r} R`));
+    g.appendChild(el("div", "red", `${sf.pct_unwinnable}% of entries: NO exit could win`));
+    sfs.appendChild(g);
+    const warn = el("div", "prooofline", sf.hindsight_warning);
+    sfs.appendChild(warn);
+  }
+
+  const sft = $("sfTable");
+  sft.appendChild(el("div", "label", "By asset class · " + (sf.available ? sf.n_sessions : 0) + " sessions"));
+  if (sf.available) {
+    const tb = el("table"), hd = el("tr");
+    ["class", "n", "efficiency", "giveback R", "mean realized", "unwinnable"].forEach(h =>
+      hd.appendChild(el("th", "", h)));
+    tb.appendChild(hd);
+    Object.entries(sf.by_class).forEach(([cls, v]) => {
+      const tr = el("tr");
+      tr.appendChild(el("td", "", cls));
+      tr.appendChild(el("td", "muted", String(v.n)));
+      const e = el("td", "", v.median_efficiency.toFixed(3));
+      e.className = "td " + (v.median_efficiency > 0.7 ? "green" : v.median_efficiency < 0.5 ? "red" : "amber");
+      tr.appendChild(e);
+      tr.appendChild(el("td", "muted", String(v.median_giveback_r)));
+      const mr = el("td", "r " + (v.mean_realized_r > 0 ? "green" : "red"),
+                    (v.mean_realized_r >= 0 ? "+" : "") + v.mean_realized_r);
+      tr.appendChild(mr);
+      tr.appendChild(el("td", "red", v.pct_unwinnable + "%"));
+      tb.appendChild(tr);
+    });
+    sft.appendChild(tb);
+    sft.appendChild(el("div", "prooofline",
+      "efficiency = realized / best-in-vocabulary (hindsight). Giveback = max " +
+      "favorable excursion the position reached, minus what it kept. " +
+      "'Unwinnable' means no configuration in the entire exit vocabulary " +
+      "finished that session positive — an ENTRY failure the exit cannot fix."));
+  }
+
+  // ---------------- latest judgment (kept, compact) ----------------
+  const j = d.latest_judgment, jc = $("judgmentCard");
+  if (!j.available) {
+    jc.className = "card s12 empty"; jc.textContent = "no data yet";
+  } else {
     jc.appendChild(el("div", "label", "The judgment"));
+    const head = el("div");
+    head.appendChild(el("span", "pill " + (VP[j.verdict] || "abstain"), j.verdict));
+    head.appendChild(el("span", "mono muted",
+      `  conf ${(j.confidence ?? 0).toFixed(2)} · ${j.trigger} · ${fmtTs(j.ts)}`));
     jc.appendChild(head);
     if (j.abstention) {
-      const a = el("div", "mono amber");
-      a.style.marginTop = "10px"; a.style.fontSize = "13px";
-      a.textContent = `ABSTAIN(${j.abstention.reason}): ${j.abstention.detail}`;
-      jc.appendChild(a);
+      const ab = el("div", "mono amber", `ABSTAIN(${j.abstention.reason}): ${j.abstention.detail}`);
+      ab.style.cssText = "margin-top:10px;font-size:13px"; jc.appendChild(ab);
     }
     if (j.both_sides) {
       const t = el("div", "triptych");
@@ -380,139 +468,18 @@ function render(d) {
       });
       jc.appendChild(t);
     }
-    const proof = el("div", "prooofline",
-      `sealed ${j.record_id || ""} · packet_as_of ${fmtTs(j.packet_as_of)} · ` +
-      `max_data_ts ${fmtTs(j.packet_max_data_ts)} · cost $${(j.cost_usd ?? 0).toFixed(4)}`);
-    jc.appendChild(proof);
-
-    js.appendChild(el("div", "label", "Pre-registration"));
-    if (j.pre_registration) {
-      const pr = j.pre_registration;
-      js.appendChild(el("div", "mono",
-        `expected R  [${pr.expected_r_low}, ${pr.expected_r_high}]`));
-      js.appendChild(bandSVG(pr.expected_r_low, pr.expected_r_high));
-      (pr.invalidation_predicates || []).forEach(p =>
-        js.appendChild(el("div", "chiplet", `${p.kind} ${p.value}`)));
-    } else {
-      js.appendChild(el("div", "empty", "no prereg — ABSTAIN carries no claim"));
-    }
-    if (j.invalidators && j.invalidators.length) {
-      js.appendChild(el("div", "label", "Invalidators")).style.marginTop = "16px";
-      const ul = el("ul", "inv");
-      j.invalidators.forEach(x => ul.appendChild(el("li", "", x)));
-      js.appendChild(ul);
-    }
+    (j.invalidators || []).forEach(x => jc.appendChild(el("div", "chiplet", x)));
+    jc.appendChild(el("div", "prooofline",
+      `packet_as_of ${fmtTs(j.packet_as_of)} · max_data_ts ${fmtTs(j.packet_max_data_ts)} · ` +
+      `spend to date $${d.spend.total_usd.toFixed(2)} / $${d.spend.cap_usd.toFixed(2)}`));
   }
-
-  // telemetry
-  const dn = $("donut");
-  dn.appendChild(donutSVG(d.verdicts.counts));
-  const legend = el("div", "mono", "");
-  legend.style.fontSize = "11px";
-  Object.entries(d.verdicts.counts).forEach(([k, n]) => {
-    if (n) legend.appendChild(el("div", "", `${k}: ${n}`));
-  });
-  Object.entries(d.verdicts.abstain_reasons || {}).forEach(([k, n]) =>
-    legend.appendChild(el("div", "muted", `  └ ${k}: ${n}`)));
-  dn.appendChild(legend);
-
-  const sp = $("spend");
-  sp.appendChild(el("div", "big", `$${d.spend.total_usd.toFixed(4)}`));
-  const meter = el("div", "meter"); const fill = el("div");
-  fill.style.width = Math.min(100, d.spend.total_usd / d.spend.cap_usd * 100) + "%";
-  meter.appendChild(fill); sp.appendChild(meter);
-  sp.appendChild(el("div", "mono muted",
-    `${d.spend.call_count} priced calls · avg $${d.spend.avg_call_usd ?? "—"} · hard cap $${d.spend.cap_usd}`))
-    .style.fontSize = "11px";
-  (d.spend.by_day || []).slice(-7).forEach(r => {
-    const row = el("div", "mono muted", `${r.date}  $${r.usd.toFixed(4)}  (${r.calls})`);
-    row.style.fontSize = "11px"; sp.appendChild(row);
-  });
-
-  const fc = $("forecasts"), f = d.forecasts;
-  fc.appendChild(el("div", "big", `${f.resolved}/${f.total}`));
-  fc.appendChild(el("div", "mono muted", "resolved / recorded")).style.fontSize = "11px";
-  fc.appendChild(el("div", "mono", `open: ${f.open}`)).style.marginTop = "8px";
-  const rate = f.prereg_in_band_rate;
-  fc.appendChild(el("div", "mono " + (rate === null ? "muted" : "green"),
-    rate === null ? "prereg in-band: no scored claims yet"
-                  : `prereg in-band: ${(rate * 100).toFixed(0)}% (${f.prereg_in_band}/${f.prereg_scored})`));
-
-  // four books
-  const bk = $("books"), b = d.four_books;
-  bk.appendChild(el("div", "label", "Latest session comparison"));
-  if (!b.available) {
-    bk.appendChild(el("div", "empty", "no books artifact yet — first four-books run pending"));
-  } else {
-    const tb = el("table"); const hd = el("tr");
-    ["book", "role", "entered", "R", "why"].forEach(h => hd.appendChild(el("th", "", h)));
-    tb.appendChild(hd);
-    b.books.forEach(row => {
-      const tr = el("tr", row.book === "veto" ? "hi" : "");
-      tr.appendChild(el("td", row.book === "veto" ? "green" : "", row.book));
-      tr.appendChild(el("td", "muted", row.role));
-      tr.appendChild(el("td", "", row.entered ? "yes" : "no"));
-      const r = el("td", "r " + (row.r > 0 ? "green" : row.r < 0 ? "red" : "muted"),
-                   (row.r >= 0 ? "+" : "") + row.r.toFixed(3));
-      tr.appendChild(r);
-      tr.appendChild(el("td", "muted", row.why));
-      tb.appendChild(tr);
-    });
-    bk.appendChild(tb);
-    bk.appendChild(el("div", "prooofline",
-      `${b.session} · ${b.symbol} · yield Δ ${(b.yield_delta_r >= 0 ? "+" : "")}${b.yield_delta_r}R · ` +
-      `bars ${b.bars_fingerprint} · ${b.note_full_book}`));
-  }
-
-  const yd = $("yield");
-  if (d.yield_curve.available && d.yield_curve.rows.length) {
-    yd.appendChild(sparkSVG(d.yield_curve.rows));
-    yd.appendChild(el("div", "mono muted",
-      d.yield_curve.rows.map(r => (r.yield_delta_r >= 0 ? "+" : "") + r.yield_delta_r.toFixed(3)).join(" → ")))
-      .style.fontSize = "11px";
-  } else {
-    yd.appendChild(el("div", "empty", "no yield rows yet — first post-session grade pending"));
-  }
-
-  // disciplines
-  const dg = $("disciplines");
-  d.disciplines.forEach(x => {
-    const cardEl = el("div", "card s4 disc");
-    const st = el("span", "pill status " + (/^(active|ON)$/.test(x.status) ? "on" : "armed"), x.status);
-    cardEl.appendChild(st);
-    cardEl.appendChild(el("h3", "", `${x.id}. ${x.name}`));
-    cardEl.appendChild(el("p", "", x.mechanism));
-    const chips = el("div"); chips.style.marginTop = "9px";
-    x.invariants.forEach(i => chips.appendChild(el("span", "chiplet", i)));
-    x.mutations.forEach(m => chips.appendChild(el("span", "chiplet m", m + " ✓")));
-    cardEl.appendChild(chips);
-    dg.appendChild(cardEl);
-  });
-
-  // verification
-  $("mutCount").textContent =
-    `${d.verification.mutations_killed}/${d.verification.mutation_rows} killed`;
-  const kg = $("killgrid");
-  d.verification.mutations.forEach(m => {
-    const flagged = d.verification.flagged[m];
-    const k = el("div", "kill" + (flagged ? " flag" : ""), m);
-    k.setAttribute("data-tip", flagged ? `${m}: ${flagged}` : `${m}: fault injected, named test failed, restored — KILLED`);
-    kg.appendChild(k);
-  });
-  const gt = $("gates");
-  d.verification.gates.forEach(g => {
-    const cls = /closed/.test(g.status) ? "done" : /built|advisory/.test(g.status) ? "part" : "";
-    const ge = el("div", "gate " + cls, `G${g.gate} ${g.name}`);
-    const sm = el("small", "", g.status);
-    ge.appendChild(sm); gt.appendChild(ge);
-  });
 
   $("foot").textContent =
-    `generated ${fmtTs(d.generated_at)} · shadow soak; no live fills; single-seat build, ` +
-    `certification owed · specs 023 + 024 · `;
-  const a = el("a", "", "ceyre-boop/passing-funded-account-1-");
-  a.href = "https://github.com/ceyre-boop/passing-funded-account-1-";
-  $("foot").appendChild(a);
+    `generated ${fmtTs(d.generated_at)} · shadow soak; no live fills; ` +
+    `intraday equity/futures lane — NOT the FX carry edge · specs 023-030 · `;
+  const link = el("a", "", "ceyre-boop/passing-funded-account-1-");
+  link.href = "https://github.com/ceyre-boop/passing-funded-account-1-";
+  $("foot").appendChild(link);
 }
 
 fetch("./data.json", { cache: "no-store" })
