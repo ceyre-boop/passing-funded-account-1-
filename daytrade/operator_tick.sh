@@ -21,6 +21,16 @@ echo "--- tick $(date -u +%FT%TZ) (ET $ET_HM)"
 # Mechanical R-geometry plan (spec 024 prereg scoring) — no-op before 10:00,
 # idempotent per day, never touches a hand-written plan.
 python3 write_baseline_plan.py NVDA || echo "!! plan writer failed (non-fatal)"
+
+# Spec 030: OBSERVE the decision channel every tick — cheap, no model, no API
+# cost, so it runs whether or not a judgment happens. The soak proved that a
+# system not observing 09:30-11:00 ET cannot learn from it.
+python3 decision_ledger.py capture --symbol NVDA || echo "!! capture failed (non-fatal)"
+# Catch-up: if the host slept through the morning, reconstruct today's missed
+# decision points from point-in-time sources the moment it wakes. Marked
+# source=backfill — knowable-state evidence, never "what the model saw".
+python3 decision_ledger.py backfill --symbol NVDA --days 1 \
+    || echo "!! backfill failed (non-fatal)"
 # The resolver runs REGARDLESS of the operator call's fate — a spend-cap or
 # network failure on `run` must not stall the learning loop (review fix 3).
 set +e
