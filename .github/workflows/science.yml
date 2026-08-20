@@ -1,0 +1,67 @@
+name: science loop
+
+# Runs the deterministic science whether or not any laptop is awake.
+# Deliberately does NOT: call a model, spend money, touch a sealed artifact,
+# re-pin a checkpoint, or trade. Those need a human, a market, or both.
+on:
+  schedule:
+    - cron: "20 22 * * 1-5"     # 22:20 UTC weekdays — after the US close
+  workflow_dispatch: {}          # and on demand
+
+permissions:
+  contents: write
+
+concurrency:
+  group: science-loop            # never two writers on a hash-chained log
+  cancel-in-progress: false
+
+jobs:
+  science:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install
+        run: pip install --quiet pandas pyarrow yfinance scikit-learn pytest pydantic
+
+      - name: regression suite must pass before any science is believed
+        run: python3 -m pytest -q
+
+      - name: run the science loop
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python3 daytrade/science_loop.py | tee /tmp/science.txt
+
+      - name: publish what moved
+        run: |
+          git config user.name  "science-loop"
+          git config user.email "science-loop@users.noreply.github.com"
+          git add data/ docs/ || true
+          if git diff --cached --quiet; then
+            echo "nothing moved — no commit"
+            exit 0
+          fi
+          MOVED=$(sed -n '/WHAT MOVED/,/^$/p' /tmp/science.txt | head -12)
+          git commit -m "science loop $(date -u +%F): $(echo "$MOVED" | head -1)
+
+          $MOVED"
+          # another writer (the local dashboard job) may have pushed meanwhile
+          git pull --rebase origin main || { echo "rebase conflict — not forcing"; exit 1; }
+          git push origin main
+
+      - name: summary
+        if: always()
+        run: |
+          {
+            echo '## science loop'
+            echo '```'
+            tail -30 /tmp/science.txt 2>/dev/null || echo "no output"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

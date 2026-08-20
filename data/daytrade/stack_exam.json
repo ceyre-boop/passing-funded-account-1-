@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-20T23:17:26.774224+00:00",
+ "generated_at": "2026-08-20T23:37:02.167906+00:00",
  "tally": {
   "PASS": 10,
   "GAP": 3,
@@ -25,7 +25,7 @@
    "id": "SF-3",
    "claim": "an evaluator is complete for each position type the system trades",
    "status": "GAP",
-   "evidence": "intraday: TradeState 23 fields (complete for intraday, carry-blind by design). carry-exit-v1: 22 fields, separate type True, carry terms present all. Reconciliation against 411 sealed trades: 44.0% exit-reason match; cannot yet express ['reversal', 'trailing_stop'] \u2014 missing the entry signal (general repo), the true stop-placement rule, and the trail spec. Named, not tuned away."
+   "evidence": "intraday: TradeState 23 fields (complete for intraday, carry-blind by design). carry-exit-v1: 22 fields, separate type True, carry terms present all. Reconciliation against 411 sealed trades: 44.8% exit-reason match; cannot yet express ['reversal', 'trailing_stop'] \u2014 missing the entry signal (general repo), the true stop-placement rule, and the trail spec. Named, not tuned away."
   },
   {
    "layer": "stockfish",

@@ -1,23 +1,22 @@
 {
- "generated_at": "2026-08-20T23:14:58.763146+00:00",
+ "generated_at": "2026-08-20T23:35:14.890676+00:00",
  "evaluator": "carry-exit-v1",
- "trail_outranks_time": true,
+ "trail_outranks_time": false,
  "note": "COMPLETENESS test, not a fit. A low match means a missing term, never a reason to tune the evaluator.",
  "n_sealed": 411,
  "n_replayed": 411,
  "n_skipped": 0,
- "reason_match_rate": 0.44,
- "day_match_rate": 0.363,
- "both_match_rate": 0.221,
+ "reason_match_rate": 0.448,
+ "day_match_rate": 0.414,
+ "both_match_rate": 0.277,
  "median_day_delta": 0,
- "mean_swap_paid_r": 0.1443,
+ "mean_swap_paid_r": 0.1401,
  "by_sealed_reason": {
   "reversal": {
    "n": 79,
    "engine_said": {
-    "stop": 27,
-    "time": 49,
-    "trailing_stop": 3
+    "stop": 26,
+    "time": 53
    },
    "reason_match_rate": 0.0
   },
@@ -32,21 +31,19 @@
   "time": {
    "n": 205,
    "engine_said": {
-    "time": 170,
-    "stop": 30,
-    "trailing_stop": 5
+    "time": 175,
+    "stop": 30
    },
-   "reason_match_rate": 0.829
+   "reason_match_rate": 0.854
   },
   "trailing_stop": {
    "n": 118,
    "engine_said": {
-    "time": 65,
-    "stop": 49,
-    "reversal": 1,
-    "trailing_stop": 3
+    "time": 69,
+    "stop": 48,
+    "trailing_stop": 1
    },
-   "reason_match_rate": 0.025
+   "reason_match_rate": 0.008
   }
  },
  "rows": [
@@ -266,14 +263,14 @@
    "sealed_exit": "2017-01-13",
    "sealed_reason": "time",
    "sealed_hold_days": 8,
-   "engine_exit": "2017-01-11",
+   "engine_exit": "2017-01-09",
    "engine_reason": "time",
-   "engine_hold_days": 7,
-   "day_delta": -2,
+   "engine_hold_days": 5,
+   "day_delta": -4,
    "reason_match": true,
    "day_match": false,
-   "net_r": 1.6791,
-   "swap_paid_r": 0.036
+   "net_r": 1.424,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -281,14 +278,14 @@
    "sealed_exit": "2017-02-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2017-02-16",
+   "engine_exit": "2017-02-08",
    "engine_reason": "time",
-   "engine_hold_days": 13,
-   "day_delta": 7,
+   "engine_hold_days": 5,
+   "day_delta": -1,
    "reason_match": true,
-   "day_match": false,
-   "net_r": 1.864,
-   "swap_paid_r": 0.068
+   "day_match": true,
+   "net_r": 1.0284,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -311,14 +308,14 @@
    "sealed_exit": "2017-04-10",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2017-04-11",
+   "engine_exit": "2017-04-10",
    "engine_reason": "time",
-   "engine_hold_days": 7,
-   "day_delta": 1,
+   "engine_hold_days": 6,
+   "day_delta": 0,
    "reason_match": true,
    "day_match": true,
-   "net_r": 0.8712,
-   "swap_paid_r": 0.036
+   "net_r": 1.0699,
+   "swap_paid_r": 0.032
   },
   {
    "pair": "EURUSD=X",
@@ -341,14 +338,14 @@
    "sealed_exit": "2017-06-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2017-06-13",
+   "engine_exit": "2017-06-12",
    "engine_reason": "time",
-   "engine_hold_days": 8,
-   "day_delta": 4,
+   "engine_hold_days": 7,
+   "day_delta": 3,
    "reason_match": true,
    "day_match": false,
-   "net_r": 0.8975,
-   "swap_paid_r": 0.04
+   "net_r": 0.8333,
+   "swap_paid_r": 0.036
   },
   {
    "pair": "EURUSD=X",
@@ -491,14 +488,14 @@
    "sealed_exit": "2018-07-13",
    "sealed_reason": "time",
    "sealed_hold_days": 8,
-   "engine_exit": "2018-07-20",
+   "engine_exit": "2018-07-09",
    "engine_reason": "time",
-   "engine_hold_days": 16,
-   "day_delta": 7,
+   "engine_hold_days": 5,
+   "day_delta": -4,
    "reason_match": true,
    "day_match": false,
-   "net_r": -0.1282,
-   "swap_paid_r": 0.08
+   "net_r": 1.0344,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -596,14 +593,14 @@
    "sealed_exit": "2019-01-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2019-01-11",
+   "engine_exit": "2019-01-08",
    "engine_reason": "time",
-   "engine_hold_days": 8,
-   "day_delta": 2,
+   "engine_hold_days": 5,
+   "day_delta": -1,
    "reason_match": true,
-   "day_match": false,
-   "net_r": 2.2313,
-   "swap_paid_r": 0.04
+   "day_match": true,
+   "net_r": 1.8853,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -611,14 +608,14 @@
    "sealed_exit": "2019-02-04",
    "sealed_reason": "reversal",
    "sealed_hold_days": 1,
-   "engine_exit": "2019-02-15",
+   "engine_exit": "2019-02-11",
    "engine_reason": "time",
-   "engine_hold_days": 11,
-   "day_delta": 11,
+   "engine_hold_days": 7,
+   "day_delta": 7,
    "reason_match": false,
    "day_match": false,
-   "net_r": 1.8321,
-   "swap_paid_r": 0.052
+   "net_r": 1.5117,
+   "swap_paid_r": 0.036
   },
   {
    "pair": "EURUSD=X",
@@ -641,14 +638,14 @@
    "sealed_exit": "2019-03-04",
    "sealed_reason": "reversal",
    "sealed_hold_days": 1,
-   "engine_exit": "2019-03-12",
+   "engine_exit": "2019-03-11",
    "engine_reason": "time",
-   "engine_hold_days": 8,
-   "day_delta": 8,
+   "engine_hold_days": 7,
+   "day_delta": 7,
    "reason_match": false,
    "day_match": false,
-   "net_r": 1.3201,
-   "swap_paid_r": 0.04
+   "net_r": 1.6384,
+   "swap_paid_r": 0.036
   },
   {
    "pair": "EURUSD=X",
@@ -701,14 +698,14 @@
    "sealed_exit": "2019-05-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2019-05-09",
+   "engine_exit": "2019-05-08",
    "engine_reason": "time",
-   "engine_hold_days": 6,
-   "day_delta": 0,
+   "engine_hold_days": 5,
+   "day_delta": -1,
    "reason_match": true,
    "day_match": true,
-   "net_r": 0.2756,
-   "swap_paid_r": 0.032
+   "net_r": 0.1928,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -761,14 +758,14 @@
    "sealed_exit": "2019-10-24",
    "sealed_reason": "time",
    "sealed_hold_days": 14,
-   "engine_exit": "2019-10-24",
+   "engine_exit": "2019-10-14",
    "engine_reason": "time",
-   "engine_hold_days": 17,
-   "day_delta": 0,
+   "engine_hold_days": 7,
+   "day_delta": -10,
    "reason_match": true,
-   "day_match": true,
-   "net_r": 1.6853,
-   "swap_paid_r": 0.084
+   "day_match": false,
+   "net_r": 0.4908,
+   "swap_paid_r": 0.036
   },
   {
    "pair": "EURUSD=X",
@@ -806,14 +803,14 @@
    "sealed_exit": "2020-01-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2020-01-13",
+   "engine_exit": "2020-01-08",
    "engine_reason": "time",
-   "engine_hold_days": 10,
-   "day_delta": 4,
+   "engine_hold_days": 5,
+   "day_delta": -1,
    "reason_match": true,
-   "day_match": false,
-   "net_r": 0.5903,
-   "swap_paid_r": 0.056
+   "day_match": true,
+   "net_r": 0.1639,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -821,14 +818,14 @@
    "sealed_exit": "2020-02-10",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2020-02-18",
+   "engine_exit": "2020-02-10",
    "engine_reason": "time",
-   "engine_hold_days": 14,
-   "day_delta": 8,
+   "engine_hold_days": 6,
+   "day_delta": 0,
    "reason_match": true,
-   "day_match": false,
-   "net_r": 2.6135,
-   "swap_paid_r": 0.072
+   "day_match": true,
+   "net_r": 1.3374,
+   "swap_paid_r": 0.032
   },
   {
    "pair": "EURUSD=X",
@@ -836,14 +833,14 @@
    "sealed_exit": "2020-03-13",
    "sealed_reason": "trailing_stop",
    "sealed_hold_days": 8,
-   "engine_exit": "2020-03-11",
+   "engine_exit": "2020-03-09",
    "engine_reason": "time",
-   "engine_hold_days": 7,
-   "day_delta": -2,
+   "engine_hold_days": 5,
+   "day_delta": -4,
    "reason_match": false,
    "day_match": false,
-   "net_r": 1.6245,
-   "swap_paid_r": 0.036
+   "net_r": 2.4617,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -881,14 +878,14 @@
    "sealed_exit": "2021-04-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2021-04-13",
+   "engine_exit": "2021-04-12",
    "engine_reason": "time",
-   "engine_hold_days": 8,
-   "day_delta": 4,
+   "engine_hold_days": 7,
+   "day_delta": 3,
    "reason_match": true,
    "day_match": false,
-   "net_r": 1.6408,
-   "swap_paid_r": 0.04
+   "net_r": 1.4841,
+   "swap_paid_r": 0.036
   },
   {
    "pair": "EURUSD=X",
@@ -911,14 +908,14 @@
    "sealed_exit": "2021-06-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2021-06-11",
+   "engine_exit": "2021-06-08",
    "engine_reason": "time",
-   "engine_hold_days": 8,
-   "day_delta": 2,
+   "engine_hold_days": 5,
+   "day_delta": -1,
    "reason_match": true,
-   "day_match": false,
-   "net_r": 0.3852,
-   "swap_paid_r": 0.04
+   "day_match": true,
+   "net_r": 0.1671,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -926,14 +923,14 @@
    "sealed_exit": "2021-07-02",
    "sealed_reason": "reversal",
    "sealed_hold_days": 1,
-   "engine_exit": "2021-07-08",
+   "engine_exit": "2021-07-07",
    "engine_reason": "time",
-   "engine_hold_days": 6,
-   "day_delta": 6,
+   "engine_hold_days": 5,
+   "day_delta": 5,
    "reason_match": false,
    "day_match": false,
-   "net_r": -0.6361,
-   "swap_paid_r": 0.032
+   "net_r": -0.2818,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -956,14 +953,14 @@
    "sealed_exit": "2021-09-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2021-09-14",
+   "engine_exit": "2021-09-08",
    "engine_reason": "time",
-   "engine_hold_days": 11,
-   "day_delta": 5,
+   "engine_hold_days": 5,
+   "day_delta": -1,
    "reason_match": true,
-   "day_match": false,
-   "net_r": 0.6393,
-   "swap_paid_r": 0.06
+   "day_match": true,
+   "net_r": 0.3163,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -1001,14 +998,14 @@
    "sealed_exit": "2022-03-09",
    "sealed_reason": "time",
    "sealed_hold_days": 5,
-   "engine_exit": "2022-03-09",
+   "engine_exit": "2022-03-08",
    "engine_reason": "time",
-   "engine_hold_days": 6,
-   "day_delta": 0,
+   "engine_hold_days": 5,
+   "day_delta": -1,
    "reason_match": true,
    "day_match": true,
-   "net_r": 2.5516,
-   "swap_paid_r": 0.032
+   "net_r": 2.9505,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -1181,14 +1178,14 @@
    "sealed_exit": "2022-12-01",
    "sealed_reason": "time",
    "sealed_hold_days": 20,
-   "engine_exit": "2022-11-10",
+   "engine_exit": "2022-11-09",
    "engine_reason": "time",
-   "engine_hold_days": 6,
-   "day_delta": -21,
+   "engine_hold_days": 5,
+   "day_delta": -22,
    "reason_match": true,
    "day_match": false,
-   "net_r": 3.6592,
-   "swap_paid_r": 0.032
+   "net_r": 4.5016,
+   "swap_paid_r": 0.028
   },
   {
    "pair": "EURUSD=X",
@@ -1211,14 +1208,14 @@
    "sealed_exit": "2023-01-02",
    "sealed_reason": "reversal",
    "sealed_hold_days": 5,
-   "engine_exit": "2023-01-03",
+   "engine_exit": "2023-01-02",
    "engine_reason": "time",
-   "engine_hold_days": 7,
-   "day_delta": 1,
+   "engine_hold_days": 6,
+   "day_delta": 0,
    "reason_match": false,
    "day_match": true,
-   "net_r": 0.4338,
-   "swap_paid_r": 0.036
+   "net_r": 0.8391,
+   "swap_paid_r": 0.032
   },
   {
    "pair": "EURUSD=X",
