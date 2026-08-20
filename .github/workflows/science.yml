@@ -47,7 +47,20 @@ jobs:
         run: |
           git config user.name  "science-loop"
           git config user.email "science-loop@users.noreply.github.com"
-          git add data/ docs/ || true
+          # ONLY the paths this loop writes. `git add data/` swept up files
+          # the laptop owns — operator records, the decision ledger, the spend
+          # log — and CI and the local tree would fight over hash-chained
+          # files at the worst possible moment.
+          git add \
+            data/carry/fx_state.jsonl \
+            data/carry/rates \
+            data/carry/bars \
+            data/daytrade/science_log.jsonl \
+            data/daytrade/carry_reconcile.json \
+            data/daytrade/exit_quality.json \
+            data/daytrade/ontology_audit.json \
+            data/daytrade/stack_exam.json \
+            data/daytrade/wrapper_anomaly.json || true
           if git diff --cached --quiet; then
             echo "nothing moved — no commit"
             exit 0
