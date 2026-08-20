@@ -34,6 +34,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import chain
+
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / "data" / "daytrade" / "decision_ledger.jsonl"
@@ -57,53 +59,23 @@ class LedgerError(RuntimeError):
 
 
 def _rows() -> list[dict]:
-    if not LEDGER.exists():
-        return []
-    out = []
-    for i, line in enumerate(LEDGER.open(), 1):
-        if not line.strip():
-            continue
-        try:
-            out.append(json.loads(line))
-        except json.JSONDecodeError as e:
-            raise LedgerError(f"{LEDGER.name}:{i} is not JSON ({e})") from e
-    return out
+    try:
+        return chain.rows(LEDGER)
+    except chain.ChainError as e:
+        raise LedgerError(str(e)) from e
 
 
 def _row_hash(row: dict) -> str:
-    body = {k: v for k, v in row.items() if k != "row_sha256"}
-    return hashlib.sha256(json.dumps(body, sort_keys=True).encode()).hexdigest()
+    return chain.row_hash(row)
 
 
 def append(row: dict) -> dict:
-    """Append with the hash chain. fsync'd — an audit row the OS buffered and
-    lost is a row that never happened at the worst possible moment."""
-    prev = _rows()
-    row["seq"] = len(prev)
-    row["prev_sha256"] = prev[-1]["row_sha256"] if prev else None
-    row["row_sha256"] = _row_hash(row)
-    LEDGER.parent.mkdir(parents=True, exist_ok=True)
-    with LEDGER.open("a") as fh:
-        fh.write(json.dumps(row, sort_keys=True) + "\n")
-        fh.flush()
-        os.fsync(fh.fileno())
-    return row
+    return chain.append(LEDGER, row)
 
 
 def verify() -> int:
     """Walk the chain. A rewritten past breaks it, loudly."""
-    rows = _rows()
-    prev_hash = None
-    for r in rows:
-        if r.get("prev_sha256") != prev_hash:
-            print(f"  !! CHAIN BREAK at seq {r.get('seq')}: prev_sha256 mismatch")
-            return 1
-        if _row_hash(r) != r.get("row_sha256"):
-            print(f"  !! ROW TAMPERED at seq {r.get('seq')}: hash mismatch")
-            return 1
-        prev_hash = r["row_sha256"]
-    print(f"  {len(rows)} decision row(s), chain intact")
-    return 0
+    return chain.verify(LEDGER)
 
 
 # ------------------------------------------------------- the observable state
