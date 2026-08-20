@@ -29,7 +29,11 @@ jobs:
           python-version: "3.12"
 
       - name: install
-        run: pip install --quiet pandas pyarrow yfinance scikit-learn pytest pydantic
+        # the repo pins what it imports; guessing a package list is how the
+        # first cloud run died on a missing pyyaml
+        run: |
+          pip install --quiet -r requirements.txt
+          pip install --quiet pytest scikit-learn pydantic
 
       - name: regression suite must pass before any science is believed
         run: python3 -m pytest -q
