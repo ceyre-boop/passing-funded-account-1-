@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-20T23:37:02.167906+00:00",
+ "generated_at": "2026-08-20T23:46:34.170078+00:00",
  "tally": {
   "PASS": 10,
   "GAP": 3,
@@ -39,14 +39,14 @@
    "id": "AZ-1",
    "claim": "calibrated: stated probability matches realised frequency",
    "status": "UNTESTABLE",
-   "evidence": "13 resolved forecasts; calibration needs populated bins (>=30). Any number computed here would have an error bar wider than itself \u2014 the same n=10 error withdrawn on 2026-08-17"
+   "evidence": "0 resolved forecasts; calibration needs populated bins (>=30). Any number computed here would have an error bar wider than itself \u2014 the same n=10 error withdrawn on 2026-08-17"
   },
   {
    "layer": "alphazero",
    "id": "AZ-2",
    "claim": "it knows when it doesn't know \u2014 abstention is first-class",
    "status": "PASS",
-   "evidence": "13/23 records abstained (57%), typed reasons ['CONFLICTING_EVIDENCE', 'DATA_INCOMPLETE', 'LOW_CONFIDENCE', 'NO_OPINION', 'STALE_CONTEXT']; an ABSTAIN with no reason raises OperatorError"
+   "evidence": "5/5 records abstained (100%), typed reasons ['CONFLICTING_EVIDENCE', 'DATA_INCOMPLETE', 'LOW_CONFIDENCE', 'NO_OPINION', 'STALE_CONTEXT']; an ABSTAIN with no reason raises OperatorError"
   },
   {
    "layer": "alphazero",
@@ -81,7 +81,7 @@
    "id": "LL-3",
    "claim": "the holdout is non-renewable and every read is a purchase",
    "status": "PASS",
-   "evidence": "4 log rows across 1 distinct rule_version(s) ['futures-exit-v1']; the rows are per-symbol calls within ONE authorised judgment, each carrying its written reason"
+   "evidence": "0 log rows across 0 distinct rule_version(s) []; the rows are per-symbol calls within ONE authorised judgment, each carrying its written reason"
   },
   {
    "layer": "learning",
@@ -109,7 +109,7 @@
    "id": "ST-2",
    "claim": "the layers are pointed at the market the money is in",
    "status": "GAP",
-   "evidence": "exit evaluator + operator: intraday equities/futures (40 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10188 rows) but no exit evaluator prices a carry position yet"
+   "evidence": "exit evaluator + operator: intraday equities/futures (40 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10192 rows) but no exit evaluator prices a carry position yet"
   }
  ]
 }
