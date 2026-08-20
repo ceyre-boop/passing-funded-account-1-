@@ -1,0 +1,59 @@
+{
+ "generated_at": "2026-08-20T23:29:12.592088+00:00",
+ "question": "same underlying, two wrappers \u2014 does exit quality differ?",
+ "theory_predicts": "no difference (delta-correlation 0.93)",
+ "compared_against": "SF-FROZEN-001",
+ "pooled_mean_efficiency_delta": -0.07003432626694996,
+ "p_pooled": 0.28285857071464265,
+ "verdict": "NO_RESIDUAL",
+ "twins": [
+  {
+   "underlying": "S&P 500",
+   "cash": "SPY",
+   "futures": "ES=F",
+   "n_common_sessions": 19,
+   "n_traded_both": 17,
+   "entry_disagreements": 0,
+   "direction_disagreements": 0,
+   "median_entry_time_delta_min": 0,
+   "mean_realized_delta_r": -0.0872,
+   "mean_efficiency_delta": 0.0108,
+   "n_efficiency_pairs": 8,
+   "p_paired_signflip": 0.7776,
+   "winnable_cash": 9,
+   "winnable_futures": 8
+  },
+  {
+   "underlying": "Nasdaq 100",
+   "cash": "QQQ",
+   "futures": "NQ=F",
+   "n_common_sessions": 19,
+   "n_traded_both": 16,
+   "entry_disagreements": 0,
+   "direction_disagreements": 0,
+   "median_entry_time_delta_min": 0.0,
+   "mean_realized_delta_r": -0.127,
+   "mean_efficiency_delta": -0.2118,
+   "n_efficiency_pairs": 7,
+   "p_paired_signflip": 0.2529,
+   "winnable_cash": 7,
+   "winnable_futures": 7
+  },
+  {
+   "underlying": "Russell 2000",
+   "cash": "IWM",
+   "futures": "RTY=F",
+   "n_common_sessions": 19,
+   "n_traded_both": 15,
+   "entry_disagreements": 1,
+   "direction_disagreements": 0,
+   "median_entry_time_delta_min": 0,
+   "mean_realized_delta_r": 0.2861,
+   "mean_efficiency_delta": 0.0163,
+   "n_efficiency_pairs": 4,
+   "p_paired_signflip": 0.2384,
+   "winnable_cash": 4,
+   "winnable_futures": 6
+  }
+ ]
+}
