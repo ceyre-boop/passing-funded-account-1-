@@ -102,6 +102,12 @@ class SpendCapReached(RuntimeError):
     """The budget is exhausted. Never downgraded to a warning."""
 
 
+class NoApiCredit(RuntimeError):
+    """The Anthropic account balance is empty. Distinct from SpendCapReached:
+    the local cap is OUR discipline, this is an upstream account limit the cap
+    cannot see. A stack trace here reads as a code bug; it is not."""
+
+
 # ------------------------------------------------------------------ the money
 
 def cost_of(usage, model: str) -> float:
@@ -397,7 +403,16 @@ def _call(system, user, schema, *, model: str, cap: float, effort: str, kind: st
         if model.startswith(("claude-opus-5", "claude-sonnet-5")):
             kw["thinking"] = {"type": "adaptive"}
 
-        r = client.messages.create(**kw)
+        try:
+            r = client.messages.create(**kw)
+        except Exception as e:
+            if "credit balance is too low" in str(e):
+                raise NoApiCredit(
+                    "the Anthropic account has no credit — every judgment is "
+                    "blocked until it is topped up at console.anthropic.com "
+                    "(Plans & Billing). The local $ cap is unrelated and still "
+                    f"has headroom: ${spent_so_far():.4f} spent.") from None
+            raise
         cost = cost_of(r.usage, model)
         record_spend(model, r.usage, cost, kind)          # BEFORE parsing. Always.
         _report(model, kind, effort, cost, used, r.usage, max_tok)
