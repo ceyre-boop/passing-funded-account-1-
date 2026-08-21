@@ -216,6 +216,12 @@
     <div class="card s8" id="sfTable"></div>
   </div>
 
+  <div class="sec">The learning loop — what the residual actually fed back</div>
+  <div class="grid">
+    <div class="card s6" id="loopCard"></div>
+    <div class="card s6" id="ontologyCard"></div>
+  </div>
+
   <div class="sec">Latest sealed judgment</div>
   <div class="grid">
     <div class="card s12" id="judgmentCard"></div>
@@ -335,6 +341,91 @@ function bandSVG(lo, hi) {
   band.setAttribute("stroke", "#3fdc97"); band.setAttribute("stroke-width", "1.5");
   svg.appendChild(band);
   return svg;
+}
+
+function renderLoop(d) {
+  // Closed-but-null is a real state and is shown as one. A blank panel would
+  // read as "not built"; a green panel would read as "working". Neither is true.
+  const L = $("loopCard"), O = $("ontologyCard"), ll = d.learning_loop || {};
+  L.appendChild(el("div", "label", "Residual → model → fed back"));
+  if (!ll.available) {
+    L.appendChild(el("div", "empty", ll.why || "not run yet"));
+  } else {
+    const r = ll.stockfish, a = ll.alphazero;
+    const closed = ll.loop_closed;
+    const head = el("div", "big " + (closed ? (r.usable ? "green" : "amber") : "red"),
+                    closed ? (r.usable ? "CLOSED · CARRYING" : "CLOSED · NULL") : "OPEN");
+    L.appendChild(head);
+    L.appendChild(ageBadge(ll));
+    const b = el("div", "mono", "");
+    b.style.marginTop = "10px";
+    b.appendChild(el("div", "", `Stockfish residual — giveback = oracle − realized`));
+    b.appendChild(el("div", "muted",
+      `n=${r.n} over ${r.n_days} days · mean giveback ${r.mean_giveback_r} R`));
+    const sk = el("div", (r.skill_vs_baseline > 0 ? "green" : "red"),
+      `skill vs mean-baseline ${(r.skill_vs_baseline * 100).toFixed(1)}% · ` +
+      `corr ${r.oof_correlation}`);
+    b.appendChild(sk);
+    const vd = el("div", "muted", r.verdict || "");
+    vd.style.cssText = "margin-top:6px;white-space:normal;font-size:12px;line-height:1.5";
+    b.appendChild(vd);
+    const corr = el("div", "", "CORRECTION NOW APPLIED: " + ll.correction_applied);
+    corr.style.cssText = "margin-top:12px;padding:9px 11px;border-left:3px solid " +
+      (r.usable ? "var(--green)" : "var(--amber)") +
+      ";background:rgba(255,255,255,.02);white-space:normal;font-size:12.5px;line-height:1.5";
+    b.appendChild(corr);
+    b.appendChild(el("div", "muted",
+      `AlphaZero track record fed to the next packet: ${a.n_resolved} resolved ` +
+      `· ${a.quotable ? "quotable" : "below the " + a.min_n + " needed to quote a rate"}`))
+      .style.marginTop = "12px";
+    L.appendChild(b);
+    const runs = ll.science_runs || [];
+    if (runs.length) {
+      const last = runs[runs.length - 1];
+      const m = el("div", "mono muted");
+      m.style.cssText = "margin-top:12px;font-size:11.5px";
+      m.textContent = `last science run ${fmtTs(last.started)} — ` +
+        (last.n_moved ? `${last.n_moved} metric(s) moved: ` +
+           Object.keys(last.moved).join(", ")
+         : "nothing moved");
+      L.appendChild(m);
+    }
+  }
+
+  // ---------------- ontology ----------------
+  const on = d.ontology || {};
+  O.appendChild(el("div", "label", "Does the vocabulary carve real joints?"));
+  if (!on.available) { O.appendChild(el("div", "empty", "audit has not run")); return; }
+  const hdr = el("div", "mono muted");
+  hdr.style.fontSize = "12px";
+  hdr.textContent = `${on.n_sessions} sessions · ${on.split || "?"} split` +
+    (on.tune_end ? ` (≤ ${on.tune_end})` : "") +
+    ` · ${on.n_perm.toLocaleString()} permutations`;
+  O.appendChild(hdr);
+  const t = el("table"), h = el("tr");
+  ["label", "p", "halves", "verdict"].forEach(x => h.appendChild(el("th", "", x)));
+  t.appendChild(h);
+  (on.results || []).forEach(r => {
+    const tr = el("tr");
+    if (r.verdict === "CARVES") tr.className = "hi";
+    tr.appendChild(el("td", "", r.label));
+    tr.appendChild(el("td", "r " + (r.p_value < 0.05 ? "green" : "muted"),
+      r.p_value === undefined ? "—" : r.p_value.toFixed(3)));
+    tr.appendChild(el("td", "r muted",
+      r.subsamples_evaluable ? `${r.subsamples_carved}/${r.subsamples_evaluable}` : "—"));
+    const v = el("td", r.verdict === "CARVES" ? "green"
+      : r.verdict.startsWith("UNSTABLE") ? "amber" : "muted", r.verdict.split(" —")[0]);
+    tr.appendChild(v);
+    t.appendChild(tr);
+  });
+  O.appendChild(t);
+  const foot = el("div", "mono muted");
+  foot.style.cssText = "margin-top:10px;font-size:11.5px;white-space:normal;line-height:1.5";
+  foot.textContent = `${on.n_carves} of ${(on.results || []).length} labels separate ` +
+    `outcomes; ${on.n_survive_bonferroni} survive Bonferroni AND subsampling. ` +
+    `A label reported CARVES must reproduce in enough half-samples to beat the ` +
+    `noise rate — tune split only, so this is a hypothesis, not a confirmed edge.`;
+  O.appendChild(foot);
 }
 
 function render(d) {
@@ -492,7 +583,8 @@ function render(d) {
 
   $("foot").textContent =
     `generated ${fmtTs(d.generated_at)} · shadow soak; no live fills; ` +
-    `intraday equity/futures lane — NOT the FX carry edge · specs 023-030 · `;
+    `intraday equity/futures lane — NOT the FX carry edge · specs 023-035 · `;
+  renderLoop(d);
   const link = el("a", "", "ceyre-boop/passing-funded-account-1-");
   link.href = "https://github.com/ceyre-boop/passing-funded-account-1-";
   $("foot").appendChild(link);

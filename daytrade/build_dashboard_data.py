@@ -249,6 +249,72 @@ def build_stockfish() -> dict:
     return q
 
 
+def build_learning_loop() -> dict:
+    """Is the loop closed, and what is flowing through it?
+
+    Colin's question was "the stats haven't moved" — this section answers it
+    directly rather than making him infer it from static counters. A closed
+    loop carrying a null correction is a real state and is reported as one:
+    the honest answer is "closed, currently zero", never a blank.
+    """
+    path = ROOT / "data" / "daytrade" / "residual_model.json"
+    if not path.exists():
+        return {"available": False,
+                "why": "residual_model.py has not run"}
+    d = json.loads(path.read_text())
+    sf = d.get("stockfish_residual") or {}
+    az = d.get("alphazero_track_record") or {}
+
+    runs = []
+    log = ROOT / "data" / "daytrade" / "science_log.jsonl"
+    if log.exists():
+        for line in log.open():
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            if r.get("kind") == "science_run" and not r.get("aborted"):
+                runs.append({"started": r["started"],
+                             "moved": r.get("moved", {}),
+                             "n_moved": len(r.get("moved", {})),
+                             "thresholds": r.get("thresholds_crossed", [])})
+
+    return {
+        "available": True, "loop_closed": bool(d.get("loop_closed")),
+        "age_hours": _age_hours(path),
+        "stale": (_age_hours(path) or 0) > 30,
+        "stockfish": {
+            "n": sf.get("n"), "n_days": sf.get("n_days"),
+            "mean_giveback_r": sf.get("mean_giveback_r"),
+            "skill_vs_baseline": sf.get("skill_vs_baseline"),
+            "oof_correlation": sf.get("oof_correlation"),
+            "usable": sf.get("usable"), "verdict": sf.get("verdict"),
+        },
+        "alphazero": {
+            "n_resolved": az.get("n_resolved"), "min_n": az.get("min_n", 30),
+            "quotable": az.get("quotable"),
+            "by_verdict": az.get("by_verdict", {}),
+        },
+        # what the model is actually told right now
+        "correction_applied": ("conditional estimate from entry-time features"
+                               if sf.get("usable") else
+                               "unconditional mean — the residual carries no "
+                               "information yet, so the correction is zero"),
+        "science_runs": runs[-8:], "n_science_runs": len(runs),
+    }
+
+
+def build_ontology() -> dict:
+    """Which of the nine asserted regime labels actually carve the tape."""
+    path = ROOT / "data" / "daytrade" / "ontology_audit.json"
+    if not path.exists():
+        return {"available": False}
+    d = json.loads(path.read_text())
+    d["available"] = True
+    d["age_hours"] = _age_hours(path)
+    d["stale"] = (d["age_hours"] or 0) > 48
+    return d
+
+
 def build_containment(records: list[dict]) -> dict:
     emitted = sum(1 for r in records if r.get("directive") and not r.get("shadow"))
     suppressed = sum(1 for r in records if r.get("directive") and r.get("shadow"))
@@ -274,6 +340,8 @@ def main() -> int:
                       "age_hours": _age_hours(FC_LOG),
                       "stale": (_age_hours(FC_LOG) or 0) > 30},
         "stockfish": build_stockfish(),
+        "learning_loop": build_learning_loop(),
+        "ontology": build_ontology(),
         "yield_curve": build_yield(load_jsonl(YIELD_LOG)),
         "four_books": build_books(),
         "disciplines": DISCIPLINES,
