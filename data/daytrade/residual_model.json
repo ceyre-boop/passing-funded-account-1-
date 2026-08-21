@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-21T21:11:05.768922+00:00",
+ "generated_at": "2026-08-21T22:54:46.543484+00:00",
  "stockfish_residual": {
   "n": 336,
   "n_days": 39,
@@ -13,10 +13,10 @@
    "entry_minute"
   ],
   "mean_giveback_r": 0.6696,
-  "oof_mae": 0.7768,
-  "baseline_mae": 0.6349,
-  "skill_vs_baseline": -0.2235,
-  "oof_correlation": -0.0477,
+  "oof_mae": 0.7907,
+  "baseline_mae": 0.6347,
+  "skill_vs_baseline": -0.2458,
+  "oof_correlation": -0.0728,
   "usable": false,
   "verdict": "NO_SKILL \u2014 residual is not predictable from entry-time conditions; expected_giveback stays the unconditional mean and the loop carries no information yet"
  },

@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-21T18:34:23.312282+00:00",
+ "generated_at": "2026-08-21T22:54:47.627799+00:00",
  "tally": {
   "PASS": 10,
   "GAP": 3,
@@ -81,7 +81,7 @@
    "id": "LL-3",
    "claim": "the holdout is non-renewable and every read is a purchase",
    "status": "PASS",
-   "evidence": "4 log rows across 1 distinct rule_version(s) ['futures-exit-v1']; the rows are per-symbol calls within ONE authorised judgment, each carrying its written reason"
+   "evidence": "0 log rows across 0 distinct rule_version(s) []; the rows are per-symbol calls within ONE authorised judgment, each carrying its written reason"
   },
   {
    "layer": "learning",
