@@ -38,6 +38,16 @@ jobs:
       - name: regression suite must pass before any science is believed
         run: python3 -m pytest -q
 
+      - name: secret reachability (never prints the value)
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          if [ -n "${FRED_API_KEY:-}" ]; then
+            echo "FRED_API_KEY reachable, length ${#FRED_API_KEY}"
+          else
+            echo "FRED_API_KEY NOT reachable in this job"
+          fi
+
       - name: run the science loop
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
