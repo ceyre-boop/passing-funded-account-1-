@@ -292,6 +292,12 @@ def carry_packet(on: date, *, symbols=None) -> tuple[str, dict]:
         lines.append(f"  UNAVAILABLE: {snap['unavailable']}")
         meta["missing"] += snap["unavailable"]
 
+    try:
+        from residual_model import prior_correction_text
+        lines.append("\n" + prior_correction_text())
+    except Exception as e:
+        lines.append(f"\nYOUR TRACK RECORD: unavailable ({e})")
+
     meta["n_pairs"] = len(rows)
     meta["n_macro_series"] = len(snap["series"])
     text = "\n".join(lines)

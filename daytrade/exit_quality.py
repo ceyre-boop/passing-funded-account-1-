@@ -108,7 +108,9 @@ def main() -> int:
         "n_unwinnable_entries": len(unwinnable),
         "pct_unwinnable": round(100 * len(unwinnable) / len(rows), 1),
         "by_class": {},
-        "rows": rows[-60:],
+        # ALL rows: the residual model joins on these, and a
+        # truncated report silently starved it to 10 samples.
+        "rows": rows,
     }
     for cls in CLASSES:
         sub = [r for r in rows if r["class"] == cls]

@@ -507,6 +507,16 @@ def build_packet(symbol: str, *, as_of: Optional[datetime] = None
     else:
         lines.append("\nHEADLINES: UNAVAILABLE (no POLYGON_API_KEY) — news context is missing")
 
+    # LOOP CLOSURE: hand the model its own scored track record in the same
+    # breath it is asked again. Measuring a residual and filing it is not
+    # learning; this is the return path. It refuses to state a rate it cannot
+    # support, so a small sample teaches counts rather than false skill.
+    try:
+        from residual_model import prior_correction_text
+        lines.append("\n" + prior_correction_text())
+    except Exception as e:
+        lines.append(f"\nYOUR TRACK RECORD: unavailable ({e})")
+
     meta["max_data_ts"] = _iso(max_ts) if max_ts else None
     return "\n".join(lines), heads, meta
 

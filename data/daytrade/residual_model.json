@@ -1,0 +1,57 @@
+{
+ "generated_at": "2026-08-21T18:34:22.462679+00:00",
+ "stockfish_residual": {
+  "n": 336,
+  "n_days": 39,
+  "features": [
+   "gap_pct",
+   "tr5",
+   "tr20_median",
+   "compression",
+   "trend_pct_vs_ma20",
+   "or_complete",
+   "entry_minute"
+  ],
+  "mean_giveback_r": 0.6696,
+  "oof_mae": 0.7768,
+  "baseline_mae": 0.6349,
+  "skill_vs_baseline": -0.2235,
+  "oof_correlation": -0.0477,
+  "usable": false,
+  "verdict": "NO_SKILL \u2014 residual is not predictable from entry-time conditions; expected_giveback stays the unconditional mean and the loop carries no information yet"
+ },
+ "alphazero_track_record": {
+  "n_resolved": 13,
+  "by_verdict": {
+   "ALLOW_BASELINE": {
+    "n": 7,
+    "dir_hits": 3,
+    "scen_hits": 2,
+    "dir_rate": 0.429,
+    "scen_rate": 0.286
+   },
+   "ABSTAIN": {
+    "n": 3,
+    "dir_hits": 1,
+    "scen_hits": 2,
+    "dir_rate": 0.333,
+    "scen_rate": 0.667
+   },
+   "TIGHTEN": {
+    "n": 3,
+    "dir_hits": 0,
+    "scen_hits": 0,
+    "dir_rate": 0.0,
+    "scen_rate": 0.0
+   }
+  },
+  "prereg_scored": 0,
+  "prereg_in_band": 0,
+  "mean_realized_r": null,
+  "quotable": false,
+  "min_n": 30
+ },
+ "prior_correction_text": "YOUR TRACK RECORD (13 resolved, BELOW the 30 needed before any rate is meaningful \u2014 treat these as raw counts, not skill estimates):\n  ABSTAIN: 1/3 direction, 2/3 scenario\n  ALLOW_BASELINE: 3/7 direction, 2/7 scenario\n  TIGHTEN: 0/3 direction, 0/3 scenario\n  Do not over-correct on this sample. It is reported so you know what has been observed, not so you can fit it.",
+ "loop_closed": true,
+ "note": "the residual is modelled and FED BACK; a null model is still a closed loop \u2014 it means the correction is currently zero, not that no correction is applied"
+}

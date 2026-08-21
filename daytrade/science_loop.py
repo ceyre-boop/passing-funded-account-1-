@@ -46,6 +46,7 @@ REPORTS = {
     "ontology_audit": ROOT / "data" / "daytrade" / "ontology_audit.json",
     "stack_exam": ROOT / "data" / "daytrade" / "stack_exam.json",
     "wrapper_anomaly": ROOT / "data" / "daytrade" / "wrapper_anomaly.json",
+    "residual_model": ROOT / "data" / "daytrade" / "residual_model.json",
 }
 # Metrics watched across runs. A move in any of these is the signal; the rest
 # of a report is context.
@@ -57,7 +58,15 @@ WATCHED = {
     "pct_unwinnable": ("exit_quality", "pct_unwinnable"),
     "ontology_carves": ("ontology_audit", "n_carves"),
     "ontology_bonferroni": ("ontology_audit", "n_survive_bonferroni"),
+    "ontology_unstable": ("ontology_audit", "n_unstable"),
+    "ontology_n_sessions": ("ontology_audit", "n_sessions"),
     "wrapper_p": ("wrapper_anomaly", "p_pooled"),
+}
+# nested metrics the flat WATCHED map cannot reach
+NESTED = {
+    "residual_skill": ("residual_model", ("stockfish_residual", "skill_vs_baseline")),
+    "residual_corr": ("residual_model", ("stockfish_residual", "oof_correlation")),
+    "az_resolved": ("residual_model", ("alphazero_track_record", "n_resolved")),
 }
 MOVE_EPS = 1e-9
 
@@ -112,6 +121,7 @@ def remeasure() -> list[str]:
             ("exit_quality", ["python3", "daytrade/exit_quality.py"]),
             ("ontology_audit", ["python3", "daytrade/ontology_audit.py"]),
             ("wrapper_anomaly", ["python3", "daytrade/wrapper_anomaly.py"]),
+            ("residual_model", ["python3", "daytrade/residual_model.py"]),
             ("stack_exam", ["python3", "daytrade/stack_exam.py"])):
         if sh(cmd) != 0:
             failed.append(name)
@@ -128,6 +138,13 @@ def snapshot() -> dict:
         if field is None:
             continue
         out[metric] = loaded.get(report, {}).get(field)
+    for metric, (report, path) in NESTED.items():
+        node = loaded.get(report, {})
+        for k in path:
+            node = node.get(k, {}) if isinstance(node, dict) else None
+        out[metric] = node if not isinstance(node, dict) else None
+    out["residual_usable"] = ((loaded.get("residual_model", {})
+                               .get("stockfish_residual") or {}).get("usable"))
     ex = loaded.get("stack_exam", {}).get("tally", {})
     out["exam_pass"] = ex.get("PASS")
     out["exam_fail"] = ex.get("FAIL")
