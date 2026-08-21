@@ -1,7 +1,7 @@
 {
  "alphazero": {
   "abstain_rate": 0.615,
-  "age_hours": 2.0,
+  "age_hours": 2.5,
   "chance_scenario": 0.2,
   "decisive_accuracy_quotable": false,
   "direction_accuracy": 0.308,
@@ -523,7 +523,7 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-21T20:40:04.955512+00:00",
+ "generated_at": "2026-08-21T21:11:21.546349+00:00",
  "latest_judgment": {
   "abstention": {
    "detail": "newest bar 18 min old (> 15)",
@@ -548,7 +548,7 @@
   "verdict": "ABSTAIN"
  },
  "learning_loop": {
-  "age_hours": 2.0,
+  "age_hours": 0.0,
   "alphazero": {
    "by_verdict": {
     "ABSTAIN": {
@@ -580,7 +580,7 @@
   "available": true,
   "correction_applied": "unconditional mean \u2014 the residual carries no information yet, so the correction is zero",
   "loop_closed": true,
-  "n_science_runs": 7,
+  "n_science_runs": 8,
   "science_runs": [
    {
     "moved": {
@@ -725,6 +725,14 @@
     "thresholds": [
      "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
     ]
+   },
+   {
+    "moved": {},
+    "n_moved": 0,
+    "started": "2026-08-21T21:07:43.508610+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
    }
   ],
   "stale": false,
@@ -739,9 +747,9 @@
   }
  },
  "ontology": {
-  "age_hours": 2.0,
+  "age_hours": 0.0,
   "available": true,
-  "generated_at": "2026-08-21T18:33:47.535693+00:00",
+  "generated_at": "2026-08-21T21:10:28.699944+00:00",
   "k_subsamples": 8,
   "labels_at_boundary": [],
   "labels_unstable": [],
@@ -959,7 +967,7 @@
   "total_usd": 0.9491
  },
  "stockfish": {
-  "age_hours": 2.0,
+  "age_hours": 0.0,
   "available": true,
   "by_class": {
    "CASH_INDEX": {
@@ -985,7 +993,7 @@
    }
   },
   "compared_against": "SF-FROZEN-001",
-  "generated_at": "2026-08-21T18:32:55.284707+00:00",
+  "generated_at": "2026-08-21T21:09:34.133184+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.1843,
   "mean_mfe_r": 3.4223,
