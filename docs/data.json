@@ -1,7 +1,7 @@
 {
  "alphazero": {
   "abstain_rate": 0.615,
-  "age_hours": 18.4,
+  "age_hours": 2.0,
   "chance_scenario": 0.2,
   "decisive_accuracy_quotable": false,
   "direction_accuracy": 0.308,
@@ -523,32 +523,32 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-21T18:35:27.638252+00:00",
+ "generated_at": "2026-08-21T20:40:04.955512+00:00",
  "latest_judgment": {
   "abstention": {
-   "detail": "newest bar 990 min old (> 15)",
-   "issued_at": "2026-08-21T12:25:11.584628+00:00",
+   "detail": "newest bar 18 min old (> 15)",
+   "issued_at": "2026-08-21T20:12:51.227966+00:00",
    "model_version": "alpha-operator-v1/stale-gate",
    "reason": "STALE_CONTEXT"
   },
   "available": true,
-  "bar_age_min": 990.2,
+  "bar_age_min": 17.9,
   "both_sides": null,
   "confidence": 0.0,
   "cost_usd": 0.0,
   "emission_refused": null,
   "invalidators": [],
   "model_version": "alpha-operator-v1/stale-gate",
-  "packet_as_of": "2026-08-21T12:25:11.584628+00:00",
-  "packet_max_data_ts": "2026-08-21T11:05:00+00:00",
+  "packet_as_of": "2026-08-21T20:12:51.227966+00:00",
+  "packet_max_data_ts": "2026-08-21T19:55:00+00:00",
   "pre_registration": null,
-  "record_id": "op-20260821-122511-584628-NVDA",
+  "record_id": "op-20260821-201251-227966-NVDA",
   "trigger": "news",
-  "ts": "2026-08-21T12:25:11.584628+00:00",
+  "ts": "2026-08-21T20:12:51.227966+00:00",
   "verdict": "ABSTAIN"
  },
  "learning_loop": {
-  "age_hours": 0.0,
+  "age_hours": 2.0,
   "alphazero": {
    "by_verdict": {
     "ABSTAIN": {
@@ -580,7 +580,7 @@
   "available": true,
   "correction_applied": "unconditional mean \u2014 the residual carries no information yet, so the correction is zero",
   "loop_closed": true,
-  "n_science_runs": 5,
+  "n_science_runs": 7,
   "science_runs": [
    {
     "moved": {
@@ -657,6 +657,22 @@
     ]
    },
    {
+    "moved": {},
+    "n_moved": 0,
+    "started": "2026-08-21T00:11:22.455808+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
+   },
+   {
+    "moved": {},
+    "n_moved": 0,
+    "started": "2026-08-21T02:28:24.225429+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
+   },
+   {
     "moved": {
      "az_resolved": {
       "from": null,
@@ -723,7 +739,7 @@
   }
  },
  "ontology": {
-  "age_hours": 0.0,
+  "age_hours": 2.0,
   "available": true,
   "generated_at": "2026-08-21T18:33:47.535693+00:00",
   "k_subsamples": 8,
@@ -907,10 +923,10 @@
  },
  "session": {
   "available": true,
-  "last_record_ts": "2026-08-21T12:25:11.584628+00:00",
+  "last_record_ts": "2026-08-21T20:12:51.227966+00:00",
   "last_trigger": "news",
   "mode": "SHADOW SOAK",
-  "records_total": 24,
+  "records_total": 25,
   "shadow": true,
   "symbol": "NVDA"
  },
@@ -943,7 +959,7 @@
   "total_usd": 0.9491
  },
  "stockfish": {
-  "age_hours": 0.0,
+  "age_hours": 2.0,
   "available": true,
   "by_class": {
    "CASH_INDEX": {
@@ -4685,10 +4701,10 @@
   "abstain_reasons": {
    "DATA_INCOMPLETE": 2,
    "NO_OPINION": 3,
-   "STALE_CONTEXT": 9
+   "STALE_CONTEXT": 10
   },
   "counts": {
-   "ABSTAIN": 14,
+   "ABSTAIN": 15,
    "ALLOW_BASELINE": 7,
    "EXIT": 0,
    "TIGHTEN": 3
@@ -4836,6 +4852,12 @@
     "confidence": 0.0,
     "shadow": true,
     "ts": "2026-08-21T12:25:11.584628+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-21T20:12:51.227966+00:00",
     "verdict": "ABSTAIN"
    }
   ]
