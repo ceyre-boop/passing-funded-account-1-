@@ -10,3 +10,5 @@ python-dotenv>=1.0.0
 pyyaml>=6.0
 yfinance>=0.2.0
 anthropic>=0.40.0       # dashboard chat panel, if kept
+scikit-learn>=1.3.0     # residual_model.py — the learning loop's regression;
+                        # a core science-loop instrument, not an extra

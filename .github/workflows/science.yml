@@ -33,7 +33,7 @@ jobs:
         # first cloud run died on a missing pyyaml
         run: |
           pip install --quiet -r requirements.txt
-          pip install --quiet pytest scikit-learn pydantic
+          pip install --quiet pytest pydantic
 
       - name: regression suite must pass before any science is believed
         run: python3 -m pytest -q
@@ -53,6 +53,14 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python3 daytrade/science_loop.py | tee /tmp/science.txt
 
+      # The page must reflect the loop even with the laptop off — that was the
+      # whole point of running this in the cloud. The generator is read-only
+      # and imports nothing from the operator, so a CI rebuild cannot steer
+      # anything; sections fed by laptop-owned files carry their own staleness
+      # badges, so an older record renders as old rather than as current.
+      - name: rebuild the dashboard from the grown record
+        run: python3 daytrade/build_dashboard_data.py
+
       - name: publish what moved
         run: |
           git config user.name  "science-loop"
@@ -70,7 +78,9 @@ jobs:
             data/daytrade/exit_quality.json \
             data/daytrade/ontology_audit.json \
             data/daytrade/stack_exam.json \
-            data/daytrade/wrapper_anomaly.json || true
+            data/daytrade/residual_model.json \
+            data/daytrade/wrapper_anomaly.json \
+            docs/data.json || true
           if git diff --cached --quiet; then
             echo "nothing moved — no commit"
             exit 0
