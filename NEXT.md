@@ -54,6 +54,32 @@ Precedent that this instinct pays: `PAIR_HOLD_OVERRIDES` was rolled back to `{}`
 2026-06-07 after exactly this kind of check failed (OOS delta +0.055,
 regime-concentrated, AUDUSD negative).
 
+## NEXT UP — the observed−predicted roadmap (written 2026-08-22, starts after Monday)
+`Plans/lucky-forging-hoare.md` holds a four-stage roadmap toward studying this
+system's own trading scientifically. Read it before adding ANY new predictive field.
+
+Headline: the predicted world is already built and running — sealed `pre_registration`
+bands, 5-way scenario probabilities graded by Brier, 6,893 point-in-time decision rows,
+evidence sealed at judgment time. Three defects block the science, and none of them is
+a missing field:
+
+1. **The join does not exist.** `records.jsonl.trade_id` is hardcoded `None`
+   (`alpha_operator.py:859,966`); `decisions_*.jsonl.evidence_ids` is always `[]`
+   because `runner.py:646-670` never passes it. Both fields exist on both sides.
+   Neither end is plugged in, so a belief cannot be joined to the trade it produced.
+2. **`alpha_operator.py:1027` scores against a mutable file.** It reads `plan.json`
+   from disk at resolution time for the risk denominator, though its docstring claims
+   the plan risk is sealed at decision time. It is sealed nowhere, and the mechanical
+   writer overwrites that file once per session by design.
+3. **`policy_regret_r` is 0/13 since 2026-08-09** — a field with a consumer
+   (`forecast.py:324`) and no supplier. Gates with no data fail closed by design, so
+   AlphaZero currently cannot be promoted for a plumbing reason, not a merit one.
+
+Stage 0 is those three plus adding `forecast_id` to the ledger row. Stages 1-3:
+unbrick the gate, register `expected_mae`/`bars_to_tp1` as full spec-029 mechanisms
+(expect the MDE gate to refuse them at n=39 days — a true answer), then build spec
+030's step 3, the bounded exploration budget, which has never been started.
+
 ## ANSWERED — "AlphaZero rescoped as walk-forward" (see the architecture section above)
 That item, open since 2026-08-03, was examined properly on 2026-08-22 and the answer
 is **do not build it yet**. Full evidence in `Plans/lucky-forging-hoare.md`; the short
