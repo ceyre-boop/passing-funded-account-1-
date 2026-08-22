@@ -29,6 +29,49 @@ Safety framing to carry over (already in APEX principles, just apply here): pape
 - ~~**CLAUDE.md vs FIRM_FIT.md/COLIN_V2.1 tension, never fully reconciled**~~ **RESOLVED 2026-08-10 by spec 021**: COLIN_V1's 0.5%/92% and COLIN_V2's 5% eval sizing are both banner-superseded; eval sizing is re-derived under the real CTI/Alpha/FTMO-swing contracts by `scripts/carry_buy_gate.py` (FIRM_FIT's 2% is the prior) and ratified via decision_logger before any purchase. CLAUDE.md's strategy section now says exactly this.
 - NQ intraday data acquisition (Databento/Polygon) — still blocked, still needed if JJ-style/session-reversion validation ever resumes. Deprioritized behind the eval account, not abandoned.
 
+## OPEN — v015's headline Sharpe is not independent of in-sample tuning (logged 2026-08-22, NOT investigated)
+`sovereign/forex/forex_backtester.py:154-159` — `PAIR_VIX_GATES` is five per-pair
+VIX thresholds (15/15/18/18/20) **selected in-sample on 2015-2024**, with the
+per-pair Sharpe table that justified them sitting in the comments at `:147-153`
+(USDJPY 1.004 -> 1.770, n 57-120/pair). `SIGNAL_THRESHOLD` was separately lowered
+0.20 -> 0.15 (`:118`) for sample size, with no OOS check noted.
+
+2015-2024 is the same decade as the sealed 411-trade proof set. So the Sharpe 1.25
+that CLAUDE.md cites as "the edge" was measured on a series produced by an engine
+carrying five thresholds tuned on that same series. **The number is not wrong, but
+it is not independent, and nobody has quantified by how much.**
+
+Consequence to hold onto: no sizing decision should treat Sharpe 1.25 as a clean
+out-of-sample estimate. It is an upper bound of unknown tightness.
+
+Why it was not measured on 2026-08-22: `data/oos_trades_2025_2026.json` (60 trades)
+has no committed generator, and the rig that plausibly produced it reproduces only
+296 of the 411 sealed in-sample trades (`data/agent/repro_gap_report.json`). The
+clean measurement is not currently available. Restoring that generator is
+`scripts/diagnose_repro_gap.py:63` RESTORE_LIST item 5 and is the real prerequisite.
+
+Precedent that this instinct pays: `PAIR_HOLD_OVERRIDES` was rolled back to `{}` on
+2026-06-07 after exactly this kind of check failed (OOS delta +0.055,
+regime-concentrated, AUDUSD negative).
+
+## ANSWERED — "AlphaZero rescoped as walk-forward" (see the architecture section above)
+That item, open since 2026-08-03, was examined properly on 2026-08-22 and the answer
+is **do not build it yet**. Full evidence in `Plans/lucky-forging-hoare.md`; the short
+version: AlphaZero has no fitted parameters to walk forward (keyword table + prompt +
+hand-set constants), the two components that WERE genuinely fitted both scored worse
+than their baselines and are recorded `killed` in `MECHANISMS.json` (MECH-004,
+`residual_model.json` NO_SKILL), a working rolling WFA already exists unused at
+`backtester/walk_forward.py`, and the daytrade lane has 24 tune entries and 13
+resolved forecasts against a gate needing 50. `specs/005_BACKTEST.md:75-77` already
+gates this behind a pre-registered protocol for the stated reason that "the bench
+makes it mechanically easy, which is exactly the danger."
+
+Revive only when: something acquires real fitted parameters that are production
+candidates, AND the lane has enough samples to split, AND the pre-registered protocol
+is written and ratified. Then start from `backtester/walk_forward.py` and add the
+purge gap — the one genuinely missing idea (zero purge/embargo implementations exist
+repo-wide).
+
 ## Market rumors mentioned tonight — flagged, not modeled, not actioned
 Colin referenced (housing crash 80-90%, "Oct 5 Bitcoin move via elite manipulation," reseller game inventory as a spending tell, Gen Z drinking stats). Explicitly kept OUT of THE_SHOT.md and MONDAY_OPEN.md — unconfirmed/unfalsifiable claims are exactly what "trade what you see, not what you believe" rules out. If Colin brings these up again, they stay in the "watch for confirmation" bucket, never become model inputs.
 
