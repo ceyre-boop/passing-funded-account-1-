@@ -16,4 +16,6 @@ cooloff, enforced here and honoured by the runner. friction_ladder.py showed the
 entire campaign's 93-98% pass probability depends on the cooloff being real. It
 is not advice. The runner must refuse to arm before `cooloff_until`.
 """
+from __future__ import annotations
+
 raise NotImplementedError("streak.py is not built. No blockers — see spec 004.")

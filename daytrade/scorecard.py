@@ -30,4 +30,6 @@ TWO DEFECTS IN THE SPEC TO FIX WHEN BUILDING — do not implement it as written:
 Definitions are fixed BEFORE collection and versioned via `grade_version`.
 Changing a definition after seeing results is how a system learns to lie.
 """
+from __future__ import annotations
+
 raise NotImplementedError("scorecard.py is not built — blocked on regime.py (spec 001).")

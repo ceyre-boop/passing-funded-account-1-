@@ -67,6 +67,22 @@ def sandbox(tmp_path, monkeypatch):
     # is "log-only" since the spec-026 channel retirement.
     monkeypatch.setattr(ao, "EMISSION_MODE", "live")
 
+    # Pin the operator's clock near NOW (a Friday, 11:00 ET — inside the RTH
+    # tradability gate's window) so every test's forecasts are, by default,
+    # scoreable claims regardless of the wall-clock time the suite actually
+    # runs at. Tests that care about a specific as_of already monkeypatch
+    # ao._utcnow themselves (e.g. _seed_forecast) — those overrides still win.
+    # Ticks forward a few ms per call (never enough to leave the RTH window
+    # in any of these fixtures) so record_id/forecast_id stay distinct across
+    # repeated run_once() calls in one test, same as real time always did.
+    clock = {"calls": 0}
+
+    def _fake_utcnow():
+        clock["calls"] += 1
+        return NOW + timedelta(milliseconds=clock["calls"])
+
+    monkeypatch.setattr(ao, "_utcnow", _fake_utcnow)
+
     ctl = {"read": _read(), "calls": 0, "call_order": []}
 
     def fake_call(system, user, schema, *, model, cap, effort, kind):
@@ -682,6 +698,118 @@ def test_resolver_double_resolution_impossible(sandbox, monkeypatch):
     ao.resolve_open(now=NOW + timedelta(minutes=61))
     ao.resolve_open(now=NOW + timedelta(minutes=62))       # second pass: no-op
     assert sum(1 for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "resolution") == 1
+
+
+# ------------------------------------------------- RTH tradability gate (024)
+
+def _at(as_of, sandbox, **kw):
+    """Run once with the operator's clock pinned to `as_of` (aware UTC)."""
+    orig = ao._utcnow
+    ao._utcnow = lambda: as_of
+    try:
+        return _run(sandbox, **kw)
+    finally:
+        ao._utcnow = orig
+
+
+def test_rth_gate_refuses_forecast_with_no_tradable_session(sandbox):
+    """23:00 ET Friday — market shut, same shape as the real stuck rows
+    (fc-op-20260816-030041 etc). The judgment is still sealed; the claim
+    is not: forecast is null with a machine-readable reason, and nothing
+    lands in FC_LOG for it."""
+    as_of = datetime(2026, 8, 15, 3, 0, tzinfo=UTC)     # 23:00 ET Fri
+    _at(as_of, sandbox)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["forecast"] is None
+    assert rec["forecast_id"] is None
+    assert rec["forecast_refused"] == {
+        "reason": "window has no tradable session",
+        "as_of": ao._iso(as_of), "horizon_min": 60,
+        "detail": f"[{ao._iso(as_of)} +60m] never touches a tradable RTH session"}
+    # the judgment itself (verdict, both_sides, directive) is still sealed —
+    # only the scoreable claim is refused
+    assert rec["verdict"] == "TIGHTEN"
+    assert not any(r["kind"] == "forecast" for r in ao._read_jsonl(ao.FC_LOG))
+
+
+def test_rth_gate_clamps_horizon_that_crosses_the_close(sandbox):
+    """15:53 ET Friday — 2 minutes of session left before the 15:55 close.
+    Not refused (some tradable minutes exist); clamped instead, with the
+    original claim preserved in horizon_clamped_from so the grader can see
+    it was never a free 60-minute claim past the close."""
+    as_of = datetime(2026, 8, 14, 19, 53, tzinfo=UTC)   # 15:53 ET Fri
+    _at(as_of, sandbox)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["forecast"] is not None
+    assert rec["forecast"]["horizon_min"] == 2
+    assert rec["forecast"]["horizon_clamped_from"] == 60
+    fc = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "forecast"][0]
+    assert fc["horizon_min"] == 2 and fc["horizon_clamped_from"] == 60
+
+
+def test_rth_gate_leaves_in_session_forecast_unclamped(sandbox):
+    """A forecast issued mid-RTH (the sandbox default clock, 11:00 ET) is
+    unaffected: full horizon, no clamp, no refusal."""
+    _run(sandbox)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["forecast_refused"] is None
+    assert rec["forecast"]["horizon_min"] == 60
+    assert rec["forecast"]["horizon_clamped_from"] is None
+
+
+def _seed_stuck_forecast(sandbox, fid: str, as_of_iso: str, horizon: int = 60,
+                         model: str = "claude-sonnet-5") -> None:
+    """Directly inject a raw forecast row, bypassing the emission gate — this
+    is exactly the shape of the 4 real rows that predate this fix (minted by
+    a manual run that bypassed operator_tick.sh's own session guard)."""
+    ao.OPDIR.mkdir(parents=True, exist_ok=True)
+    ao._append_jsonl(ao.FC_LOG, {
+        "kind": "forecast", "forecast_id": fid,
+        "model_version": f"alpha-operator-v1/{model}", "prompt_version": "op-1",
+        "as_of": as_of_iso, "symbol": "NVDA", "horizon_min": horizon,
+        "scenario_probs": {"bull_continuation": 0.7, "range_consolidation": 0.3},
+        "direction": "up", "recommendation": None, "interrupt": None,
+        "confidence": 0.5, "evidence_ids": []})
+
+
+def test_resolver_marks_overnight_stuck_forecast_unresolvable(sandbox, monkeypatch):
+    """The real fc-op-20260816-030041 case: issued 23:00 ET Fri, zero bars
+    ever possible. Must become `unresolvable`, never `resolution` with a
+    guessed outcome."""
+    monkeypatch.setattr(bars_mod, "CACHE", sandbox["tmp"] / "nonexistent")
+    as_of = "2026-08-16T03:00:41.537973+00:00"
+    _seed_stuck_forecast(sandbox, "fc-stuck-overnight", as_of)
+    ao.resolve_open(now=ao._aware(as_of) + timedelta(minutes=120))
+    rows = ao._read_jsonl(ao.FC_LOG)
+    unresolvable = [r for r in rows if r["kind"] == "unresolvable"]
+    assert len(unresolvable) == 1
+    assert unresolvable[0]["forecast_id"] == "fc-stuck-overnight"
+    assert unresolvable[0]["reason"] == "window has no tradable session"
+    assert not any(r["kind"] == "resolution" for r in rows)
+    led = ao.load_ledger()                     # tolerates the new row kind
+    assert led.is_unresolvable("fc-stuck-overnight")
+
+
+def test_resolver_marks_close_crossing_stuck_forecast_unresolvable(sandbox, monkeypatch):
+    """The real fc-op-20260817-195335 case: issued 15:53 ET Mon, +60m horizon
+    ends past the close — at most 1 bar can ever exist in the window."""
+    monkeypatch.setattr(bars_mod, "CACHE", sandbox["tmp"] / "nonexistent")
+    as_of = "2026-08-17T19:53:35.400001+00:00"
+    _seed_stuck_forecast(sandbox, "fc-stuck-close", as_of)
+    ao.resolve_open(now=ao._aware(as_of) + timedelta(minutes=120))
+    unresolvable = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "unresolvable"]
+    assert len(unresolvable) == 1
+    assert unresolvable[0]["forecast_id"] == "fc-stuck-close"
+
+
+def test_resolver_reports_unresolvable_separately_from_still_open(sandbox, monkeypatch, capsys):
+    monkeypatch.setattr(bars_mod, "CACHE", sandbox["tmp"] / "nonexistent")
+    _seed_stuck_forecast(sandbox, "fc-stuck-1", "2026-08-16T03:00:41.537973+00:00")
+    _seed_stuck_forecast(sandbox, "fc-stuck-2", "2026-08-16T04:40:34.709506+00:00")
+    ao.resolve_open(now=datetime(2026, 8, 18, 12, 0, tzinfo=UTC))
+    out = capsys.readouterr().out
+    assert "2 unresolvable (window has no tradable session)" in out
+    assert "0 still open" in out
 
 
 # ------------------------------------------------------------- gradeable

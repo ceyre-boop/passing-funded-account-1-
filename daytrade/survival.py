@@ -23,4 +23,6 @@ ONE CONFLICT TO RESOLVE BEFORE BUILDING: spec 002 computes
 `goal = account_size * daily_goal_pct / 100`, which drifts as the account grows.
 The doctrine and THE_SHOT.md use a FIXED $300/day. They disagree. Pick one.
 """
+from __future__ import annotations
+
 raise NotImplementedError("survival.py is not built. No blockers — see spec 002.")

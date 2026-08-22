@@ -133,6 +133,99 @@ def test_grade_scores_baseline_on_identical_cases_and_counts_open():
         led.grade("nobody", oos=True)
 
 
+# ------------------------------------------------------- unresolvable state
+
+def test_mark_unresolvable_contract():
+    """spec 024 review: a forecast whose window can never produce an outcome
+    gets a terminal state, never a guessed resolution."""
+    led = ForecastLedger()
+    with pytest.raises(ForecastError, match="unknown forecast"):
+        led.mark_unresolvable("ghost", "window has no tradable session",
+                              at=T0.isoformat())
+
+    led.record(forecast("f1"))
+    with pytest.raises(ForecastError, match="non-empty reason"):
+        led.mark_unresolvable("f1", "", at=T0.isoformat())
+    with pytest.raises(ForecastError):                            # naive ts
+        led.mark_unresolvable("f1", "window has no tradable session", at="2026-08-07")
+
+    led.mark_unresolvable("f1", "window has no tradable session", at=T0.isoformat())
+    assert led.is_unresolvable("f1")
+    with pytest.raises(ForecastError, match="already marked unresolvable"):
+        led.mark_unresolvable("f1", "window has no tradable session", at=T0.isoformat())
+
+    # already-resolved forecasts cannot retroactively become unresolvable
+    led.record(forecast("f2"))
+    led.resolve(resolution("f2"))
+    with pytest.raises(ForecastError, match="already resolved"):
+        led.mark_unresolvable("f2", "window has no tradable session", at=T0.isoformat())
+
+    # and the reverse: an unresolvable forecast can never be resolve()'d with
+    # a fabricated outcome — resolve() itself refuses it as an unknown pair
+    # only in the sense that mark_unresolvable never touches _resolutions,
+    # so a later resolve() call is a plain, valid path if evidence ever
+    # showed up — the seal is on grade()'s accounting, not on resolve()'s
+    # door. What must never happen is the reverse order (asserted above).
+
+
+def test_grade_excludes_unresolvable_from_pairs_and_open():
+    """n_unresolvable must be excluded from BOTH `pairs` and `n_open`
+    (spec 024 review) — a forecast that can never be scored is not "still
+    open", and it must never contaminate the resolved-pairs population."""
+    led = graded_ledger("az-1", 10, hit_rate=0.8)
+    led.record(forecast("stuck-1", model="az-1"))
+    led.record(forecast("stuck-2", model="az-1"))
+    led.record(forecast("open-1", model="az-1"))          # genuinely still open
+
+    before = led.grade("az-1", oos=True)
+    assert before.n_resolved == 10 and before.n_open == 3 and before.n_unresolvable == 0
+
+    led.mark_unresolvable("stuck-1", "window has no tradable session", at=T0.isoformat())
+    led.mark_unresolvable("stuck-2", "window has no tradable session", at=T0.isoformat())
+    after = led.grade("az-1", oos=True)
+
+    assert after.n_resolved == 10                          # pairs untouched
+    assert after.n_open == 1                                # only the genuine one left
+    assert after.n_unresolvable == 2
+    # the two reclassified rows moved OUT of n_open, not double-counted
+    assert after.n_open + after.n_unresolvable + after.n_resolved == \
+        before.n_open + before.n_unresolvable + before.n_resolved
+
+
+def test_unresolvable_forecasts_leave_brier_and_calibration_bit_identical():
+    """THE regression: grade()'s brier and calibration_error must be
+    bit-identical whether or not any forecast has ever been marked
+    unresolvable. forecast.py's grade() builds every one of briers/base/
+    dir_hits/cal from `pairs`, which is built ONLY from self._resolutions —
+    stuck-OPEN rows never touched that math before this change, and marking
+    them unresolvable must not touch it either. This is pinned numerically,
+    not just compared before/after in the same process, so a future edit
+    that quietly perturbs the math cannot pass by accident."""
+    led = graded_ledger("az-1", 10, hit_rate=0.8)
+    led.record(forecast("stuck-1", model="az-1"))
+    led.record(forecast("stuck-2", model="az-1"))
+    led.record(forecast("stuck-3", model="az-1"))
+    led.record(forecast("stuck-4", model="az-1"))
+
+    before = led.grade("az-1", oos=True)
+    # Pinned to forecast.py's actual current output for graded_ledger("az-1",
+    # 10, hit_rate=0.8): 8 hits scoring brier 0.18 each, 2 misses (forecast
+    # "bull_continuation" 0.7 vs outcome "range_consolidation") scoring
+    # 0.7**2 + (1-0.3)**2 = 0.49 + 0.49 = 0.98 each -> mean 0.34.
+    assert before.brier == pytest.approx((8 * 0.18 + 2 * 0.98) / 10)
+    assert before.n_open == 4 and before.n_unresolvable == 0
+
+    for fid in ("stuck-1", "stuck-2", "stuck-3", "stuck-4"):
+        led.mark_unresolvable(fid, "window has no tradable session", at=T0.isoformat())
+    after = led.grade("az-1", oos=True)
+
+    assert after.brier == before.brier                     # bit-identical
+    assert after.calibration_error == before.calibration_error
+    assert after.baseline_brier == before.baseline_brier
+    assert after.directional_accuracy == before.directional_accuracy
+    assert after.n_open == 0 and after.n_unresolvable == 4  # only these moved
+
+
 def test_false_urgent_and_missed_shock_rates():
     led = ForecastLedger()
     # deliberately ASYMMETRIC counts (2/3 vs 1/3): a symmetric fixture lets an

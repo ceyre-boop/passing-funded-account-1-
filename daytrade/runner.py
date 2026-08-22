@@ -30,6 +30,8 @@ Usage
     python3 daytrade/runner.py --plan ... --once
     python3 daytrade/runner.py --plan ... --replay path/to/prices.json
 """
+from __future__ import annotations
+
 import argparse
 import json
 import os

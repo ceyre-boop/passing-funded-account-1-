@@ -20,7 +20,25 @@ cd "$REPO/daytrade"
 echo "--- tick $(date -u +%FT%TZ) (ET $ET_HM)"
 # Mechanical R-geometry plan (spec 024 prereg scoring) — no-op before 10:00,
 # idempotent per day, never touches a hand-written plan.
-python3 write_baseline_plan.py NVDA || echo "!! plan writer failed (non-fatal)"
+# Non-fatal for THIS tick (a plan failure must not stall the resolver below),
+# but its return code is captured and folded into the tick's own exit status
+# so it is never silently invisible across ticks (review fix: 98 consecutive
+# failures were previously swallowed here without a trace).
+PLAN_STATE_DIR="$REPO/data/daytrade/operator"
+PLAN_FAIL_FILE="$PLAN_STATE_DIR/plan_writer_fails"
+mkdir -p "$PLAN_STATE_DIR"
+
+python3 write_baseline_plan.py NVDA && PLAN_RC=0 || PLAN_RC=$?
+if [[ $PLAN_RC -ne 0 ]]; then
+  echo "!! plan writer failed (non-fatal, exit $PLAN_RC)"
+  PLAN_FAILS=$(( $(cat "$PLAN_FAIL_FILE" 2>/dev/null || echo 0) + 1 ))
+  echo "$PLAN_FAILS" > "$PLAN_FAIL_FILE"
+  if [[ $PLAN_FAILS -ge 3 ]]; then
+    echo "!! PERSISTENT: plan writer has failed $PLAN_FAILS consecutive ticks"
+  fi
+else
+  echo 0 > "$PLAN_FAIL_FILE"
+fi
 
 # Spec 030: OBSERVE the decision channel every tick — cheap, no model, no API
 # cost, so it runs whether or not a judgment happens. The soak proved that a
@@ -52,4 +70,4 @@ fi
 # See ~/Library/LaunchAgents/com.alta.dashboard-publish.plist ->
 # daytrade/dashboard_publish.sh (16:40 ET weekdays).
 
-exit $(( RUN_RC || RES_RC ))
+exit $(( RUN_RC || RES_RC || PLAN_RC ))

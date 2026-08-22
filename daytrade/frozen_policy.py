@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SF-FROZEN-001 — the pinned exit-policy checkpoint.
+"""SF-FROZEN-002 — the pinned exit-policy checkpoint.
 
 Stack exam LL-2 recorded the gap: mechanisms were measured against "the
 shipped policy", which is stable but not PINNED. Nothing stopped the
@@ -15,6 +15,14 @@ measured against.
 It becomes load-bearing the moment a second evaluator exists: once there is a
 carry exit evaluator beside the intraday one, "the shipped policy" is
 ambiguous — shipped which? A pinned id is not.
+
+SUPERSEDES SF-FROZEN-001 (2026-08-20, `data/daytrade/SF_FROZEN_001.json`,
+engine_sha256 1c437fc4e49c9a60cf1c497feaa0269af61440423cf1b6c94c69e068588ff457).
+001 is never deleted or overwritten — it stays on disk as history and its
+`pin()` refusal-on-overwrite is what forced this file to become a NEW
+checkpoint id instead of quietly rewriting the old one. See SF-FROZEN-002's
+own `why` field (`data/daytrade/SF_FROZEN_002.json`) for the re-pin reason and
+the empirical proof that motivated it.
 """
 from __future__ import annotations
 
@@ -26,10 +34,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 ENGINE = HERE / "stockfish_exit.py"
-RECORD = ROOT / "data" / "daytrade" / "SF_FROZEN_001.json"
+RECORD = ROOT / "data" / "daytrade" / "SF_FROZEN_002.json"
 
-CHECKPOINT_ID = "SF-FROZEN-001"
-PINNED_AT = "2026-08-20"
+CHECKPOINT_ID = "SF-FROZEN-002"
+PINNED_AT = "2026-08-21"
 
 # The exact parameters in force per asset class at pin time. Copied here
 # deliberately rather than imported: if the source moves, this record must
@@ -59,9 +67,15 @@ def policies_sha256() -> str:
         json.dumps(POLICIES, sort_keys=True).encode()).hexdigest()
 
 
-def pin() -> dict:
+def pin(*, why: str | None = None) -> dict:
     """Write the checkpoint record. Refuses to overwrite an existing pin —
-    re-pinning is a deliberate act with its own reason, not a side effect."""
+    re-pinning is a deliberate act with its own reason, not a side effect.
+
+    `why` lets a re-pin (a NEW checkpoint_id, per the refusal above) record
+    its own specific reason instead of inheriting the original stack-exam
+    rationale verbatim. Callers that omit it get that original rationale,
+    unchanged, so the existing SF-FROZEN-001 behavior this function always
+    had is preserved exactly."""
     if RECORD.exists():
         raise CheckpointError(
             f"{RECORD.name} already exists. Re-pinning redefines what every "
@@ -72,8 +86,9 @@ def pin() -> dict:
             "engine_sha256": engine_sha256(),
             "policies": POLICIES, "policies_sha256": policies_sha256(),
             "prices": PRICES,
-            "why": "stack exam LL-2: improvement must be measured against a "
-                   "frozen opponent, not against a moving self"}
+            "why": why or (
+                "stack exam LL-2: improvement must be measured against a "
+                "frozen opponent, not against a moving self")}
     RECORD.parent.mkdir(parents=True, exist_ok=True)
     RECORD.write_text(json.dumps(body, indent=1))
     return body

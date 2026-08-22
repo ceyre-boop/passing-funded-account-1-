@@ -57,6 +57,11 @@ class Forecast:
     interrupt: Optional[str]         # None | TIGHTEN | REDUCE_RISK | INVALIDATE | EMERGENCY
     confidence: float
     evidence_ids: tuple = ()
+    # Set only when the emission-time RTH gate shrank the claimed horizon to
+    # fit inside the tradable session (spec 024 review, 2026-08-2x): the
+    # grader must be able to see this was not a free `horizon_clamped_from`
+    # minute claim. None on every forecast the gate left untouched.
+    horizon_clamped_from: Optional[int] = None
 
     def __post_init__(self):
         if not self.forecast_id or not self.model_version:
@@ -64,6 +69,12 @@ class Forecast:
         _aware(self.as_of, "as_of")
         if self.horizon_min <= 0:
             raise ForecastError(f"horizon_min {self.horizon_min} must be positive")
+        if (self.horizon_clamped_from is not None
+                and self.horizon_clamped_from <= self.horizon_min):
+            raise ForecastError(
+                f"horizon_clamped_from {self.horizon_clamped_from} must exceed "
+                f"the clamped horizon_min {self.horizon_min} — a clamp that "
+                "didn't shrink anything is not a clamp")
         if self.direction not in DIRECTIONS:
             raise ForecastError(f"unknown direction {self.direction!r}")
         if not (0.0 <= self.confidence <= 1.0):
@@ -128,6 +139,10 @@ class ScoreReport:
     oos: bool                        # label supplied by the grader, required by the gate
     n_resolved: int
     n_open: int
+    n_unresolvable: int               # sealed by mark_unresolvable(); never
+                                       # graded, never counted as still-open —
+                                       # a forecast whose window can never
+                                       # produce an outcome (spec 024 review)
     brier: float
     baseline_brier: float
     directional_accuracy: float
@@ -149,6 +164,7 @@ class ForecastLedger:
     def __init__(self):
         self._forecasts: dict[str, Forecast] = {}
         self._resolutions: dict[str, Resolution] = {}
+        self._unresolvable: dict[str, dict] = {}
 
     def record(self, f: Forecast) -> None:
         if f.forecast_id in self._forecasts:
@@ -174,13 +190,47 @@ class ForecastLedger:
     def forecast(self, forecast_id: str) -> Forecast:
         return self._forecasts[forecast_id]
 
+    def mark_unresolvable(self, forecast_id: str, reason: str, *, at: str) -> None:
+        """Seal a forecast as permanently unable to produce an outcome — e.g.
+        its [as_of, as_of+horizon] window never touches a tradable RTH
+        session, so the bars it would be scored against can never exist.
+
+        Deliberately NEVER routes through resolve(): an unresolvable claim
+        gets no outcome_scenario, inferred or otherwise. Injecting a fabricated
+        outcome here would corrupt the Brier sum resolve() exists to protect
+        (spec 024 review, 2026-08-2x)."""
+        f = self._forecasts.get(forecast_id)
+        if f is None:
+            raise ForecastError(
+                f"cannot mark unknown forecast {forecast_id!r} unresolvable")
+        if forecast_id in self._resolutions:
+            raise ForecastError(
+                f"{forecast_id!r} already resolved — an outcome exists, it "
+                "cannot retroactively become unresolvable")
+        if forecast_id in self._unresolvable:
+            raise ForecastError(
+                f"{forecast_id!r} already marked unresolvable — sealed once")
+        if not reason:
+            raise ForecastError("mark_unresolvable requires a non-empty reason")
+        _aware(at, "at")
+        self._unresolvable[forecast_id] = {"reason": reason, "at": at}
+
+    def is_unresolvable(self, forecast_id: str) -> bool:
+        return forecast_id in self._unresolvable
+
     def grade(self, model_version: str, *, oos: bool) -> ScoreReport:
         """Score every RESOLVED forecast of one model. Pure over the ledger."""
-        fs = [f for f in self._forecasts.values()
-              if f.model_version == model_version]
+        fs_all = [f for f in self._forecasts.values()
+                  if f.model_version == model_version]
+        # Unresolvable forecasts are excluded from BOTH the resolved pairs
+        # (already true — they were never in self._resolutions) AND n_open —
+        # a forecast that can never produce an outcome is not "still open",
+        # it is a separate terminal state (spec 024 review).
+        fs = [f for f in fs_all if f.forecast_id not in self._unresolvable]
         pairs = [(f, self._resolutions[f.forecast_id]) for f in fs
                  if f.forecast_id in self._resolutions]
         n_open = len(fs) - len(pairs)
+        n_unresolvable = len(fs_all) - len(fs)
         if not pairs:
             raise ForecastError(f"{model_version!r}: nothing resolved to grade")
 
@@ -211,7 +261,7 @@ class ForecastLedger:
 
         return ScoreReport(
             model_version=model_version, oos=oos,
-            n_resolved=len(pairs), n_open=n_open,
+            n_resolved=len(pairs), n_open=n_open, n_unresolvable=n_unresolvable,
             brier=sum(briers) / len(briers),
             baseline_brier=sum(base) / len(base),
             directional_accuracy=sum(dir_hits) / len(dir_hits),

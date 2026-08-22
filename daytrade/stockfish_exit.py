@@ -45,6 +45,8 @@ reviewable. The invariant that actually matters â€” runner log == harness log â€
 is unaffected, and every one of the ceiling's 9,576 per-config R values is
 unchanged, which is the real regression test.
 """
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, List

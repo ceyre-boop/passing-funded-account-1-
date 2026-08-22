@@ -1,0 +1,32 @@
+{
+ "checkpoint_id": "SF-FROZEN-002",
+ "pinned_at": "2026-08-21",
+ "engine": "daytrade/stockfish_exit.py",
+ "engine_sha256": "eb12b4a4f78acd3747e9ff64122ee2a7a4cef64a628947794960ef7e9b2d9991",
+ "policies": {
+  "SINGLE_NAME": {
+   "trail_mult": null,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  },
+  "CASH_INDEX": {
+   "trail_mult": 1.5,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  },
+  "FUTURES": {
+   "trail_mult": 1.5,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  }
+ },
+ "policies_sha256": "474d817dd245fdc2ef0183bbb1ceed5bc6c8681825de23312552b001c6f21521",
+ "prices": "intraday equity/futures positions only \u2014 see SF-3, it has no term for swap accrual, days held, weekend exposure, or rate differential",
+ "why": "Re-pin required by a two-line, behavior-inert byte change to stockfish_exit.py: `from __future__ import annotations` plus a blank line, inserted after the module docstring. Nothing else in the file changed (verified via git diff). WHY: PEP 604 union syntax (`plan: dict | None`) at stockfish_exit.py:332 is not runtime-evaluable under /usr/bin/python3 3.9.6, which is the interpreter launchd actually invokes for the alpha-operator job (no PATH override in its plist). That broke import of stockfish_exit, ceiling, write_baseline_plan, and runner on every tick. The future-annotations import defers annotation evaluation to strings, fixing the import under 3.9.6 without touching any executable logic. PROOF: behavioral identity was measured empirically, not argued. Ran daytrade/ceiling.py's own regression bench (spec 008 sweep) against both engines \u2014 the pre-change engine materialized read-only from `git show HEAD:daytrade/stockfish_exit.py` into a scratch dir outside the working tree, and the current (post-change) engine \u2014 over the full narrow_space() (3 configs) + wide_space() (396 configs) grid on the TUNE split (24 entries). Compared 9,576 per-config R values (72 narrow + 9,504 wide) with exact equality (no tolerance): 0 mismatches, 100% match. This is the same 9,576-value count named in stockfish_exit.py's own module docstring as the real regression test. policies_sha256 is unchanged from SF-FROZEN-001 (474d817dd245fdc2ef0183bbb1ceed5bc6c8681825de23312552b001c6f21521) \u2014 confirmed by direct recomputation before this pin. SUPERSEDES: SF-FROZEN-001 (pinned 2026-08-20, data/daytrade/SF_FROZEN_001.json, engine_sha256 1c437fc4e49c9a60cf1c497feaa0269af61440423cf1b6c94c69e068588ff457), which is left on disk, untouched, as history \u2014 frozen_policy.pin() refuses to overwrite an existing record by design, so a genuinely new opponent requires a new checkpoint id rather than a silent rewrite of the old one."
+}

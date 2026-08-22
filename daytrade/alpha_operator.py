@@ -106,6 +106,78 @@ def _iso(dt: datetime) -> str:
     return dt.isoformat()
 
 
+# ------------------------------------------------------- RTH tradability gate
+#
+# spec 024 review (2026-08-2x): 4 forecasts stuck OPEN forever because their
+# [as_of, as_of+horizon] window never had 2 bars to resolve against —
+# NVDA_5m.parquet is RTH-only by design (bars.py), so a window issued
+# overnight or one that runs past the close simply never accrues data. This
+# is not a bars-fetching bug; it is an unscoreable claim that should never
+# have been minted. Gated here at EMISSION (see _seal_and_emit) and reused at
+# RESOLUTION (see resolve_open) to retire the already-stuck rows.
+#
+# The session bounds below are bars.py's OWN constants (RTH_OPEN/RTH_CLOSE) —
+# no new calendar is invented and no hour is hardcoded here. Weekday-only is
+# the same trading-day heuristic operator_tick.sh's own guard already uses
+# (ET_DOW>5 excluded, operator_tick.sh:11-15); this module does not have,
+# and does not attempt to build, a holiday calendar.
+MIN_BAR_INTERVAL_MIN = 5            # the "5m" cache everywhere in this module
+
+
+def _rth_session_bounds(day_et) -> "Optional[tuple[datetime, datetime]]":
+    """RTH open/close as tz-aware ET datetimes for one ET calendar date, or
+    None if that date is not a trading day at all (weekend)."""
+    if day_et.weekday() >= 5:                       # Saturday=5, Sunday=6
+        return None
+    oh, om = (int(x) for x in bars_mod.RTH_OPEN.split(":"))
+    ch, cm = (int(x) for x in bars_mod.RTH_CLOSE.split(":"))
+    open_dt = datetime(day_et.year, day_et.month, day_et.day, oh, om, tzinfo=ET)
+    close_dt = datetime(day_et.year, day_et.month, day_et.day, ch, cm, tzinfo=ET)
+    return open_dt, close_dt
+
+
+def _rth_overlap_minutes(start: datetime, end: datetime) -> float:
+    """Minutes of [start, end] that fall inside the RTH session on START's
+    own ET calendar date. Zero on a non-trading day, or a window that never
+    touches that day's session at all (e.g. issued after the close, or
+    entirely overnight)."""
+    start_et = start.astimezone(ET)
+    end_et = end.astimezone(ET)
+    bounds = _rth_session_bounds(start_et.date())
+    if bounds is None:
+        return 0.0
+    session_open, session_close = bounds
+    overlap_start = max(start_et, session_open)
+    overlap_end = min(end_et, session_close)
+    return max(0.0, (overlap_end - overlap_start).total_seconds() / 60.0)
+
+
+def _tradable_forecast_window(as_of: datetime, horizon_min: int) -> dict:
+    """Decide whether [as_of, as_of+horizon_min] is a scoreable claim.
+
+    Returns one of:
+      {"ok": True,  "horizon_min": horizon_min, "clamped_from": None}
+        — the window lies wholly inside a tradable RTH session.
+      {"ok": True,  "horizon_min": <shrunk>, "clamped_from": horizon_min}
+        — the window crossed the session close; horizon_min is clamped to
+          end exactly at the close. Still emitted, just not a free claim
+          past hours the market was never open.
+      {"ok": False, "reason": "window has no tradable session"}
+        — zero RTH minutes anywhere in the window (issued overnight, on a
+          weekend, or entirely after that day's close). Not emittable.
+    """
+    horizon_end = as_of + timedelta(minutes=horizon_min)
+    overlap_min = _rth_overlap_minutes(as_of, horizon_end)
+    if overlap_min <= 0:
+        return {"ok": False, "reason": "window has no tradable session"}
+    session_close = _rth_session_bounds(as_of.astimezone(ET).date())[1]
+    if horizon_end.astimezone(ET) > session_close:
+        clamped = max(1, int((session_close - as_of.astimezone(ET))
+                             .total_seconds() // 60))
+        return {"ok": True, "horizon_min": clamped, "clamped_from": horizon_min}
+    return {"ok": True, "horizon_min": horizon_min, "clamped_from": None}
+
+
 # ------------------------------------------------------------- the judgment
 
 from pydantic import BaseModel, Field  # noqa: E402
@@ -251,6 +323,9 @@ def load_ledger() -> ForecastLedger:
             led.record(Forecast(**body))
         elif kind == "resolution":
             led.resolve(Resolution(**body))
+        elif kind == "unresolvable":
+            led.mark_unresolvable(body["forecast_id"], body["reason"],
+                                  at=body["at"])
         elif kind == "prereg_score":
             pass                       # spec 024: scored pre-registration rows
                                        # live beside the ledger, not inside 017
@@ -662,21 +737,28 @@ def _make_evidence(read: OperatorRead, symbol: str, now: datetime,
 
 def _make_forecast(read: OperatorRead, symbol: str, now: datetime,
                    record_id: str, model: str,
-                   evidence_ids: tuple[str, ...]) -> Forecast:
+                   evidence_ids: tuple[str, ...], *,
+                   horizon_min: Optional[int] = None,
+                   horizon_clamped_from: Optional[int] = None) -> Forecast:
     return Forecast(
         forecast_id=f"fc-{record_id}",
         model_version=f"{MODEL_VERSION_BASE}/{model}",
         prompt_version=PROMPT_VERSION,
         as_of=_iso(now), symbol=symbol,
-        horizon_min=read.horizon_min,        # bounds enforced by the schema; a
-                                             # violation raises rather than being
-                                             # silently repaired (Cato finding 5)
+        # bounds enforced by the schema; a violation raises rather than being
+        # silently repaired (Cato finding 5). `horizon_min` may be a caller
+        # override — the RTH tradability gate clamps a window that crosses
+        # the session close to end exactly at that close (spec 024 review) —
+        # `horizon_clamped_from` records the original, unclamped claim so the
+        # grader can see it was not a free extra-hours minute.
+        horizon_min=read.horizon_min if horizon_min is None else horizon_min,
         scenario_probs=_scenario_probs(read),
         direction=read.direction,
         recommendation=None,
         interrupt="TIGHTEN" if read.verdict in ("TIGHTEN", "EXIT") else None,
         confidence=read.confidence,
-        evidence_ids=evidence_ids)
+        evidence_ids=evidence_ids,
+        horizon_clamped_from=horizon_clamped_from)
 
 
 def _make_directive(read: OperatorRead, symbol: str, now: datetime,
@@ -824,9 +906,34 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
     prereg = _pre_registration(read)            # I11: refused if band missing
     evs = _make_evidence(read, symbol, now, record_id)
     ev_ids = tuple(ev.evidence_id for ev in evs)
-    fc = _make_forecast(read, symbol, now, record_id, model, ev_ids)
-    ledger = load_ledger()
-    ledger.record(fc)                           # validates against the 017 contract
+
+    # RTH TRADABILITY GATE (spec 024 review, 2026-08-2x): a forecast whose
+    # [as_of, as_of+horizon] window never touches a tradable RTH session can
+    # never accrue the 2 bars resolve_open() needs — it would sit OPEN
+    # forever, not because bars are missing, but because they can never
+    # exist. Gate here, at the moment a claim would be minted, rather than
+    # discovering it at resolution: the judgment is still sealed below either
+    # way, but a claim that cannot be scored is never emitted as one.
+    window = _tradable_forecast_window(now, read.horizon_min)
+    fc = None
+    forecast_refused = None
+    if window["ok"]:
+        fc = _make_forecast(read, symbol, now, record_id, model, ev_ids,
+                            horizon_min=window["horizon_min"],
+                            horizon_clamped_from=window["clamped_from"])
+        ledger = load_ledger()
+        ledger.record(fc)                       # validates against the 017 contract
+        if window["clamped_from"] is not None:
+            print(f"  RTH GATE: horizon clamped {window['clamped_from']}m -> "
+                  f"{window['horizon_min']}m — window crossed the session close")
+    else:
+        forecast_refused = {
+            "reason": window["reason"],
+            "as_of": _iso(now), "horizon_min": read.horizon_min,
+            "detail": f"[{_iso(now)} +{read.horizon_min}m] never touches a "
+                      "tradable RTH session"}
+        print(f"  RTH GATE: forecast refused — {window['reason']} "
+              f"[{_iso(now)} +{read.horizon_min}m]")
     directive, suppressed = _make_directive(read, symbol, now, record_id,
                                             model, list(ev_ids), ttl)
 
@@ -854,7 +961,8 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
     _append_jsonl(RECORDS, {
         "record_id": record_id, "ts": _iso(now), "trigger": trigger,
         "symbol": symbol, "model_version": f"{MODEL_VERSION_BASE}/{model}",
-        "prompt_version": PROMPT_VERSION, "forecast_id": fc.forecast_id,
+        "prompt_version": PROMPT_VERSION,
+        "forecast_id": fc.forecast_id if fc else None,
         "trade_id": None, "evidence_ids": list(ev_ids),
         "both_sides": {"bull": read.bull, "base": read.base, "bear": read.bear},
         "invalidators": read.invalidators, "verdict": read.verdict,
@@ -863,8 +971,10 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
         "suppressed_to": suppressed,
         "directive": directive.to_dict() if directive else None,
         "abstention": abst.to_dict() if abst else None,
-        "forecast": fc.to_dict(), "evidence": [ev.to_dict() for ev in evs],
+        "forecast": fc.to_dict() if fc else None,
+        "evidence": [ev.to_dict() for ev in evs],
         "pre_registration": prereg, "emission_refused": emission_refused,
+        "forecast_refused": forecast_refused,
         "portfolio_advisory": advisory, "shadow": shadow,
         "packet_as_of": meta.get("as_of"),
         "packet_max_data_ts": meta.get("max_data_ts"),
@@ -874,7 +984,8 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
     for ev in evs:
         store.add(ev)
         _append_jsonl(EV_LOG, {"kind": "evidence", **ev.to_dict()})
-    _append_jsonl(FC_LOG, {"kind": "forecast", **fc.to_dict()})
+    if fc is not None:
+        _append_jsonl(FC_LOG, {"kind": "forecast", **fc.to_dict()})
 
     if directive and shadow:
         print(f"  SHADOW: directive {directive.directive_id} suppressed "
@@ -1028,8 +1139,10 @@ def resolve_open(now: Optional[datetime] = None) -> int:
     records = {r["forecast_id"]: r for r in _read_jsonl(RECORDS)}
     rows = _read_jsonl(FC_LOG)
     open_ids = ({r["forecast_id"] for r in rows if r["kind"] == "forecast"}
-                - {r["forecast_id"] for r in rows if r["kind"] == "resolution"})
+                - {r["forecast_id"] for r in rows if r["kind"] == "resolution"}
+                - {r["forecast_id"] for r in rows if r["kind"] == "unresolvable"})
     n = 0
+    n_unresolvable = 0
     for fid in sorted(open_ids):
         f = ledger.forecast(fid)
         horizon_end = _aware(f.as_of) + timedelta(minutes=f.horizon_min)
@@ -1037,7 +1150,25 @@ def resolve_open(now: Optional[datetime] = None) -> int:
             continue
         window = _bars_between(f.symbol, _aware(f.as_of), horizon_end)
         if window is None or len(window) < 2:
-            print(f"  {fid}: bars missing for [{f.as_of} +{f.horizon_min}m] — stays OPEN")
+            # Bars missing is usually transient (cache hasn't refreshed yet).
+            # It is PERMANENT when the window's own overlap with a tradable
+            # RTH session is too short to ever contain 2 five-minute bars —
+            # issued overnight/weekend (zero overlap), or so close to the
+            # session close that only one bar timestamp can ever exist in
+            # the window (spec 024 review, 2026-08-2x). Route this through a
+            # terminal state, never through resolve() with a guessed outcome.
+            overlap_min = _rth_overlap_minutes(_aware(f.as_of), horizon_end)
+            if overlap_min < MIN_BAR_INTERVAL_MIN:
+                reason = "window has no tradable session"
+                ledger.mark_unresolvable(fid, reason, at=_iso(now))
+                _append_jsonl(FC_LOG, {"kind": "unresolvable",
+                                       "forecast_id": fid, "reason": reason,
+                                       "at": _iso(now)})
+                n_unresolvable += 1
+                print(f"  {fid}: {reason} [{f.as_of} +{f.horizon_min}m] — "
+                      "UNRESOLVABLE")
+            else:
+                print(f"  {fid}: bars missing for [{f.as_of} +{f.horizon_min}m] — stays OPEN")
             continue
         try:
             scenario, direction, shock = _outcome(f.symbol, f, window)
@@ -1068,7 +1199,9 @@ def resolve_open(now: Optional[datetime] = None) -> int:
         print(f"  {fid}: {scenario} / {direction} ({hit})"
               + (" SHOCK" if shock else ""))
         n += 1
-    print(f"  resolved {n} forecast(s); {len(open_ids) - n} still open")
+    still_open = len(open_ids) - n - n_unresolvable
+    print(f"  resolved {n} forecast(s); {n_unresolvable} unresolvable "
+          f"(window has no tradable session); {still_open} still open")
     return 0
 
 
