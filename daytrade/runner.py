@@ -37,7 +37,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
@@ -482,6 +482,43 @@ def _sim_fill(price: float, qty: float, plan: dict, *, when: str, what: str):
     )
 
 
+def resolve_session_date(*, live: bool, plan: dict) -> date:
+    """The ET date this session's trade_id / event log / ledger row key on.
+
+    trade_id keys on the SESSION the trade belongs to, not the wall clock the
+    process happened to run under. For a genuine live run wall clock IS the
+    session date — there is no other honest source. For a replay it is not:
+    replaying a 2026-08-21 tape on 2026-08-22 must not mint NVDA-2026-08-22,
+    or the ledger/event-log key silently disagrees with the tape's own date.
+
+    The replay plan already carries `_session` (see write_baseline_plan.py:68,
+    and execution_ledger.py's own note at `ledger_path` about this exact class
+    of bug for month-boundary writes) — reusing that field is the
+    least-new-surface fix: no new CLI flag, no new file format, and it is
+    already present on every plan this runner reads.
+
+    Per CLAUDE.md rule 5, an unresolvable session date FAILS LOUD; it is never
+    defaulted to datetime.now().
+    """
+    if live:
+        return datetime.now(ET).date()
+    raw_session = plan.get("_session")
+    if not raw_session:
+        raise ValueError(
+            "--replay requires the plan to carry a `_session` field (the ET "
+            "date of the tape being replayed, e.g. \"2026-08-21\") — refusing "
+            "to key the trade_id off today's wall clock for a replayed tape. "
+            "Set plan['_session'] before replaying."
+        )
+    try:
+        return date.fromisoformat(str(raw_session))
+    except ValueError as e:
+        raise ValueError(
+            f"plan['_session']={raw_session!r} is not an ISO date "
+            f"(YYYY-MM-DD): {e}"
+        ) from e
+
+
 def run(plan: dict, *, interval: int, once: bool, replay: list | None,
         max_stale: int, require_bias: bool, broker=None,
         quote_source: str = "auto", max_spread_pct: float = 0.01,
@@ -496,7 +533,7 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
     # memory. Explicit resume only — a surprise reconstruction at 09:31 is
     # worse than an operator choice, and silently forking an open trade's
     # history is worse than either.
-    session_date = datetime.now(ET).date()
+    session_date = resolve_session_date(live=live, plan=plan)
     trade_id = f"{symbol}-{session_date}"
     events_path = EVENTS_DIR / f"events_{session_date}_{symbol}.jsonl"
     event_log = JsonlEventLog(events_path)

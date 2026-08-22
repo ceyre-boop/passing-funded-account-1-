@@ -176,7 +176,10 @@ def test_runner_replay_threads_one_session_lifetime_key_set(tmp_path, monkeypatc
 
     plan = {"symbol": "TEST", "direction": 1, "entry": 200.0, "qty": 100,
             "sl": 199.0, "tp1": 201.0, "tp2": 202.14, "trail_dist": 0.5,
-            "trail_mult": None, "be_arm_frac": 1.0, "hold_past_tp2": True}
+            "trail_mult": None, "be_arm_frac": 1.0, "hold_past_tp2": True,
+            # required since runner.run keys a replay's trade_id/session off
+            # the plan, never off wall clock — see runner.py's session_date.
+            "_session": "2026-08-12"}
     rc = runner.run(plan, interval=0, once=False, replay=[200.2, 200.6, 201.2],
                     max_stale=180, require_bias=False)
 

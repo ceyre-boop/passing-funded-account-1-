@@ -65,6 +65,36 @@ def test_trade_id_matches_the_runner_scheme_exactly():
     assert mint_trade_id(symbol, session_date) == runner_side
 
 
+def test_ledger_root_is_absolute_and_cwd_independent():
+    """The defect: LEDGER_ROOT used to be `Path("data/decision_logs")`, a
+    relative path resolved against the process CWD. runner.py launched from
+    inside daytrade/ (as operator_tick.sh does — `cd "$REPO/daytrade"`) then
+    wrote real trade rows into daytrade/data/decision_logs/ instead of
+    data/decision_logs/: silent scattering, not a crash.
+
+    Proven here by actually importing the module from two different process
+    CWDs (repo root, and daytrade/) and asserting the resolved LEDGER_ROOT is
+    byte-identical either way — an in-process `os.chdir` would not exercise
+    the real bug, since it never touched `Path(__file__)`.
+    """
+    import subprocess
+    repo_root = Path(__file__).resolve().parents[1]
+    probe = ("import sys; sys.path.insert(0, %r); "
+             "from sovereign.intelligence.execution_ledger import LEDGER_ROOT; "
+             "print(LEDGER_ROOT)") % str(repo_root)
+
+    from_root = subprocess.run([sys.executable, "-c", probe], cwd=repo_root,
+                               capture_output=True, text=True, check=True)
+    from_daytrade = subprocess.run([sys.executable, "-c", probe],
+                                   cwd=repo_root / "daytrade",
+                                   capture_output=True, text=True, check=True)
+
+    assert from_root.stdout.strip() == from_daytrade.stdout.strip(), (
+        "LEDGER_ROOT resolved differently depending on the launch directory: "
+        f"root={from_root.stdout.strip()!r} daytrade={from_daytrade.stdout.strip()!r}")
+    assert from_root.stdout.strip() == str(repo_root / "data" / "decision_logs")
+
+
 def test_mint_trade_id_is_deterministic():
     a = mint_trade_id("NVDA", "2026-08-12")
     b = mint_trade_id("NVDA", "2026-08-12")
@@ -392,6 +422,67 @@ def test_candidates_live_outside_every_executed_lane(isolated_ledger):
     assert "r_realized" not in rec and "outcome" not in rec
 
 
+# ─── ISC-30..32 session date: replay keys on the tape, never the wall clock ──
+
+def test_replay_session_date_comes_from_the_plan_not_wall_clock():
+    """Defect 2: a replay run must key trade_id/session on the tape's own
+    date. Replaying a 2026-08-21 tape today must produce 2026-08-21, not
+    today's date — this is the actual bug that minted NVDA-2026-08-22 for a
+    session that traded 2026-08-21 bars."""
+    import runner
+    got = runner.resolve_session_date(live=False, plan={"_session": "2026-08-21"})
+    assert got == datetime(2026, 8, 21).date()
+
+
+def test_replay_without_session_field_fails_loud_not_now():
+    """CLAUDE.md rule 5: an unresolvable session date must raise, never
+    silently fall back to datetime.now()."""
+    import runner
+    with pytest.raises(ValueError, match="_session"):
+        runner.resolve_session_date(live=False, plan={"symbol": "NVDA"})
+
+
+def test_replay_with_malformed_session_field_fails_loud():
+    import runner
+    with pytest.raises(ValueError, match="not an ISO date"):
+        runner.resolve_session_date(live=False, plan={"_session": "not-a-date"})
+
+
+def test_live_session_date_still_uses_wall_clock():
+    """The live path must be unchanged: wall clock IS the session date for a
+    genuine live run — there is no tape to read a date from."""
+    import runner
+    got = runner.resolve_session_date(live=True, plan={})
+    assert got == datetime.now(runner.ET).date()
+
+
+# ─── ISC-33 basis: a closed record's fills always carry real provenance ─────
+
+def test_closed_trade_fills_carry_a_real_basis_string(isolated_ledger):
+    """Defect 3, as a regression: entry_fill.basis and exit_fill.basis must
+    never be null/empty on a persisted record — that string is the only thing
+    that keeps a nominal-geometry R from being misread later as a real
+    fill-to-fill result. SimulatedFill already refuses to construct with an
+    empty basis (ISC-14-ish), but this pins it on the ACTUAL PERSISTED record,
+    end to end, matching the documented format
+    'sim:<what>;costs=<declared|none-declared>'."""
+    _open(trade_id="NVDA-1", price=204.0, stop=202.0, qty=100.0)
+    closed = close_executed_trade(
+        trade_id="NVDA-1", mode="sim",
+        exit_fill=_fill(price=208.0, qty=100.0, when=T1),
+        exit_reason="TP2: day goal hit", exit_timestamp=T1)
+
+    entry_basis = closed["entry_fill"]["basis"]
+    exit_basis = closed["exit_fill"]["basis"]
+    assert entry_basis and isinstance(entry_basis, str)
+    assert exit_basis and isinstance(exit_basis, str)
+
+    # And on disk — not just in the returned dict.
+    row = json.loads(_lines(isolated_ledger)[-1])
+    assert row["entry_fill"]["basis"]
+    assert row["exit_fill"]["basis"]
+
+
 # ─── ISC-27..29 end-to-end: AlphaZero → entry → Stockfish events → exit ──────
 
 def test_end_to_end_replay_produces_one_closed_correlated_record(tmp_path, monkeypatch,
@@ -412,11 +503,15 @@ def test_end_to_end_replay_produces_one_closed_correlated_record(tmp_path, monke
     monkeypatch.setattr(runner, "BIAS", bias)
     monkeypatch.setattr(runner, "DIRECTIVES", tmp_path / "directives.json")
 
+    session_date = datetime.now(runner.ET).date()
     plan = runner.load_plan_dict = {
         "symbol": "NVDA", "direction": 1, "entry": 204.0, "qty": 100,
         "sl": 202.0, "tp1_r": 0.45, "tp2_r": 0.9, "trail_r": 0.4,
         "exit_policy": "DEFAULT",
         "sim_costs": {"commission_per_share": 0.005, "slippage_per_share": 0.0},
+        # required since runner.run keys a replay's trade_id/session off the
+        # plan, never off wall clock — see runner.py's session_date.
+        "_session": str(session_date),
     }
     plan_path = tmp_path / "plan.json"
     plan_path.write_text(json.dumps(plan))
@@ -428,7 +523,6 @@ def test_end_to_end_replay_produces_one_closed_correlated_record(tmp_path, monke
                     require_bias=False, broker=None, ledger_mode="sim")
     assert rc == 0
 
-    session_date = datetime.now(runner.ET).date()
     trade_id = f"NVDA-{session_date}"
 
     # --- one closed record, in the sim lane only ---
@@ -481,7 +575,8 @@ def test_second_same_day_trade_is_refused_loudly(tmp_path, monkeypatch, isolated
     plan_path = tmp_path / "plan.json"
     plan_path.write_text(json.dumps({
         "symbol": "NVDA", "direction": 1, "entry": 204.0, "qty": 100, "sl": 202.0,
-        "tp1_r": 0.45, "tp2_r": 0.9, "trail_r": 0.4, "exit_policy": "DEFAULT"}))
+        "tp1_r": 0.45, "tp2_r": 0.9, "trail_r": 0.4, "exit_policy": "DEFAULT",
+        "_session": "2026-08-12"}))
     plan = runner.load_plan(plan_path)
 
     assert runner.run(plan, interval=0, once=False, replay=[204.2, 200.0],
@@ -502,7 +597,8 @@ def test_ledger_off_leaves_the_runner_byte_identical(tmp_path, monkeypatch, isol
     plan_path = tmp_path / "plan.json"
     plan_path.write_text(json.dumps({
         "symbol": "NVDA", "direction": 1, "entry": 204.0, "qty": 100, "sl": 202.0,
-        "tp1_r": 0.45, "tp2_r": 0.9, "trail_r": 0.4, "exit_policy": "DEFAULT"}))
+        "tp1_r": 0.45, "tp2_r": 0.9, "trail_r": 0.4, "exit_policy": "DEFAULT",
+        "_session": "2026-08-12"}))
     plan = runner.load_plan(plan_path)
     assert runner.run(plan, interval=0, once=False, replay=[204.2, 205.8, 200.0],
                       max_stale=180, require_bias=False, broker=None,

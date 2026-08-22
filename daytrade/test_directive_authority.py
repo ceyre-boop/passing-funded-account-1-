@@ -171,7 +171,10 @@ def _run_replay(tmp_path, monkeypatch, directives_content):
     monkeypatch.setattr(runner, "decide_exit", spy)
     plan = {"symbol": "NVDA", "direction": 1, "entry": 200.0, "qty": 100,
             "sl": 199.0, "tp1": 201.0, "tp2": 202.14, "trail_dist": 0.5,
-            "trail_mult": None, "be_arm_frac": 1.0, "hold_past_tp2": True}
+            "trail_mult": None, "be_arm_frac": 1.0, "hold_past_tp2": True,
+            # required since runner.run keys a replay's trade_id/session off
+            # the plan, never off wall clock — see runner.py's session_date.
+            "_session": "2026-08-12"}
     rc = runner.run(plan, interval=0, once=False, replay=[200.2, 200.4],
                     max_stale=180, require_bias=False)
     assert rc == 0

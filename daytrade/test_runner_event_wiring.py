@@ -24,7 +24,10 @@ from trade_events import JsonlEventLog
 PLAN = {"symbol": "NVDA", "direction": 1, "entry": 200.0, "qty": 100.0,
         "sl": 199.0, "tp1": 201.0, "tp2": 202.14, "trail_dist": 0.5,
         "goal_fraction": 0.5, "trail_mult": 1.5, "be_arm_frac": 0.25,
-        "hold_past_tp2": True}
+        "hold_past_tp2": True,
+        # required since runner.run keys a replay's trade_id/session off the
+        # plan, never off wall clock — see runner.py's session_date.
+        "_session": "2026-08-12"}
 
 # Crosses be-arm (200.25), TP1, TP2 (202.14 -> partial at index 3), then trails.
 REPLAY = [200.5, 201.2, 202.0, 202.5, 203.0, 203.4]
@@ -341,7 +344,7 @@ def test_pending_submission_refuses_resume(tmp_path, monkeypatch):
     from trade_events import TradeEvent
     _patch(tmp_path, monkeypatch)
     now = dt.now(tz.utc).isoformat()
-    date = dt.now(runner.ET).date()
+    date = PLAN["_session"]   # runner keys a replay's session off the plan now
     log = JsonlEventLog(tmp_path / f"events_{date}_NVDA.jsonl")
     log.append(TradeEvent(event_id="t-0", trade_id="t", sequence=0,
                           event_type="POSITION_OPENED", occurred_at=now,

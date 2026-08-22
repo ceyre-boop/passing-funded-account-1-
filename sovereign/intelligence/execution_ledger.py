@@ -64,7 +64,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-LEDGER_ROOT = Path("data/decision_logs")
+#: Absolute, resolved from the repo root — never the process CWD. A relative
+#: Path("data/decision_logs") here silently scatters ledger rows depending on
+#: where the caller was launched from (proven live: runner.py invoked from
+#: inside daytrade/ wrote into daytrade/data/decision_logs/ instead of
+#: data/decision_logs/). Same pattern as daytrade/write_baseline_plan.py's
+#: ROOT = Path(__file__).resolve().parents[1] and daytrade/alpha_operator.py's.
+#: This file lives at sovereign/intelligence/execution_ledger.py, two levels
+#: below the repo root, so parents[2].
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+LEDGER_ROOT = _REPO_ROOT / "data" / "decision_logs"
 
 #: Closed enumeration. An unknown mode raises — a typo must never silently
 #: create a sixth lane whose rows nothing will ever find again.
