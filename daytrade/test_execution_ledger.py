@@ -20,10 +20,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sovereign.intelligence import execution_ledger as el  # noqa: E402
 from sovereign.intelligence.execution_ledger import (  # noqa: E402
-    DuplicateEntryConflict, LedgerCorruption, LedgerError, SimulatedFill,
-    close_executed_trade, find_executed_trade, log_executed_trade,
-    log_scan_candidate, mint_trade_id, realized_r, realized_r_multileg,
-    record_partial_exit,
+    DuplicateEntryConflict, DuplicateEventDetected, LedgerCorruption, LedgerError,
+    SimulatedFill, close_executed_trade, find_executed_trade, log_correction,
+    log_executed_trade, log_scan_candidate, mark_superseded, mint_trade_id,
+    realized_r, realized_r_multileg, record_partial_exit,
 )
 
 T0 = "2026-08-12T13:30:00+00:00"
@@ -43,12 +43,12 @@ def _fill(price=204.0, qty=100.0, when=T0, commission=0.0, **kw):
 
 
 def _open(trade_id="NVDA-2026-08-12", mode="sim", price=204.0, stop=202.0,
-          qty=100.0, commission=0.0, **kw):
+          qty=100.0, commission=0.0, direction=+1, entry_timestamp=T0, **kw):
     return log_executed_trade(
         trade_id=trade_id, mode=mode, system="DAYTRADE", pair="NVDA",
-        direction=+1, entry_fill=_fill(price=price, qty=qty, commission=commission),
+        direction=direction, entry_fill=_fill(price=price, qty=qty, commission=commission),
         initial_stop=stop, strategy_version="stockfish-v3",
-        entry_timestamp=T0, **kw)
+        entry_timestamp=entry_timestamp, **kw)
 
 
 def _lines(ledger_root, mode="sim"):
@@ -644,3 +644,221 @@ def test_ledger_cannot_reach_the_exit_engine():
     assert not any("stockfish" in m for m in imported), f"ledger imports {imported}"
     assert "decide_exit" not in called
     assert "apply_action" not in called and "apply_actions" not in called
+
+
+# ─── content-level duplicate detection — NVDA-2026-08-21/-22, hardened ───────
+#
+# The incident: two trade_ids (a correct one and a wall-clock artifact,
+# 52a24e3) recorded the SAME replayed event. DuplicateEntryConflict never
+# fired because it keys on trade_id, and these two ids differ. These tests
+# use the real numbers from that incident: SHORT, entry 216.06, exit 214.975,
+# stop 216.35 — 1R = 0.29, gross = (216.06-214.975)*100 = 108.5 -> R≈3.3534.
+
+_DUP_KW = dict(price=216.06, stop=216.35, qty=100.0, direction=-1)
+
+
+def test_content_duplicate_within_window_raises_in_sim(isolated_ledger):
+    """CARD TEST: the exact shape of NVDA-2026-08-21/-22, replayed. This must
+    raise in a non-real-money mode — sim/shadow/replay lose nothing by
+    refusing, and this is precisely the bug class the guard exists to catch.
+    Deliberately deleting the `_content_duplicates` check in
+    close_executed_trade makes this test fail: the second close would
+    succeed silently instead of raising, exactly like the real incident.
+    """
+    # Real incident shape: BOTH rows carry a same-day entry_timestamp (the
+    # fill's own wall clock, never touched by the bug) — only the trade_id
+    # differed, minted from session_date instead of the tape date (52a24e3).
+    _open(trade_id="NVDA-2026-08-21", entry_timestamp="2026-08-22T20:00:00+00:00", **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-2026-08-21", mode="sim",
+                         exit_fill=_fill(price=214.975, qty=100.0, when="2026-08-22T20:20:00+00:00"),
+                         exit_reason="TP hit", exit_timestamp="2026-08-22T20:20:00+00:00")
+
+    _open(trade_id="NVDA-2026-08-22", entry_timestamp="2026-08-22T20:07:58+00:00", **_DUP_KW)
+    with pytest.raises(DuplicateEventDetected, match="content-level duplicate"):
+        close_executed_trade(trade_id="NVDA-2026-08-22", mode="sim",
+                             exit_fill=_fill(price=214.975, qty=100.0, when="2026-08-22T20:25:38+00:00"),
+                             exit_reason="TP hit", exit_timestamp="2026-08-22T20:25:38+00:00")
+
+    # And it was never written: the sim row for -22 stays OPEN.
+    assert find_executed_trade("NVDA-2026-08-22", "sim")["outcome"] == "OPEN"
+
+
+def test_content_duplicate_outside_window_does_not_raise(isolated_ledger):
+    """A genuinely distinct trade that happens to share every price, days
+    later, is outside the drift window this bug class can produce and is not
+    flagged — the window exists to catch the bug, not to ban coincidence."""
+    _open(trade_id="NVDA-2026-08-10", entry_timestamp="2026-08-10T20:00:00+00:00", **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-2026-08-10", mode="sim",
+                         exit_fill=_fill(price=214.975, qty=100.0, when="2026-08-10T20:25:00+00:00"),
+                         exit_reason="TP hit", exit_timestamp="2026-08-10T20:25:00+00:00")
+
+    _open(trade_id="NVDA-2026-08-20", entry_timestamp="2026-08-20T20:00:00+00:00", **_DUP_KW)
+    closed = close_executed_trade(trade_id="NVDA-2026-08-20", mode="sim",
+                                  exit_fill=_fill(price=214.975, qty=100.0, when="2026-08-20T20:25:00+00:00"),
+                                  exit_reason="TP hit", exit_timestamp="2026-08-20T20:25:00+00:00")
+    assert closed["outcome"] == "WIN"
+    assert "possible_duplicate_of" not in closed
+
+
+def test_content_duplicate_in_real_money_mode_is_flagged_never_blocked(isolated_ledger):
+    """CARD TEST: in paper/live, the trade already happened. Refusing to
+    record it would be the non-negotiable #3 violation this ledger exists to
+    prevent, so the guard records it and flags it instead of raising."""
+    _open(trade_id="NVDA-2026-08-21", mode="paper",
+          entry_timestamp="2026-08-22T20:00:00+00:00", **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-2026-08-21", mode="paper",
+                         exit_fill=_fill(price=214.975, qty=100.0, when="2026-08-22T20:20:00+00:00"),
+                         exit_reason="TP hit", exit_timestamp="2026-08-22T20:20:00+00:00")
+
+    _open(trade_id="NVDA-2026-08-22", mode="paper",
+          entry_timestamp="2026-08-22T20:07:58+00:00", **_DUP_KW)
+    closed2 = close_executed_trade(trade_id="NVDA-2026-08-22", mode="paper",
+                                   exit_fill=_fill(price=214.975, qty=100.0, when="2026-08-22T20:25:38+00:00"),
+                                   exit_reason="TP hit", exit_timestamp="2026-08-22T20:25:38+00:00")
+    assert closed2["outcome"] == "WIN"                       # written, not blocked
+    assert closed2["possible_duplicate_of"] == ["NVDA-2026-08-21"]
+    assert "possible_duplicate_reason" in closed2
+
+
+# ─── mark_superseded / log_correction — the fix, not just the guard ─────────
+
+def test_mark_superseded_flags_metadata_only(isolated_ledger):
+    """Every substantive field is untouched — only metadata is added."""
+    _open(trade_id="NVDA-2026-08-22", entry_timestamp="2026-08-22T20:07:58+00:00", **_DUP_KW)
+    before = close_executed_trade(trade_id="NVDA-2026-08-22", mode="sim",
+                                  exit_fill=_fill(price=214.975, qty=100.0, when="2026-08-22T20:25:38+00:00"),
+                                  exit_reason="TP hit", exit_timestamp="2026-08-22T20:25:38+00:00")
+
+    after = mark_superseded(trade_id="NVDA-2026-08-22", mode="sim",
+                            superseded_by="NVDA-2026-08-21",
+                            reason="wall-clock trade_id artifact predating 52a24e3")
+
+    assert after["superseded"] is True
+    assert after["superseded_by"] == "NVDA-2026-08-21"
+    assert after["superseded_reason"] == "wall-clock trade_id artifact predating 52a24e3"
+    assert "superseded_at" in after
+    for k in ("r_realized", "outcome", "entry_fill", "exit_fill", "stop_loss",
+              "exit_timestamp", "exit_reason", "trade_id", "mode"):
+        assert after[k] == before[k], f"{k} changed — substantive field was touched"
+
+
+def test_mark_superseded_is_idempotent(isolated_ledger):
+    """A retried correction is a no-op, same discipline as record_partial_exit."""
+    _open(trade_id="NVDA-1", **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-1", mode="sim", exit_fill=_fill(price=214.975, when=T1),
+                         exit_reason="x", exit_timestamp=T1)
+    args = dict(trade_id="NVDA-1", mode="sim", superseded_by="NVDA-2", reason="dup")
+    a = mark_superseded(**args)
+    b = mark_superseded(**args)
+    assert a == b
+    assert len(_lines(isolated_ledger)) == 1
+
+
+def test_mark_superseded_conflicting_correction_raises(isolated_ledger):
+    """A supersession is decided once, not re-litigated — same shape as
+    conflicting reclose."""
+    _open(trade_id="NVDA-1", **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-1", mode="sim", exit_fill=_fill(price=214.975, when=T1),
+                         exit_reason="x", exit_timestamp=T1)
+    mark_superseded(trade_id="NVDA-1", mode="sim", superseded_by="NVDA-2", reason="dup")
+    with pytest.raises(LedgerError, match="already marked superseded"):
+        mark_superseded(trade_id="NVDA-1", mode="sim", superseded_by="NVDA-3", reason="dup")
+
+
+def test_mark_superseded_requires_a_closed_row(isolated_ledger):
+    _open(trade_id="NVDA-1", **_DUP_KW)
+    with pytest.raises(LedgerError, match="not closed"):
+        mark_superseded(trade_id="NVDA-1", mode="sim", superseded_by="NVDA-2", reason="dup")
+
+
+def test_mark_superseded_unknown_trade_id_raises(isolated_ledger):
+    with pytest.raises(LedgerError, match="does not exist"):
+        mark_superseded(trade_id="GHOST", mode="sim", superseded_by="NVDA-2", reason="dup")
+
+
+def test_log_correction_matches_repo_idiom(isolated_ledger):
+    """Shape matches the two DECISION_LOG/CORRECTION marker rows already in
+    data/decision_logs/decisions_2026_08.jsonl (spec_021_log_correction), and
+    it is never scored (r_realized/outcome stay None, so build_cockpit's
+    `r_realized is None: continue` and gap_log's `outcome in (None, "OPEN")`
+    both already skip it without any special-casing)."""
+    _open(trade_id="NVDA-2026-08-22", **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-2026-08-22", mode="sim",
+                         exit_fill=_fill(price=214.975, when=T1), exit_reason="x", exit_timestamp=T1)
+    n_before = len(_lines(isolated_ledger))
+
+    rec = log_correction(mode="sim", system="DAYTRADE",
+                         superseded_trade_id="NVDA-2026-08-22",
+                         superseding_trade_id="NVDA-2026-08-21",
+                         reason="wall-clock trade_id artifact predating 52a24e3",
+                         as_of=T1)
+
+    assert rec["pair"] == "DECISION_LOG"
+    assert rec["direction"] == "CORRECTION"
+    assert rec["risk_pct"] == 0
+    assert rec["record_kind"] == "correction"
+    assert rec["superseded_trade_id"] == "NVDA-2026-08-22"
+    assert rec["superseding_trade_id"] == "NVDA-2026-08-21"
+    assert rec["r_realized"] is None and rec["outcome"] is None
+
+    lines = _lines(isolated_ledger)
+    assert len(lines) == n_before + 1                          # appended, not rewritten
+    original = json.loads(lines[0])
+    assert original["trade_id"] == "NVDA-2026-08-22"           # untouched by the append
+
+
+# ─── superseded rows: readable, but excluded from every aggregating reader ──
+
+def _inject_duplicate_row(ledger_root, mode, source_trade_id, new_trade_id, when):
+    """Simulate a pre-existing duplicate the way the real one arose: written
+    directly, bypassing the guard added in this change (the guard did not
+    exist when 52a24e3's row was written)."""
+    src = find_executed_trade(source_trade_id, mode)
+    dup = dict(src)
+    dup["trade_id"] = new_trade_id
+    el._append_durable(el.ledger_path(mode, when), dup)
+
+
+def test_superseded_excluded_from_gap_aggregation_but_readable(isolated_ledger):
+    import gap_log
+
+    _open(trade_id="NVDA-2026-08-21", mode="sim", entry_timestamp=T0, **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-2026-08-21", mode="sim",
+                         exit_fill=_fill(price=214.975, when=T1), exit_reason="x", exit_timestamp=T1)
+    _inject_duplicate_row(isolated_ledger, "sim", "NVDA-2026-08-21", "NVDA-2026-08-22", T1)
+    mark_superseded(trade_id="NVDA-2026-08-22", mode="sim",
+                    superseded_by="NVDA-2026-08-21", reason="wall-clock artifact")
+
+    _open(trade_id="NVDA-2026-08-21", mode="paper", entry_timestamp=T0, **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-2026-08-21", mode="paper",
+                         exit_fill=_fill(price=214.975, when=T1), exit_reason="x", exit_timestamp=T1)
+
+    gaps, _ = gap_log.compute_gaps(gap_log.load_ledger_rows("sim"), gap_log.load_ledger_rows("paper"))
+    matched_ids = {g.trade_id for g in gaps}
+    assert "NVDA-2026-08-21" in matched_ids
+    assert "NVDA-2026-08-22" not in matched_ids                # excluded from scoring
+
+    # still readable, still visible as history:
+    row = find_executed_trade("NVDA-2026-08-22", "sim")
+    assert row is not None and row["superseded"] is True
+    assert row["r_realized"] is not None                       # the number is not erased
+
+
+def test_superseded_visible_in_cockpit_but_not_counted(isolated_ledger, monkeypatch):
+    import build_cockpit
+    monkeypatch.setattr(build_cockpit, "LEDGER_ROOT", isolated_ledger)
+
+    _open(trade_id="NVDA-2026-08-21", mode="sim", entry_timestamp=T0, **_DUP_KW)
+    close_executed_trade(trade_id="NVDA-2026-08-21", mode="sim",
+                         exit_fill=_fill(price=214.975, when=T1), exit_reason="x", exit_timestamp=T1)
+    _inject_duplicate_row(isolated_ledger, "sim", "NVDA-2026-08-21", "NVDA-2026-08-22", T1)
+    mark_superseded(trade_id="NVDA-2026-08-22", mode="sim",
+                    superseded_by="NVDA-2026-08-21", reason="wall-clock artifact")
+
+    rows = build_cockpit.closed_trades()
+    by_id = {r["trade_id"]: r for r in rows}
+    assert set(by_id) == {"NVDA-2026-08-21", "NVDA-2026-08-22"}         # both visible
+    assert by_id["NVDA-2026-08-22"]["superseded"] is True
+    assert by_id["NVDA-2026-08-21"]["superseded"] is False
+    counted = [r for r in rows if not r["superseded"]]                  # the page's "N closed"
+    assert len(counted) == 1

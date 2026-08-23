@@ -58,6 +58,13 @@ def _closed_r_rows(rows: list[dict]) -> dict[str, dict]:
     for r in rows:
         if r.get("outcome") in (None, "OPEN"):
             continue
+        if r.get("superseded"):
+            # A superseded row describes the SAME event as another row this
+            # scan will already see (execution_ledger.mark_superseded). It
+            # stays readable in the ledger — it is just never scored: counting
+            # it here would double-count one real trade as two, inflating
+            # whatever "positive frequency" the gap drift reads off of.
+            continue
         if r.get("r_realized") is None:
             raise GapError(f"closed trade {r.get('trade_id')!r} has no r_realized — "
                            "a closed row without R cannot be gap-scored")

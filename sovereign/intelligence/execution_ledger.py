@@ -60,7 +60,7 @@ import json
 import math
 import os
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -90,6 +90,16 @@ SCHEMA_VERSION = "1"
 #: REFUSED, not truncated — truncation silently changes what the record claims.
 MAX_PAYLOAD_STR = 512
 
+#: Content-level duplicate detection window (close_executed_trade). The bug
+#: class this exists to catch is a trade_id minted from wall-clock instead of
+#: the session/tape date (52a24e3) — that can drift the id by AT MOST one
+#: calendar day. 24h is generous enough to catch that exact drift (including
+#: a replay run near a day boundary) without being wide enough to start
+#: matching two truly independent trades that happen to share a symbol and
+#: direction days apart — the entry/exit/r fingerprint below already has to
+#: match exactly before the window is even consulted.
+DUPLICATE_EVENT_WINDOW_HOURS = 24
+
 
 class LedgerError(RuntimeError):
     """Malformed input or an impossible lifecycle move. Never repaired."""
@@ -101,6 +111,21 @@ class LedgerCorruption(LedgerError):
 
 class DuplicateEntryConflict(LedgerError):
     """Same trade_id re-delivered with different entry facts."""
+
+
+class DuplicateEventDetected(LedgerError):
+    """A closed record already exists in this mode whose pair, direction,
+    entry fill, exit fill, and r_realized all match this one, with an entry
+    timestamp inside the drift window a wall-clock trade_id can produce (see
+    DUPLICATE_EVENT_WINDOW). `DuplicateEntryConflict` cannot catch this shape
+    of duplicate because it keys on trade_id, and two different trade_ids can
+    describe one real event — that is exactly how NVDA-2026-08-21 and
+    NVDA-2026-08-22 both ended up in the ledger (commit 52a24e3). A duplicate
+    is an event, not an id.
+
+    Raised only in non-real-money modes (see close_executed_trade) — in a
+    real-money mode the trade already happened, so refusing to record it
+    would be silent data loss, worse than the duplicate itself."""
 
 
 # ─── helpers ─────────────────────────────────────────────────────────────────
@@ -589,6 +614,53 @@ def record_partial_exit(*, trade_id: str, mode: str, fill: SimulatedFill,
     return obj
 
 
+def _content_duplicates(*, mode: str, tid: str, pair: Any, direction_label: str,
+                        entry_price: float, exit_price: float, r: float,
+                        entry_ts: str) -> list[dict]:
+    """Every OTHER closed row in `mode` describing the same event as the one
+    about to be written: same pair, same direction, same entry fill price,
+    same exit fill price, same r_realized (within `_same`'s float tolerance —
+    the same tolerance this module already uses for redelivery and reclose
+    comparisons), entry timestamp within DUPLICATE_EVENT_WINDOW_HOURS.
+
+    A row already marked `superseded` is excluded from the scan — it is
+    already known and accounted for; re-flagging it would just be noise on
+    every future close.
+    """
+    d = ledger_dir(mode)
+    if not d.exists():
+        return []
+    this_ts = _aware(entry_ts, "entry_timestamp")
+    window = timedelta(hours=DUPLICATE_EVENT_WINDOW_HOURS)
+    hits: list[dict] = []
+    for path in sorted(d.glob("decisions_*.jsonl")):
+        for obj in _read_records(path):
+            if str(obj.get("trade_id", "")).strip() == tid:
+                continue
+            if obj.get("outcome") in (None, "OPEN"):
+                continue
+            if obj.get("superseded"):
+                continue
+            if obj.get("pair") != pair or obj.get("direction") != direction_label:
+                continue
+            other_entry = (obj.get("entry_fill") or {}).get("price")
+            other_exit = (obj.get("exit_fill") or {}).get("price")
+            other_r = obj.get("r_realized")
+            if other_r is None:
+                continue
+            if not (_same(other_entry, entry_price) and _same(other_exit, exit_price)
+                    and _same(other_r, r)):
+                continue
+            other_ts_raw = obj.get("entry_timestamp")
+            try:
+                other_ts = _aware(other_ts_raw, "entry_timestamp")
+            except LedgerError:
+                continue                      # unparsable timestamp can't confirm the window
+            if abs(other_ts - this_ts) <= window:
+                hits.append(obj)
+    return hits
+
+
 def close_executed_trade(
     *,
     trade_id: str,
@@ -652,6 +724,38 @@ def close_executed_trade(
                 f"R={obj.get('r_realized')}; refusing to re-close it at R={r:.4f} "
                 f"({exit_reason!r}). An outcome is observed once, not re-litigated.")
 
+        # Content-level duplicate guard (hardens the gap DuplicateEntryConflict
+        # cannot close — see DuplicateEventDetected). Runs here, inside the
+        # ONE function that ever sets r_realized/outcome, so no caller can
+        # reach a closed row without passing through it.
+        dupes = _content_duplicates(
+            mode=mode, tid=tid, pair=obj.get("pair"), direction_label=obj.get("direction"),
+            entry_price=entry_fill.get("price"), exit_price=exit_fill.price, r=r,
+            entry_ts=obj.get("entry_timestamp"))
+        if dupes:
+            other_ids = sorted(str(o.get("trade_id")) for o in dupes)
+            reason = (f"content-level duplicate of {other_ids} — same pair/direction/"
+                     f"entry/exit/r_realized within {DUPLICATE_EVENT_WINDOW_HOURS}h "
+                     "(a duplicate is an event, not an id — 52a24e3)")
+            if mode in REAL_MONEY_MODES:
+                # The trade already happened in the real market. Refusing to
+                # record it would be exactly the non-negotiable #3 violation
+                # this ledger exists to prevent — an unlogged trade is silent
+                # data loss, strictly worse than a flagged one. Write it,
+                # flagged, and let a human resolve it via mark_superseded().
+                obj["possible_duplicate_of"] = other_ids
+                obj["possible_duplicate_reason"] = reason
+            else:
+                # sim/shadow/replay: nothing real happened and nothing is lost
+                # by refusing. This IS the exact shape of the bug that
+                # produced NVDA-2026-08-21/-22 — fail loud before it is
+                # written, per CLAUDE.md rule 5 and specs/README.md rule 2.
+                raise DuplicateEventDetected(
+                    f"trade_id {tid!r} in mode {mode!r} is a {reason}. Refusing to "
+                    "write it. If this is genuinely a second, distinct trade that "
+                    "happens to share every fact with an existing row, investigate "
+                    "before re-closing it.")
+
         obj["outcome"] = "WIN" if r > 0 else ("LOSS" if r < 0 else "SCRATCH")
         obj["r_realized"] = r
         obj["exit_timestamp"] = ts
@@ -673,6 +777,120 @@ def close_executed_trade(
         f"no open record with trade_id {tid!r} in mode {mode!r}. Refusing to create one "
         "on close: a close with no matching entry means the entry boundary never fired, "
         "and inventing the entry here would fabricate the very correlation this ledger exists to prove.")
+
+
+# ─── corrections — history is amended by addition, never by rewrite ──────────
+#
+# Both functions below exist because of one incident: NVDA-2026-08-21 and
+# NVDA-2026-08-22 are the same replayed event, recorded twice under different
+# trade_ids (a wall-clock trade_id, fixed in 52a24e3). The mis-dated row is
+# real history — it is evidence the bug happened — so it is never deleted or
+# rewritten. `mark_superseded` adds metadata to it (never touches a
+# substantive field: fills, r_realized, outcome, timestamps are untouched).
+# `log_correction` appends a human-readable marker row, the same idiom already
+# used in data/decision_logs/decisions_2026_08.jsonl for spec_021_log_correction,
+# adapted to this module's own schema rather than borrowed wholesale — that
+# file's DecisionRecord schema and this ledger's schema are deliberately two
+# different shapes (see the module docstring's WHY A SEPARATE MODULE section).
+
+def mark_superseded(*, trade_id: str, mode: str, superseded_by: str, reason: str) -> dict:
+    """Flag an existing CLOSED row as describing the same event as another,
+    correct trade_id. Adds `superseded` / `superseded_by` / `superseded_reason`
+    / `superseded_at` fields only — every substantive field is left
+    byte-identical, so any diff against the pre-correction row shows nothing
+    but the flag.
+
+    Idempotent: re-marking with the SAME superseded_by/reason is a no-op, the
+    same forgivable-retry shape as record_partial_exit. Re-marking with a
+    DIFFERENT superseded_by/reason raises — a supersession is decided once,
+    like an outcome, not re-litigated.
+    """
+    tid = _check_trade_id(trade_id)
+    sup_by = _check_trade_id(superseded_by)
+    _check_mode(mode)
+    if not reason or not reason.strip():
+        raise LedgerError("reason is required — a superseded row with no stated "
+                          "cause is indistinguishable from silent data loss")
+    _check_payload(reason, "reason")
+
+    found = _locate(tid, mode)
+    if found is None:
+        raise LedgerError(f"no record with trade_id {tid!r} in mode {mode!r} — "
+                          "cannot supersede a row that does not exist")
+    path, records, i = found
+    obj = records[i]
+    if obj.get("outcome") in (None, "OPEN"):
+        raise LedgerError(f"trade_id {tid!r} is not closed — an open row has no "
+                          "outcome yet for another row to supersede")
+
+    if obj.get("superseded"):
+        if obj.get("superseded_by") == sup_by and obj.get("superseded_reason") == reason:
+            return obj                                     # the forgivable retry
+        raise LedgerError(
+            f"trade_id {tid!r} is already marked superseded by "
+            f"{obj.get('superseded_by')!r} ({obj.get('superseded_reason')!r}); "
+            f"refusing to overwrite with superseded_by={sup_by!r} — a "
+            "supersession is decided once, like an outcome.")
+
+    obj["superseded"] = True
+    obj["superseded_by"] = sup_by
+    obj["superseded_reason"] = reason
+    obj["superseded_at"] = _now_iso()
+    records[i] = obj
+    _rewrite_durable(path, records)
+    return obj
+
+
+def log_correction(*, mode: str, system: str, superseded_trade_id: str,
+                   superseding_trade_id: str, reason: str,
+                   as_of: Optional[str] = None) -> dict:
+    """Append a zero-risk correction marker row to the same ledger file the
+    rows it discusses live in — the repo's own idiom for "I know about this
+    and here is why" (CLAUDE.md rule 3), matching the shape of the two
+    DECISION_LOG/CORRECTION rows already in
+    data/decision_logs/decisions_2026_08.jsonl (`pair: "DECISION_LOG"`,
+    `direction: "CORRECTION"`, `risk_pct: 0`, `why_this_trade`), adapted to
+    this module's own field vocabulary (trade_id/mode/entry_fill/outcome)
+    rather than the FOREX DecisionRecord schema, since the two schemas are
+    deliberately different (module docstring). `record_kind: "correction"`
+    mirrors `log_scan_candidate`'s `record_kind: "candidate"` — a value every
+    reader that filters non-executed rows can already recognize.
+
+    This never mutates the rows it discusses; pair it with `mark_superseded`
+    for the machine-readable half.
+    """
+    _check_mode(mode)
+    sup = _check_trade_id(superseded_trade_id)
+    by = _check_trade_id(superseding_trade_id)
+    if not reason or not reason.strip():
+        raise LedgerError("reason is required — a correction with no stated "
+                          "cause is indistinguishable from an unexplained edit")
+    _check_payload(reason, "reason")
+
+    ts = as_of or _now_iso()
+    _aware(ts, "as_of")
+
+    record = {
+        "schema_version": SCHEMA_VERSION,
+        "record_kind": "correction",           # never "executed" — mirrors "candidate"
+        "trade_id": None,
+        "mode": mode,
+        "system": system,
+        "pair": "DECISION_LOG",                # idiom: spec_021_log_correction
+        "direction": "CORRECTION",
+        "risk_pct": 0,
+        "why_this_trade": reason,
+        "superseded_trade_id": sup,
+        "superseding_trade_id": by,
+        "entry_fill": None,
+        "exit_fill": None,
+        "outcome": None,
+        "r_realized": None,
+        "entry_timestamp": ts,
+        "recorded_at": _now_iso(),
+    }
+    _append_durable(ledger_path(mode, ts), record)
+    return record
 
 
 # ─── scan candidates — explicitly NOT executed trades ────────────────────────
