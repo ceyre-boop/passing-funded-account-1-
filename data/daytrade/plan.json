@@ -1,0 +1,14 @@
+{
+ "_writer": "mechanical-or-break-v1",
+ "_session": "2026-08-24",
+ "_note": "R-geometry plan for prereg scoring; NOT an order",
+ "symbol": "NVDA",
+ "direction": "short",
+ "entry": 208.8699951171875,
+ "sl": 209.3699951171875,
+ "qty": 1.0,
+ "tp1": 208.3699951171875,
+ "tp2": 207.7999951171875,
+ "trail_dist": 0.25,
+ "exit_policy": "DEFAULT"
+}

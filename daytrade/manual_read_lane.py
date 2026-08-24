@@ -100,6 +100,9 @@ class ManualRead:
     authored_by: str             # model name + "via Claude Code (manual, not API)"
     authored_at: str             # ISO tz-aware wall-clock time of authoring
     source: str = "manual"
+    caveats: str = ""            # anything that qualifies this read — anchoring,
+                                 # hindsight, partial windows. Empty means the
+                                 # author asserted none, not that none were checked.
 
     def __post_init__(self):
         if self.source != "manual":
@@ -191,6 +194,18 @@ def build_manual_read(payload: dict) -> ManualRead:
     if missing:
         raise ManualReadError(f"missing required field(s): {missing}")
 
+    # An unknown key is a caller believing it recorded something it did not.
+    # FORBIDDEN_FORECAST_KEYS above already refuses the dangerous shapes loudly;
+    # everything else used to be dropped SILENTLY, which is the same defect one
+    # step quieter — a `caveats` disclosure was supplied on 2026-08-24 and
+    # vanished, leaving a contaminated read looking clean. Refuse instead.
+    accepted = set(required) | {"caveats"}
+    unknown = sorted(set(payload) - accepted)
+    if unknown:
+        raise ManualReadError(
+            f"payload names unknown field(s) {unknown} — refusing rather than "
+            f"dropping them silently. Accepted fields: {sorted(accepted)}")
+
     symbol = payload["symbol"]
     article_ids = payload["article_ids"]
     if not isinstance(article_ids, list) or not article_ids:
@@ -219,6 +234,7 @@ def build_manual_read(payload: dict) -> ManualRead:
         authored_by=authored_by,
         authored_at=now.isoformat(),
         source="manual",
+        caveats=str(payload.get("caveats", "")),
     )
 
 
