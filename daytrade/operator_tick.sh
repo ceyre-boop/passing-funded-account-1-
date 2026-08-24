@@ -77,6 +77,11 @@ else
   echo 0 > "$PLAN_FAIL_FILE"
 fi
 
+# Permanent headline archive — no model, no cost, keeps working through the
+# Anthropic API blackout. Reuses polygon_news.py's fetch; dedups on Polygon's
+# own article id. A Polygon outage here is non-fatal, same pattern as above.
+python3 news_archive.py --symbol NVDA || echo "!! news archive failed (non-fatal)"
+
 # Spec 030: OBSERVE the decision channel every tick — cheap, no model, no API
 # cost, so it runs whether or not a judgment happens. The soak proved that a
 # system not observing 09:30-11:00 ET cannot learn from it.

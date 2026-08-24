@@ -57,11 +57,17 @@ def fetch_headlines(symbol: str, limit: int = 12) -> list[dict]:
         pol = next((i.get("sentiment") for i in (a.get("insights") or [])
                     if i.get("ticker") == symbol), None)
         out.append({
+            "id": a.get("id", ""),
             "title": a.get("title", ""),
             "publisher": (a.get("publisher") or {}).get("name", ""),
             "published_utc": a.get("published_utc", ""),
             "description": (a.get("description") or "")[:400],
             "polygon_sentiment": pol,
+            # Full per-ticker insight list (ticker, sentiment, reasoning) —
+            # NOT just the queried symbol's. Kept here only so news_archive.py
+            # can preserve the whole independent baseline; still never read
+            # by anything that builds a model prompt.
+            "insights": a.get("insights") or [],
             "url": a.get("article_url", ""),
         })
     return out
