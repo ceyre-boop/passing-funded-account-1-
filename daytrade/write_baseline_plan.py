@@ -25,8 +25,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from bars import load_sessions, BarDataError                       # noqa: E402
-from ceiling import find_entry, TP1_R                              # noqa: E402
+from bars import load_partial_session, BarDataError                # noqa: E402
+from ceiling import find_entry, TP1_R, TRIGGER_END                 # noqa: E402
 
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,11 +52,10 @@ def main(symbol: str = "NVDA") -> int:
         if cur.get("_session") == today:
             return 0                        # today's plan already written
     try:
-        sessions = load_sessions(symbol, "5m", allow_fetch=False)
+        sess = load_partial_session(symbol, now.date(), TRIGGER_END, "5m")
     except BarDataError as e:
         print(f"  !! {e}")
         return 1
-    sess = next((s for s in sessions if str(s.day) == today), None)
     if sess is None:
         print(f"  no complete session for {today} in cache yet")
         return 0

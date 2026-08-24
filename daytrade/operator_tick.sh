@@ -11,23 +11,60 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 ET_DOW=$(TZ=America/New_York date +%u)      # 1=Mon .. 7=Sun
 ET_HM=$(TZ=America/New_York date +%H%M)
 if [[ $ET_DOW -gt 5 || $ET_HM -lt 0800 || $ET_HM -gt 1630 ]]; then
-  exit 0                                    # outside the window: silent, free
+  # TICK_FORCE_RUN exists solely for manual out-of-window testing (e.g. a
+  # workflow_dispatch rehearsal run on a Sunday). It is never set by launchd
+  # or by a scheduled cron trigger, so the real 08:00-16:30 ET Mon-Fri guard
+  # is unchanged for every ordinary tick.
+  if [[ "${TICK_FORCE_RUN:-0}" == "1" ]]; then
+    echo "!! TICK_FORCE_RUN=1 — bypassing window guard (ET dow=$ET_DOW hm=$ET_HM)"
+  else
+    exit 0                                    # outside the window: silent, free
+  fi
 fi
 
 set -a; source "$REPO/.env"; set +a
 cd "$REPO/daytrade"
 
 echo "--- tick $(date -u +%FT%TZ) (ET $ET_HM)"
+PLAN_STATE_DIR="$REPO/data/daytrade/operator"
+PLAN_FAIL_FILE="$PLAN_STATE_DIR/plan_writer_fails"
+REFRESH_FAIL_FILE="$PLAN_STATE_DIR/bars_refresh_fails"
+mkdir -p "$PLAN_STATE_DIR"
+
+# Refresh the bar cache BEFORE the plan writer reads it. alpha_operator.py's
+# own refresh (line ~58 below, via bars_mod.refresh_cache inside `run`) used
+# to be the only refresh in this tick, which left the plan writer always one
+# tick behind — it read whatever the PREVIOUS tick's refresh had cached.
+# Calling bars.refresh_cache directly here (rather than routing through
+# `bars.py --refresh`'s CLI, which also runs load_sessions() afterward and
+# sys.exit(1)s if zero complete sessions exist — an unrelated failure mode
+# this step has no business coupling to) merges any new bars in first, so
+# write_baseline_plan.py's load_partial_session() call sees today's bars as
+# of THIS tick. Network flakiness is expected and must not abort the tick —
+# same non-fatal-but-visible pattern as PLAN_RC below.
+python3 -c "
+import sys; sys.path.insert(0, '.')
+import bars
+r = bars.refresh_cache('NVDA', '5m')
+print(f\"  bars refreshed: +{r['added']} bars, {r['total_bars']} total\")
+" && REFRESH_RC=0 || REFRESH_RC=$?
+if [[ $REFRESH_RC -ne 0 ]]; then
+  echo "!! bar refresh failed (non-fatal, exit $REFRESH_RC)"
+  REFRESH_FAILS=$(( $(cat "$REFRESH_FAIL_FILE" 2>/dev/null || echo 0) + 1 ))
+  echo "$REFRESH_FAILS" > "$REFRESH_FAIL_FILE"
+  if [[ $REFRESH_FAILS -ge 3 ]]; then
+    echo "!! PERSISTENT: bar refresh has failed $REFRESH_FAILS consecutive ticks"
+  fi
+else
+  echo 0 > "$REFRESH_FAIL_FILE"
+fi
+
 # Mechanical R-geometry plan (spec 024 prereg scoring) — no-op before 10:00,
 # idempotent per day, never touches a hand-written plan.
 # Non-fatal for THIS tick (a plan failure must not stall the resolver below),
 # but its return code is captured and folded into the tick's own exit status
 # so it is never silently invisible across ticks (review fix: 98 consecutive
 # failures were previously swallowed here without a trace).
-PLAN_STATE_DIR="$REPO/data/daytrade/operator"
-PLAN_FAIL_FILE="$PLAN_STATE_DIR/plan_writer_fails"
-mkdir -p "$PLAN_STATE_DIR"
-
 python3 write_baseline_plan.py NVDA && PLAN_RC=0 || PLAN_RC=$?
 if [[ $PLAN_RC -ne 0 ]]; then
   echo "!! plan writer failed (non-fatal, exit $PLAN_RC)"
@@ -70,4 +107,4 @@ fi
 # See ~/Library/LaunchAgents/com.alta.dashboard-publish.plist ->
 # daytrade/dashboard_publish.sh (16:40 ET weekdays).
 
-exit $(( RUN_RC || RES_RC || PLAN_RC ))
+exit $(( RUN_RC || RES_RC || PLAN_RC || REFRESH_RC ))

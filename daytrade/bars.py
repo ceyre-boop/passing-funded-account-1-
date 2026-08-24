@@ -159,6 +159,77 @@ def load_sessions(symbol: str, tf: str = "5m", *, allow_fetch: bool = True) -> l
     return sessions
 
 
+def load_partial_session(symbol: str, day: date, end_hhmm: str,
+                          tf: str = "5m") -> Session | None:
+    """One IN-PROGRESS session for `day`, RTH_OPEN..end_hhmm inclusive, or None.
+
+    NOT a weakening of load_sessions. load_sessions' MIN_SESSION_BARS_5M /
+    70-bar completeness rule protects the BACKTEST POPULATION: a half day or a
+    still-forming today must never be counted as a sealed session, because
+    that population is what tune/sealed splits and every measured edge are
+    built on. That rule is untouched here and must stay untouched.
+
+    This accessor exists for a different consumer with a structurally
+    different need: a same-day LIVE writer (write_baseline_plan.py) whose
+    entry rule (ceiling.find_entry) only ever reads bars through the trigger
+    window (09:30 open through TRIGGER_END, currently 11:00 — 19 bars, not
+    the 78-bar full session or even the 70-bar completeness floor). Waiting
+    for load_sessions' completeness gate to clear (~15:20 ET, when the 70th
+    bar exists) means a plan computable at ~11:05 doesn't get written until
+    the session is nearly over — every forecast in between is permanently
+    unscoreable. This function serves exactly that narrow, same-day need and
+    must never be used to assemble a backtest population — callers that build
+    tune/sealed splits or measure an edge belong on load_sessions, always.
+
+    Fails loud the same way load_sessions does: a gap inside whatever bars
+    ARE present still raises via _internal_gaps — a hole is corruption
+    whether the session is finished or still forming, and it is never
+    interpolated. This check runs BEFORE the coverage check below, and
+    deliberately does not depend on the window having reached end_hhmm yet —
+    a hole earlier in a still-forming morning is exactly as much corruption
+    as a hole in a finished day, and must not be masked by "well, we're not
+    done yet" (that would be silent data loss with a plausible excuse).
+
+    Coverage is checked separately, after the gap check: if the last bar on
+    file for the day is before end_hhmm — the window simply has not been
+    reached yet, nothing missing, just not-there-yet — this returns None
+    rather than a truncated partial-of-a-partial. Callers should read None as
+    "not yet", not as "nothing there" and not as "corrupt".
+    """
+    import pandas as pd
+
+    path = _cache_path(symbol, tf)
+    if not path.exists():
+        raise BarDataError(f"no cache at {path}")
+
+    df = pd.read_parquet(path)
+    df.index = pd.to_datetime(df.index, utc=True).tz_convert(ET)
+    t = df.index.strftime("%H:%M")
+    rth = df[(t >= RTH_OPEN) & (t <= RTH_CLOSE)]
+
+    chunk = rth[rth.index.date == day]
+    if chunk.empty:
+        return None
+
+    t2 = chunk.index.strftime("%H:%M")
+    window = chunk[t2 <= end_hhmm]
+    if window.empty:
+        return None
+
+    gaps = _internal_gaps(window, tf)
+    if gaps:
+        raise BarDataError(
+            f"{symbol} {day}: {len(gaps)} missing bar(s) inside the partial "
+            f"session window (first at {gaps[0]}). Bars are never "
+            "interpolated — fix the cache or exclude the day explicitly.")
+
+    expected_end = pd.Timestamp.combine(day, pd.Timestamp(end_hhmm).time()).tz_localize(ET)
+    if window.index[-1] < expected_end:
+        return None                    # window not fully present yet — "not yet", not "empty"
+
+    return Session(symbol, day, window)
+
+
 def _internal_gaps(chunk, tf: str) -> list:
     """Timestamps that should exist between first and last bar but don't."""
     import pandas as pd

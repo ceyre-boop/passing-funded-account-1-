@@ -1,0 +1,246 @@
+name: tick rehearsal (READ-ONLY, no commits)
+
+# Rehearsal, not a migration. This workflow exists to answer one question
+# with zero risk to Colin's data: can `daytrade/operator_tick.sh` actually
+# run on a clean Ubuntu container — dependencies build, interpreter is
+# right, yfinance/Polygon behave from a datacentre IP, a fresh checkout has
+# what the tick needs?
+#
+# It commits, pushes, and PR's NOTHING. His Mac remains the sole writer to
+# main. See science.yml:87-90 — CI and the laptop would fork the
+# hash-chained decision_ledger.jsonl / operator/state.json into two
+# valid-looking histories rather than erroring if both wrote. This workflow
+# never adds a second writer: `permissions: contents: read` below makes a
+# push impossible even if a future edit tried, and there is no git-add /
+# git-commit / git-push step anywhere in this file.
+#
+# Distinct name, distinct schedule, distinct concurrency group from
+# science.yml — the two must never interact or share state.
+
+on:
+  schedule:
+    # ~8 checkpoints across a US trading session. GitHub's scheduled cron is
+    # best-effort and commonly delayed 5-20 minutes, so a tight 5-minute
+    # cadence (operator_tick.sh's real launchd cadence) would be neither
+    # reliable nor useful here — this is a rehearsal of "does it run", not a
+    # reproduction of production cadence.
+    #
+    # Cron is UTC. Times below are ET -> UTC under EDT (UTC-4), in force
+    # through 2026-11-01. *** When EST begins (UTC-5) every one of these
+    # times shifts one hour LATER in UTC (e.g. 13:45 UTC -> 14:45 UTC) —
+    # update this block then, or the runs silently drift an hour off the
+    # intended ET times. ***
+    - cron: "45 13 * * 1-5"   # 09:45 ET
+    - cron: "20 14 * * 1-5"   # 10:20 ET
+    - cron: "10 15 * * 1-5"   # 11:10 ET
+    - cron: "10 16 * * 1-5"   # 12:10 ET
+    - cron: "10 17 * * 1-5"   # 13:10 ET
+    - cron: "10 18 * * 1-5"   # 14:10 ET
+    - cron: "10 19 * * 1-5"   # 15:10 ET
+    - cron: "5 20 * * 1-5"    # 16:05 ET
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: >-
+          Bypass operator_tick.sh's 08:00-16:30 ET Mon-Fri window guard for
+          this manual run only (sets TICK_FORCE_RUN=1). Leave false for a
+          realistic rehearsal; scheduled runs never set this regardless of
+          this default.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read   # read-only on purpose — this job cannot push even if a
+                    # future edit tried to add one. No `contents: write`
+                    # anywhere in this file.
+
+concurrency:
+  group: tick-rehearsal            # own group; never shares state with
+  cancel-in-progress: false        # science-loop's concurrency group
+
+jobs:
+  tick-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15   # a tick should be far leaner than science.yml's 7-11min
+    steps:
+      - uses: actions/checkout@v4
+        # default shallow, single-ref checkout — this job never needs history
+
+      # --- Python version -----------------------------------------------
+      # Pinned to 3.12, matching science.yml, on evidence not preference:
+      # PyPI manylinux wheel tags checked 2026-08-23 for every native-wheel
+      # package requirements.txt pulls in (numba, pyarrow, scipy,
+      # scikit-learn all publish cp312 linux_x86_64 wheels — no source
+      # build, no multi-minute numba compile on the runner). 3.9 is out
+      # (verified breaks on PEP 604 annotations elsewhere in this repo);
+      # 3.14 is unproven for these packages under CI even though it works
+      # on the owner's homebrew Mac locally. 3.12 is the only version that
+      # is BOTH evidenced or CI-proven, since science.yml already runs it
+      # successfully.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: install
+        run: |
+          pip install --quiet -r requirements.txt
+
+      # --- Secrets: report reachability, never the value -----------------
+      # Neither ANTHROPIC_API_KEY nor POLYGON_API_KEY is configured as a
+      # repo secret yet (only FRED_API_KEY is, and this tick doesn't use
+      # it). Both must degrade honestly rather than fail cryptically:
+      #   - POLYGON_API_KEY absent: alpha_operator.py's check_triggers()
+      #     already handles this in code (alpha_operator.py:454-460) -
+      #     prints "POLYGON_API_KEY not set - news trigger DISABLED" and
+      #     continues. No workflow-side handling needed beyond reporting.
+      #   - ANTHROPIC_API_KEY absent: `anthropic.Anthropic()` does NOT
+      #     raise at construction (verified locally) - it only fails, with
+      #     a 401 authentication error, on the first actual model call
+      #     inside news_claude.py's `_call`/`read_news`, and ONLY if a
+      #     trigger fires that day. On a quiet tick this key is never
+      #     touched at all. This step exists so a human reading the run
+      #     summary knows WHY a judgment call failed, instead of having to
+      #     guess from a bare traceback three steps later.
+      - name: secret reachability (never prints a value)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+        run: |
+          if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "ANTHROPIC_API_KEY reachable, length ${#ANTHROPIC_API_KEY}"
+          else
+            echo "ANTHROPIC_API_KEY NOT reachable — any tick that fires a" \
+                 "judgment trigger today will fail the Claude call with a" \
+                 "401 at call time (client construction itself will not error)."
+          fi
+          if [ -n "${POLYGON_API_KEY:-}" ]; then
+            echo "POLYGON_API_KEY reachable, length ${#POLYGON_API_KEY}"
+          else
+            echo "POLYGON_API_KEY NOT reachable — news trigger stays" \
+                 "disabled all tick (handled in code, alpha_operator.py:454-460)."
+          fi
+
+      # --- .env for operator_tick.sh --------------------------------------
+      # operator_tick.sh:17 does `set -a; source "$REPO/.env"; set +a`
+      # unconditionally. .env is gitignored, so a fresh checkout has none,
+      # and under `set -euo pipefail` a missing-file `source` kills the
+      # script before a single command runs. This step writes a minimal
+      # .env from whatever secrets ARE configured (absent ones are simply
+      # omitted — the python-side loader in execution/alpaca.py:load_env()
+      # uses os.environ.setdefault() and is already fine with missing keys).
+      # The file is never committed (repo checkout is fresh + gitignored;
+      # this job also can't push per `permissions: contents: read` above),
+      # and no step echoes its contents.
+      - name: write .env (secrets only, never echoed)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+        run: |
+          {
+            [ -n "${ANTHROPIC_API_KEY:-}" ] && echo "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY"
+            [ -n "${POLYGON_API_KEY:-}" ] && echo "POLYGON_API_KEY=$POLYGON_API_KEY"
+            true
+          } > .env
+          echo "wrote .env with $(grep -c = .env || echo 0) key(s) (values not shown)"
+
+      - name: snapshot data/daytrade before the tick
+        run: |
+          git status --porcelain -- data/ > /tmp/before-status.txt || true
+
+      - name: run the real tick (operator_tick.sh)
+        id: tick
+        # Manual bypass is opt-in and scoped to workflow_dispatch only —
+        # scheduled runs NEVER set TICK_FORCE_RUN, so the real window guard
+        # (operator_tick.sh:13-19) governs every scheduled tick exactly as
+        # it governs the Mac's launchd ticks. See that file's comment for
+        # why an env var, not a script edit, was chosen: it is the smallest
+        # possible change (one new `if`, defaulted off) that leaves the
+        # existing REFRESH_RC/PLAN_RC/RUN_RC/RES_RC exit-status pattern
+        # completely untouched.
+        env:
+          TICK_FORCE_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.force_run) && '1' || '' }}
+        run: |
+          set +e
+          ./daytrade/operator_tick.sh 2>&1 | tee /tmp/tick-output.txt
+          TICK_RC=${PIPESTATUS[0]}
+          echo "tick_rc=$TICK_RC" >> "$GITHUB_OUTPUT"
+          exit 0   # never fail the job here — the summary step reports the
+                   # real exit code; this is a rehearsal, not a gate
+
+      - name: collect changed/created files under data/
+        if: always()
+        run: |
+          mkdir -p /tmp/tick-artifact/data
+          git status --porcelain -- data/ > /tmp/after-status.txt || true
+          # Anything git now sees as modified or untracked under data/ is
+          # exactly what this tick wrote — copy it out, preserving the
+          # relative path, so the owner can diff it against his Mac's copy.
+          git status --porcelain -- data/ | cut -c4- | while IFS= read -r f; do
+            if [ -f "$f" ]; then
+              mkdir -p "/tmp/tick-artifact/$(dirname "$f")"
+              cp "$f" "/tmp/tick-artifact/$f"
+            fi
+          done
+          cp /tmp/tick-output.txt /tmp/tick-artifact/tick-output.txt || true
+          cp /tmp/before-status.txt /tmp/tick-artifact/git-status-before.txt || true
+          cp /tmp/after-status.txt  /tmp/tick-artifact/git-status-after.txt  || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tick-rehearsal-output-${{ github.run_id }}
+          path: /tmp/tick-artifact
+          retention-days: 14
+
+      - name: summary
+        if: always()
+        run: |
+          {
+            echo '## tick rehearsal'
+            echo
+            echo "- event: \`${{ github.event_name }}\`"
+            echo "- tick exit code: \`${{ steps.tick.outputs.tick_rc }}\`"
+            echo "- TICK_FORCE_RUN: \`${TICK_FORCE_RUN:-<unset>}\`"
+            echo
+            echo '### sub-command exit codes seen in tick output'
+            grep -E "bars refreshed|bar refresh failed|plan writer failed|OPERATOR RUN FAILED|RESOLVER FAILED|PERSISTENT" \
+              /tmp/tick-output.txt || echo "(no failure/refresh lines matched — see full log below)"
+            echo
+            echo '### plan written today?'
+            if [ -f data/daytrade/operator/baseline_plan.json ] || grep -qi "plan written" /tmp/tick-output.txt 2>/dev/null; then
+              echo "plan artifact/marker present — see uploaded artifact for the file itself"
+            else
+              echo "no plan marker seen (expected: before 10:00 ET, or a no-session day - e.g. weekend/holiday)"
+            fi
+            echo
+            echo '### row counts'
+            for f in data/daytrade/operator/records.jsonl data/daytrade/operator/forecasts.jsonl data/daytrade/decision_ledger.jsonl; do
+              if [ -f "$f" ]; then
+                echo "- $f: $(wc -l < "$f") lines"
+              else
+                echo "- $f: not present"
+              fi
+            done
+            echo
+            echo '### full tick output'
+            echo '```'
+            tail -100 /tmp/tick-output.txt 2>/dev/null || echo "no output captured"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: confirm nothing was staged, committed, or pushed
+        if: always()
+        run: |
+          # Belt-and-suspenders check, on top of `permissions: contents:
+          # read` above: this job's own git tree must show nothing staged.
+          # (Working-tree modifications from the tick itself are expected
+          # and fine — they die with the runner. Only a STAGED change would
+          # indicate something tried to prepare a commit.)
+          if ! git diff --cached --quiet; then
+            echo "!! something staged changes — this must never happen in this workflow"
+            git diff --cached --stat
+            exit 1
+          fi
+          echo "confirmed: nothing staged. This job has no push credentials" \
+               "(contents: read) and issued no repository write of any kind."
