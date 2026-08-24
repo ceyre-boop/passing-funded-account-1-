@@ -84,11 +84,26 @@ PRICES = {
 }
 CACHE_WRITE_MULT, CACHE_READ_MULT = 1.25, 0.10
 
-# DAILY cap, resets at midnight America/New_York — see spent_today(). Set from
-# the busiest real day on record, $0.5018 / 13 calls on 2026-08-17: 0.50 covers
-# the morning Opus frame plus a normal day's deltas, while capping a runaway
-# loop at fifty cents instead of the five dollars a lifetime cap would allow.
-DEFAULT_CAP_USD = 0.50
+# DAILY cap, resets at midnight America/New_York — see spent_today().
+#
+# 0.30 is chosen to sit UNDER the console's org-wide monthly limit, not merely
+# under a runaway. The arithmetic that matters:
+#
+#   0.30/day x ~21 trading days = $6.30/month, against an $11 console limit.
+#   (0.50/day would have been $10.50 — fifty cents of headroom, and a couple of
+#   heavy news days would have tripped the console instead.)
+#
+# Why that ordering is the whole point: this cap is LOCAL and fails soft — the
+# tick logs SPEND CAP, skips the model call, and keeps running. The console
+# limit is ORG-WIDE and fails hard: it locks out every key on the account,
+# mid-month, until the 1st. On 2026-08-23 exactly that happened — a $5 console
+# limit set after ~$40 of August spend blocked all API access until 2026-09-01.
+# A cap you control must always bind before one that shuts down the account.
+#
+# Historical context: the busiest real day on record was $0.5018 / 13 calls
+# (2026-08-17); the realistic average is ~$0.24/day. 0.30 covers a normal day
+# and binds on an abnormal one, which is the correct place for it to bite.
+DEFAULT_CAP_USD = 0.30
 
 # The two jobs and what each is worth. Opus buys the frame once; Sonnet tracks
 # against it.
