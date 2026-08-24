@@ -185,3 +185,71 @@ replay sprint, or re-derive G5's n with written justification.
 
 - [ ] Credential hygiene item outstanding — see the private session notes, not
       recorded here. (This repo is public; exposure details do not belong in it.)
+
+---
+
+# 2026-08-23 — the cost monitor has never worked (found while hunting a $40 bill)
+
+Colin reported wasting ~$40 on API spend "that did nothing." The hunt found the
+money is not recorded anywhere on this machine — and, more importantly, found
+why it could disappear unnoticed.
+
+## Tracked API spend, all of it
+
+| source | real API spend |
+|---|---|
+| `data/daytrade/llm_spend.jsonl` (this repo) | **$0.95** — 27 calls, all-time |
+| `~/quant/logs/oracle_cost.json` (morning briefings) | **$5.25** — 101 calls since 2026-06-02 |
+| **total accounted for** | **$6.20** |
+
+Note `~/quant`'s August figure is **$0.00 across 48 calls** — that lane switched
+to local `ollama/qwen2.5`. Good call by whoever made it.
+
+Do NOT be alarmed by `~/.claude/PAI/MEMORY/OBSERVABILITY/session-costs.jsonl`,
+which totals ~$23,238 across 5,073 sessions since May. That is the API-EQUIVALENT
+cost of Claude Code usage on a subscription, not money paid.
+
+## The actual defect
+
+`~/.claude/PAI/MEMORY/OBSERVABILITY/anthropic-cost.jsonl` is the cost monitor.
+**412 samples since 2026-05-19. Every single one is empty:**
+
+- `api_spend.month_used_usd` — `null` in 412/412, `source: "unavailable"` in
+  412/412. It has never once read the real spend figure.
+- `call_sites.total` — `0` in 412/412. Its call-site auditor has never detected
+  a single API call site, while `daytrade/news_claude.py` and the quant oracle
+  were both demonstrably calling the API throughout that period.
+- `alerts` — empty, every sample.
+
+**A watcher that reports nothing is indistinguishable from a healthy system.**
+This is the same failure family as `write_baseline_plan.py` crashing into a
+swallowed error 121 times (fixed 9f72a2a) and `policy_regret_r` having a
+consumer and no supplier (logged 44fe744). Three months of "no alerts" was read
+as "fine".
+
+## What to do
+
+1. **The authoritative record is `console.anthropic.com` → Usage**, filtered by
+   key and date. Ten seconds there beats three months of local monitoring.
+2. **Set an organization-level spend limit in the console** (Settings → Limits).
+   That is the only control that covers ALL keys and ALL consumers regardless of
+   whether the calling code knows a cap exists. The code cap below does not.
+3. **Fix or delete the monitor.** Either make the probe actually read spend and
+   detect call sites — with a test that fails when it returns null — or remove
+   it. Leaving it running while it reports nothing is worse than not having it,
+   because its silence reads as reassurance.
+4. **One API key per consumer.** Shared keys make spend unattributable; that is
+   why "where did $40 go" took a scavenger hunt instead of a lookup.
+
+## What was fixed here (2026-08-23)
+
+`daytrade/news_claude.py`'s cap was **lifetime, not daily** — `spent_so_far()`
+summed the entire ledger and `DEFAULT_CAP_USD = 5.00`, so at $0.95 spent the
+operator had ~$4 of headroom *for the life of the project* and would then have
+gone silent mid-soak with no obvious cause. Now: **$0.50/day, resetting midnight
+ET**, refusing loudly with the reset time in the message. A corrupt or
+timezone-naive ledger timestamp raises rather than being silently counted or
+skipped.
+
+**This cap governs `news_claude.py` only.** It is not, and cannot be, the answer
+to "limit all my keys."

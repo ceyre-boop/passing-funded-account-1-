@@ -9,10 +9,14 @@ the tape did, alongside dumb baselines.
 
 MONEY IS THE BINDING CONSTRAINT, so it is enforced rather than hoped for:
 
-  1. HARD SPEND CAP. Every call appends its real cost to llm_spend.jsonl. Before
-     each call the ledger is summed; at the cap the client REFUSES rather than
-     spending the next cent. A runaway loop stops instead of draining a budget —
-     prior experience: an unattended key burned $13 in two days.
+  1. HARD DAILY SPEND CAP, reset at midnight America/New_York. Every call
+     appends its real cost to llm_spend.jsonl. Before each call the ledger is
+     summed for the CURRENT ET CALENDAR DAY ONLY; at the cap the client
+     REFUSES rather than spending the next cent, and keeps refusing until the
+     next ET midnight. A runaway loop stops instead of draining a budget —
+     prior experience: an unattended key burned $13 in two days. This is
+     deliberately a single daily ceiling, not a lifetime one on top of it: two
+     caps means two silent ways to be stopped, so there is only one.
   2. DELTA-ONLY FIRING. The headline set is hashed; unchanged headlines mean no
      call at all. A quiet morning — most of the morning — costs nothing.
   3. PROMPT CACHING — declared, but MEASURED AS INACTIVE. The breakpoint sits on
@@ -80,7 +84,11 @@ PRICES = {
 }
 CACHE_WRITE_MULT, CACHE_READ_MULT = 1.25, 0.10
 
-DEFAULT_CAP_USD = 5.00          # under the $6 remaining, deliberately
+# DAILY cap, resets at midnight America/New_York — see spent_today(). Set from
+# the busiest real day on record, $0.5018 / 13 calls on 2026-08-17: 0.50 covers
+# the morning Opus frame plus a normal day's deltas, while capping a runaway
+# loop at fifty cents instead of the five dollars a lifetime cap would allow.
+DEFAULT_CAP_USD = 0.50
 
 # The two jobs and what each is worth. Opus buys the frame once; Sonnet tracks
 # against it.
@@ -123,18 +131,74 @@ def cost_of(usage, model: str) -> float:
             + usage.output_tokens / 1e6 * outp)
 
 
+class CorruptLedgerRow(RuntimeError):
+    """A row in llm_spend.jsonl has a `ts` that cannot be parsed as a
+    tz-aware timestamp. Never guess a timezone for it — fail loud instead of
+    silently excluding (undercounts spend) or including it as "today"
+    (overcounts). Per CLAUDE.md rule 3: an unlogged or mis-scoped spend row
+    is silent data loss."""
+
+
+def _parse_ts_aware(ts: str, *, row: dict | None = None) -> datetime:
+    """Parse an ISO timestamp and require it to be tz-aware. A naive
+    `datetime.fromisoformat` result would silently be treated as local time
+    by `.astimezone()` — exactly the kind of unstated assumption this budget
+    guard cannot afford, so it is refused instead."""
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    except (ValueError, AttributeError) as e:
+        raise CorruptLedgerRow(
+            f"{SPEND.name} row has an unparseable ts={ts!r} ({e}); "
+            f"row={row!r}") from e
+    if dt.tzinfo is None:
+        raise CorruptLedgerRow(
+            f"{SPEND.name} row has a naive (no-timezone) ts={ts!r} — refusing to "
+            f"guess UTC or local. row={row!r}")
+    return dt
+
+
 def spent_so_far() -> float:
+    """Lifetime total across the whole ledger. Kept only for --spend context
+    reporting; the budget guard itself is scoped to today, see spent_today()."""
     if not SPEND.exists():
         return 0.0
     return sum(json.loads(l)["cost_usd"] for l in SPEND.open() if l.strip())
 
 
-def check_budget(cap: float) -> float:
-    used = spent_so_far()
+def spent_today(now: Optional[datetime] = None) -> float:
+    """Sum of cost_usd for rows whose `ts` falls on the CURRENT America/New_York
+    calendar day. This is what the daily cap is checked against — a previous
+    ET day's spend never counts against today's budget."""
+    if not SPEND.exists():
+        return 0.0
+    now = (now or datetime.now(timezone.utc)).astimezone(ET)
+    today_et = now.date()
+    total = 0.0
+    for line in SPEND.open():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        ts = _parse_ts_aware(row["ts"], row=row)
+        if ts.astimezone(ET).date() == today_et:
+            total += row["cost_usd"]
+    return total
+
+
+def _next_reset_et(now: Optional[datetime] = None) -> datetime:
+    now = (now or datetime.now(timezone.utc)).astimezone(ET)
+    from datetime import timedelta
+    tomorrow = now.date() + timedelta(days=1)
+    return datetime(tomorrow.year, tomorrow.month, tomorrow.day, tzinfo=ET)
+
+
+def check_budget(cap: float, *, now: Optional[datetime] = None) -> float:
+    used = spent_today(now)
     if used >= cap:
+        reset = _next_reset_et(now)
         raise SpendCapReached(
-            f"${used:.4f} of ${cap:.2f} already spent — refusing to call. Raise --cap "
-            f"deliberately, or clear {SPEND.name} if that spend is stale.")
+            f"${used:.4f} of ${cap:.2f} spent TODAY (America/New_York) — refusing "
+            f"to call. Resets at {reset.strftime('%Y-%m-%d %H:%M %Z')}. Raise --cap "
+            f"deliberately if today genuinely warrants more.")
     return used
 
 
@@ -352,7 +416,7 @@ def read_news(symbol: str, headlines: list[dict], context: str, *,
     r = client.messages.parse(**kw)
     cost = cost_of(r.usage, model)
     record_spend(model, r.usage, cost, kind)
-    print(f"  [{model} {kind}] ${cost:.5f}  (total ${used + cost:.4f} / ${cap:.2f} cap)  "
+    print(f"  [{model} {kind}] ${cost:.5f}  (today ${used + cost:.4f} / ${cap:.2f} daily cap)  "
           f"in {r.usage.input_tokens} cache_r {getattr(r.usage,'cache_read_input_tokens',0) or 0} "
           f"out {r.usage.output_tokens}")
     return r.parsed_output, cost
@@ -441,7 +505,7 @@ def _call(system, user, schema, *, model: str, cap: float, effort: str, kind: st
 
 def _report(model, kind, effort, cost, used, usage, max_tok) -> None:
     print(f"  [{model} {kind} effort={effort}] ${cost:.5f}   "
-          f"(total ${used + cost:.4f} / cap)   "
+          f"(today ${used + cost:.4f} / ${cap:.2f} daily cap)   "
           f"in {usage.input_tokens} out {usage.output_tokens}/{max_tok}")
 
 
@@ -590,7 +654,12 @@ def main(argv=None) -> int:
     a = ap.parse_args(argv)
 
     if a.spend:
-        print(f"  spent: ${spent_so_far():.4f}")
+        today = spent_today()
+        lifetime = spent_so_far()
+        reset = _next_reset_et()
+        print(f"  TODAY (America/New_York): ${today:.4f} / ${a.cap:.2f} daily cap"
+              f"   (resets {reset.strftime('%Y-%m-%d %H:%M %Z')})")
+        print(f"  lifetime (context only, not capped): ${lifetime:.4f}")
         if SPEND.exists():
             for l in list(SPEND.open())[-12:]:
                 d = json.loads(l)
