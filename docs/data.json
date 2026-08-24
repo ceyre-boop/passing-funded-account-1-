@@ -1,7 +1,7 @@
 {
  "alphazero": {
   "abstain_rate": 0.615,
-  "age_hours": 0.2,
+  "age_hours": 50.3,
   "chance_scenario": 0.2,
   "decisive_accuracy_quotable": false,
   "direction_accuracy": 0.308,
@@ -371,7 +371,7 @@
   ],
   "scenario_accuracy": 0.308,
   "scenario_hits": 4,
-  "stale": false
+  "stale": true
  },
  "containment": {
   "clean": true,
@@ -523,32 +523,32 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-21T22:54:47.886476+00:00",
+ "generated_at": "2026-08-24T23:16:23.041478+00:00",
  "latest_judgment": {
   "abstention": {
-   "detail": "newest bar 990 min old (> 15)",
-   "issued_at": "2026-08-21T12:25:11.584628+00:00",
+   "detail": "newest bar 28 min old (> 15)",
+   "issued_at": "2026-08-24T19:32:44.753835+00:00",
    "model_version": "alpha-operator-v1/stale-gate",
    "reason": "STALE_CONTEXT"
   },
   "available": true,
-  "bar_age_min": 990.2,
+  "bar_age_min": 27.7,
   "both_sides": null,
   "confidence": 0.0,
   "cost_usd": 0.0,
   "emission_refused": null,
   "invalidators": [],
   "model_version": "alpha-operator-v1/stale-gate",
-  "packet_as_of": "2026-08-21T12:25:11.584628+00:00",
-  "packet_max_data_ts": "2026-08-21T11:05:00+00:00",
+  "packet_as_of": "2026-08-24T19:32:44.753835+00:00",
+  "packet_max_data_ts": "2026-08-24T19:05:00+00:00",
   "pre_registration": null,
-  "record_id": "op-20260821-122511-584628-NVDA",
+  "record_id": "op-20260824-193244-753835-NVDA",
   "trigger": "news",
-  "ts": "2026-08-21T12:25:11.584628+00:00",
+  "ts": "2026-08-24T19:32:44.753835+00:00",
   "verdict": "ABSTAIN"
  },
  "learning_loop": {
-  "age_hours": 0.0,
+  "age_hours": 50.3,
   "alphazero": {
    "by_verdict": {
     "ABSTAIN": {
@@ -703,7 +703,7 @@
     ]
    }
   ],
-  "stale": false,
+  "stale": true,
   "stockfish": {
    "mean_giveback_r": 0.6696,
    "n": 336,
@@ -715,7 +715,7 @@
   }
  },
  "ontology": {
-  "age_hours": 0.0,
+  "age_hours": 22.2,
   "available": true,
   "generated_at": "2026-08-21T22:53:03.808786+00:00",
   "k_subsamples": 8,
@@ -899,10 +899,10 @@
  },
  "session": {
   "available": true,
-  "last_record_ts": "2026-08-21T12:25:11.584628+00:00",
+  "last_record_ts": "2026-08-24T19:32:44.753835+00:00",
   "last_trigger": "news",
   "mode": "SHADOW SOAK",
-  "records_total": 24,
+  "records_total": 29,
   "shadow": true,
   "symbol": "NVDA"
  },
@@ -935,11 +935,11 @@
   "total_usd": 0.9491
  },
  "stockfish": {
-  "age_hours": 0.1,
+  "age_hours": 0.0,
   "available": true,
   "by_class": {
    "CASH_INDEX": {
-    "mean_realized_r": 0.1259,
+    "mean_realized_r": 0.126,
     "median_efficiency": 0.8427,
     "median_giveback_r": 1.8337,
     "n": 100,
@@ -960,8 +960,8 @@
     "pct_unwinnable": 55.6
    }
   },
-  "compared_against": "SF-FROZEN-001",
-  "generated_at": "2026-08-21T22:50:52.732791+00:00",
+  "compared_against": "SF-FROZEN-002",
+  "generated_at": "2026-08-24T23:16:22.962873+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.1843,
   "mean_mfe_r": 3.4223,
@@ -4677,10 +4677,10 @@
   "abstain_reasons": {
    "DATA_INCOMPLETE": 2,
    "NO_OPINION": 3,
-   "STALE_CONTEXT": 9
+   "STALE_CONTEXT": 14
   },
   "counts": {
-   "ABSTAIN": 14,
+   "ABSTAIN": 19,
    "ALLOW_BASELINE": 7,
    "EXIT": 0,
    "TIGHTEN": 3
@@ -4828,6 +4828,36 @@
     "confidence": 0.0,
     "shadow": true,
     "ts": "2026-08-21T12:25:11.584628+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-21T20:12:51.227966+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-24T01:19:06.699044+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-24T07:03:37.630820+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-24T12:01:59.732352+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-08-24T19:32:44.753835+00:00",
     "verdict": "ABSTAIN"
    }
   ]
