@@ -28,6 +28,8 @@ from datetime import date
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from daytrade import datasource
+
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
 CACHE = ROOT / "data" / "daytrade" / "bars"
@@ -66,23 +68,27 @@ def _cache_path(symbol: str, tf: str) -> Path:
     return CACHE / f"{symbol}_{tf}.parquet"
 
 
-def fetch(symbol: str, tf: str = "5m", period: str = "60d"):
-    """Raw pull from yfinance, ET-localised. No caching, no filtering."""
+def fetch(symbol: str, tf: str = "5m", period: str = "60d",
+          *, start: str | None = None, end: str | None = None,
+          source: "datasource.DataSource | None" = None):
+    """Raw pull through the DataSource interface, ET-localised. No caching.
+
+    This function does not know a vendor's name and must not learn one — see
+    daytrade/datasource.py. `start`/`end` (YYYY-MM-DD) reach past the ~60d
+    intraday window yfinance serves; `period` keeps the original behaviour.
+    """
     warnings.filterwarnings("ignore")
-    import pandas as pd
-    import yfinance as yf
-
-    df = yf.download(symbol, period=period, interval=tf,
-                     progress=False, auto_adjust=False)
-    if df is None or df.empty:
-        raise BarDataError(f"yfinance returned no {tf} bars for {symbol}")
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-    df.index = df.index.tz_convert(ET)
-    return df[["Open", "High", "Low", "Close", "Volume"]].sort_index()
+    src = source or datasource.get_source(symbol)
+    try:
+        return src.bars(symbol, tf, start=start, end=end,
+                        period=None if (start or end) else period)
+    except datasource.DataSourceError as e:
+        raise BarDataError(str(e)) from e
 
 
-def refresh_cache(symbol: str, tf: str = "5m", period: str = "60d") -> dict:
+def refresh_cache(symbol: str, tf: str = "5m", period: str = "60d",
+                  *, start: str | None = None, end: str | None = None,
+                  source: "datasource.DataSource | None" = None) -> dict:
     """Fetch and merge into the cache. Existing sessions are NEVER rewritten.
 
     A session already on disk is frozen history. If a fresh pull disagrees with
@@ -91,7 +97,8 @@ def refresh_cache(symbol: str, tf: str = "5m", period: str = "60d") -> dict:
     """
     import pandas as pd
 
-    fresh = fetch(symbol, tf, period)
+    src = source or datasource.get_source(symbol)
+    fresh = fetch(symbol, tf, period, start=start, end=end, source=src)
     path = _cache_path(symbol, tf)
     CACHE.mkdir(parents=True, exist_ok=True)
 
@@ -108,14 +115,23 @@ def refresh_cache(symbol: str, tf: str = "5m", period: str = "60d") -> dict:
                       f"KEEPING the cached values (frozen history wins)")
         added = fresh.index.difference(old.index)
         merged = pd.concat([old, fresh.loc[added]]).sort_index()
+        added_df = fresh.loc[added]
         result = {"added": len(added), "restated_ignored": changed}
     else:
         merged = fresh
+        added_df = fresh
         result = {"added": len(fresh), "restated_ignored": 0}
 
     merged.to_parquet(path)
     result["total_bars"] = len(merged)
     result["path"] = str(path)
+    result["source"] = src.describe()
+    # Provenance is stamped for the bars ACTUALLY added, not the whole pull —
+    # a mixed-vendor cache with no record of which rows came from where is the
+    # artifact SANITY_AUDIT.md exists to prevent.
+    result["provenance"] = str(
+        datasource.write_provenance(path, src, symbol, tf, added_df,
+                                    result["added"]))
     return result
 
 
