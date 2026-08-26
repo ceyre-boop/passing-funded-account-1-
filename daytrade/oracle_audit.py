@@ -32,6 +32,7 @@ PRE-REGISTERED, written before this script first ran:
 """
 from __future__ import annotations
 
+import argparse
 import json
 import statistics
 import sys
@@ -42,6 +43,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import bars as bars_mod                                            # noqa: E402
 from bars import load_sessions, BarDataError                       # noqa: E402
 from splits import tune_sessions, TUNE_END                         # noqa: E402
 from ceiling import find_entry, simulate                           # noqa: E402
@@ -95,18 +97,60 @@ def entry_features(sym: str, s, e) -> list[float]:
     ]
 
 
-def main() -> int:
-    entries = []
-    for sym in [s for syms in CLASSES.values() for s in syms]:
-        try:
-            for s in tune_sessions(load_sessions(sym, "5m", allow_fetch=False)):
-                e = find_entry(s)
-                if e:
-                    entries.append((sym, s, e))
-        except BarDataError as ex:
-            print(f"  !! {sym}: {ex} — excluded loudly")
+def _collect(symbols, cache: Path | None):
+    """Entries for `symbols`, tune split only.
+
+    `cache` redirects bars.CACHE for the duration and is ALWAYS restored — a
+    faulted module global outliving this call would silently repoint every
+    later reader in the process at the wrong parquet tree.
+    """
+    if cache is not None and not any(cache.glob("*_5m.parquet")):
+        raise BarDataError(
+            f"--cache {cache} holds no *_5m.parquet. Refusing to fall back to "
+            f"{bars_mod.CACHE} — a silent fallback would label a run with one "
+            f"population's name and another's data.")
+    orig = bars_mod.CACHE
+    if cache is not None:
+        bars_mod.CACHE = cache
+    try:
+        entries = []
+        for sym in symbols:
+            try:
+                for s in tune_sessions(load_sessions(sym, "5m", allow_fetch=False)):
+                    e = find_entry(s)
+                    if e:
+                        entries.append((sym, s, e))
+            except BarDataError as ex:
+                print(f"  !! {sym}: {ex} — excluded loudly")
+        return entries
+    finally:
+        bars_mod.CACHE = orig
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--symbols", nargs="+", default=None,
+                    help="default: the full CLASSES basket (original behaviour)")
+    ap.add_argument("--cache", default=None,
+                    help="bar cache dir; default: bars.CACHE (original behaviour)")
+    ap.add_argument("--out", default=None,
+                    help="output json; default: data/daytrade/oracle_audit.json")
+    ap.add_argument("--label", default="default_basket")
+    a = ap.parse_args(argv)
+
+    symbols = a.symbols or [s for syms in CLASSES.values() for s in syms]
+    cache = Path(a.cache).resolve() if a.cache else None
+    out = Path(a.out).resolve() if a.out else OUT
+
+    entries = _collect(symbols, cache)
     n = len(entries)
-    print(f"  {n} tune entries (<= {TUNE_END}) · {len(FAMILIES)} families")
+    if not n:
+        raise BarDataError(f"no tune entries for {symbols} — nothing to audit")
+    n_distinct_days = len({e.day for _, _, e in entries})
+    print(f"  {n} tune entries (<= {TUNE_END}) over {n_distinct_days} distinct "
+          f"days · {len(FAMILIES)} families · label={a.label}")
+    print(f"  entries/day {n/n_distinct_days:.2f}  "
+          f"(the day-blocked null's effective n is DAYS, not entries)")
 
     # R matrix: entries x families
     R = np.array([[simulate(s, e, dict(cfg)) for cfg in FAMILIES.values()]
@@ -176,6 +220,18 @@ def main() -> int:
     tree_text = export_text(full_tree, feature_names=FEATURES,
                             class_names=fam_names)
 
+    # A single-symbol population makes the cls_* one-hots constant. A tree never
+    # splits on a constant so this is harmless — but it shrinks the EFFECTIVE
+    # feature set, and a run that does not say so is not self-describing. The
+    # features are NOT removed: FEATURES is pre-registered.
+    constant_features = [f for j, f in enumerate(FEATURES)
+                         if float(X[:, j].std()) == 0.0]
+    if constant_features:
+        print(f"\n  constant features (no split possible): "
+              f"{', '.join(constant_features)}")
+        print(f"  effective feature count {len(FEATURES) - len(constant_features)}"
+              f" of {len(FEATURES)}")
+
     # Sample size — registered now, before anyone wants the answer
     day_r = defaultdict(list)
     for i, (_, _, e) in enumerate(entries):
@@ -197,9 +253,16 @@ def main() -> int:
     print(f"\n  VERDICT vs on-the-hook prediction (0.15–0.30): {verdict} "
           f"({realizable_leak:+.3f})")
 
-    OUT.write_text(json.dumps({
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "n_entries": n, "families": fam_names,
+        "label": a.label,
+        "symbols": symbols,
+        "cache": str(cache.relative_to(ROOT)) if cache else "default",
+        "tune_end": str(TUNE_END),
+        "n_entries": n, "n_distinct_days": n_distinct_days,
+        "constant_features": constant_features,
+        "families": fam_names,
         "fixed_means": {f: round(float(m), 4) for f, m in zip(fam_names, fixed_means)},
         "best_fixed": fam_names[best_fixed_i],
         "shortlist_oracle_R": round(shortlist_oracle, 4),
@@ -218,7 +281,7 @@ def main() -> int:
         "verdict": verdict,
         "prediction_on_the_hook": "0.15-0.30 realizable; >0.5 rich; <0.1 drawer",
     }, indent=1))
-    print(f"  report: {OUT.relative_to(ROOT)}")
+    print(f"  report: {out.relative_to(ROOT)}")
     return 0
 
 
