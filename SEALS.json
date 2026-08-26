@@ -58,6 +58,22 @@
    "sealed_by": "taboost",
    "unseal_condition": "never \u2014 a pinned checkpoint is the fixed opponent every measurement was compared against; a new opponent requires a NEW checkpoint id, never an edit",
    "status": "sealed"
+  },
+  {
+   "path": "data/daytrade/oracle_audit.json",
+   "sha256": "9277c4dc6c8829cda2a7c555b3d6fa4aab6a3313c0d0713c5d7af575f7ff965e",
+   "sealed_at": "2026-08-26T23:39:17.547075+00:00",
+   "sealed_by": "taboost",
+   "unseal_condition": "never \u2014 a superseded run gets a NEW path via --out; this is the 2026-08-17 NOTHING_QUOTABLE result and overwriting it destroys prior evidence",
+   "status": "sealed"
+  },
+  {
+   "path": "data/daytrade/oracle_audit_nvda_extended.json",
+   "sha256": "8f0f92cf870df1e57e815513eebd50dc3e63bf6058c4803f1e6f1f6fbaa528d9",
+   "sealed_at": "2026-08-26T23:39:17.595587+00:00",
+   "sealed_by": "taboost",
+   "unseal_condition": "never \u2014 the 2026-08-26 extended-population re-run; a later run gets a new path",
+   "status": "sealed"
   }
  ]
 }
