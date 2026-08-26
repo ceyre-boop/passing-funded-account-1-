@@ -289,6 +289,24 @@ def fmt_row(label, real, control):
             f"[{control['p_pass_lo']:.1%},{control['p_pass_hi']:.1%}]")
 
 
+def max_safe_risk_line(trades, contract, haircut: float, risks: list[float]) -> str:
+    """Loud line naming the realized-curve max-safe-risk beside whatever risk
+    was actually selected for this run (drawdown_margin.max_safe_risk, spec-
+    adjacent — see scripts/drawdown_margin.py docstring for why this differs
+    from the P5 ladder statistics and is not a p_pass number needing a
+    zero-edge control)."""
+    # Deferred import: drawdown_margin imports build_series/load_sealed/load_oos
+    # from this module, so importing it at module scope would be circular.
+    from scripts.drawdown_margin import max_safe_risk
+
+    idx, vi, vw, vopen = build_series(trades, haircut, center=False)
+    safe = max_safe_risk(vi, vw, vopen, contract)
+    risk_desc = ", ".join(f"{r:.2%}" for r in risks)
+    flag = " ** SELECTED RISK EXCEEDS MAX SAFE RISK **" if any(r > safe for r in risks) else ""
+    return (f"MAX SAFE RISK (realized curve, {contract.key}): {safe:.3%} per R  |  "
+            f"selected risk(s): {risk_desc}{flag}")
+
+
 # ----------------------------------------------------------------- gates G2/G5
 
 def repro_gate() -> dict:
@@ -374,6 +392,7 @@ def main():
                  else f"  ** paper sprint incomplete (n={g5.get('n', 0)}/{G5_MIN_N}) **")
 
     print(f"\n=== {contract.display_name} | series: {series_label}{watermark} ===")
+    print(max_safe_risk_line(trades, contract, haircut, risks))
     tables = {}
     for horizon in OBS_HORIZONS_DAYS:
         print(f"\n-- observation horizon {horizon}d (not a contract deadline) --")
