@@ -1,0 +1,33 @@
+{
+ "firm": "cti_1step",
+ "display_name": "City Traders Imperium 1-Step",
+ "rules_asof": "2026-08-12",
+ "series": "sealed",
+ "n_trades": 411,
+ "n_days": 2592,
+ "span": [
+  "2015-01-02",
+  "2024-12-09"
+ ],
+ "risk": 0.01,
+ "daily": {
+  "present": false
+ },
+ "max_dd": {
+  "limit": 0.05,
+  "type": "trailing",
+  "mark": "close",
+  "worst_floor_depth": 0.14562604904969798,
+  "floor_fraction_used": 2.912520980993959,
+  "worst_peak_to_trough": 0.14562604904969798,
+  "ptt_fraction_used": 2.912520980993959,
+  "under_half": false
+ },
+ "breach": {
+  "kind": "max_dd",
+  "i": 809,
+  "depth": 0.06483551620588174
+ },
+ "max_safe_risk": 0.0032767517089843756,
+ "final_balance": 3.6126516124690395
+}
