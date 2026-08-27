@@ -80,29 +80,57 @@ after-haircut 0.188, daily-nonzero 0.264, daily-all 0.087; you would need
 σ=1.1628, which is nowhere). Options drafted, no recommendation, `[UNRATIFIED]`
 — **Colin ratifies, an agent never self-ratifies a gate change.**
 
-## Next work, in dependency order (Phase 1 of THE_BIG_PLAN)
+## Phase 0 and Phase 1 — CLOSED 2026-08-26
 
-Risk before execution, deliberately: an execution path without enforced risk is
-worse than no execution path.
+All three disconnects from `Plans/THE_BIG_PLAN.md` are wired. 832 passing.
 
-1. `daytrade/survival.py` — the pre-trade "risk $X → worst case $Y" sentence.
-   Spec 002, no blockers. *(in flight 2026-08-26)*
-2. `daytrade/streak.py` — the two-red-days cooloff, made mechanical. Spec 004
-   second half; the `[SKETCH]` scorecard→classifier loop stays unbuilt.
-   `friction_ladder.py` says the ladder's 93–98% pass probability depends on
-   this being real; `TRAINING_DAY_1.md:138` currently says "cooloff is not
-   enforced by code — you enforce it." *(in flight)*
-3. **THE OPEN FORK — Colin's call.** `CLAUDE.md` non-negotiable #4 says Kelly
-   sizing is bounded and "never bypass either layer." `rg kelly_engine|risk_engine`
-   outside `sovereign/` returns nothing; those modules have zero callers and
-   zero tests. Either wire them onto the sizing path, or delete the claim. A
-   stated control that is not connected is worse than no stated control, because
-   it reads as protection. Characterisation tests are *in flight* — do not wire
-   before they land.
-4. Give `portfolio_guard` a real Gate 7 that can block an order. Its docstring
-   says "Gate 7 enforces last"; no Gate 7 exists.
-5. Then, and only then, a PAPER execution path. That is the only thing that can
-   ever fill `data/trade_logs/paper_carry_trades.jsonl` (0 bytes) and close G5.
+- **D1 execution** — `daytrade/paper_carry_runner.py`, guarded and shipped
+  **DISARMED**. Guards on the path in order: streak cooloff → portfolio_guard
+  Gate 7 → survival. Arming takes three coordinated actions. `paper_carry_trades
+  .jsonl` is still 0 bytes and will stay so until someone arms it. (`53e2f9c`)
+- **D2 risk** — non-negotiable #4 is now TRUE. `kelly_math.py` extracted the pure
+  functions out of the unimportable `kelly_engine`, so the Layer 2 quarter-Kelly
+  ceiling actually binds alongside `prop.py`. No threshold changed. The NaN
+  hazard is closed: a NaN input returned 0.04 (the CEILING, max size) and now
+  returns 0.005 (the floor). (`19a0f92`)
+- **D3 learning loop** — all three links wired, authority unchanged. The model
+  now states a policy and gets graded on it while `policy_candidate` stays gated
+  behind `granted_level >= 2`; production still resolves to exactly `(1, '')`.
+  Boundary proved by injection, not by reading. (`d60ca9c`, `24ee12b`)
+- **Wiring detector** — `scripts/wiring_audit.py`, 128 findings, all allowlisted
+  with written reasons; a new disconnect fails the suite. (`17f5a03`, `df4d5b4`)
+- `survival.py` and `streak.py` built and wired (`a6c8ac6`, `a2df8c1`, `3ad7524`).
+
+## THE GATE — three unratified numbers, and they are Colin's
+
+Not code. The last thing between the built path and a first paper trade. An
+agent guessing here is precisely the failure mode the whole discipline exists to
+prevent, so all three were left as **required arguments** rather than defaults.
+
+1. **`survival.py`'s daily-goal figure.** Spec 002 is written for the intraday
+   cockpit's $-per-day doctrine. Carry holds a median 6 days across the 411
+   sealed trades, so "already banked today's goal, stop" has no carry-lane
+   analogue on record. Separately, spec 002's own formula
+   (`account_size * daily_goal_pct / 100`) drifts as the account grows while
+   THE_SHOT.md's doctrine says a fixed $300/day — they coincide exactly at $25k
+   and 1.2%, which is why it has gone unnoticed.
+2. **`portfolio_guard` G001–G004 exposure caps** for a 4-pair book: total open
+   risk, per-symbol, correlated, and max unprotected. None ratified anywhere.
+3. **Eval sizing.** `max_safe_risk` is 0.328% on `cti_1step` against a planned
+   1.00%, and the zero-edge separation table above says the same thing from the
+   other direction. Ratify through spec 021.
+
+Note `resolve_r_limits()` already derives G005/G006 from the real contract plus
+the measured `max_safe_risk` — `alpha_swing` yields 9.53R lock / 19.06R flatten.
+`cti_1step` REFUSES, correctly: it has no `daily_dd`, and the existing fallback
+convention would derive a daily lock WIDER than the emergency flatten.
+
+## Also open
+
+- `specs/036` G5 re-registration — `[UNRATIFIED]`, needs a ruling.
+- `specs/038` — the second policy gate at `runner.py:763`. `[NOT A DEFECT]`,
+  nothing to build; read it before "fixing" a promotion that appears inert.
+- G3 needs one run-once OOS series.
 
 ## Still open, verified still true
 
