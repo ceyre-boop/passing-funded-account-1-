@@ -257,7 +257,7 @@ BROKEN_IMPORT:
     reason: "`from integration.production_engine import EnhancedEntrySignal` — `integration` does not exist anywhere in this repo; carried over from the general repo's paper-trading harness and never finished here (also flagged under ORPHANS)."
 
 DEAD_ARTIFACT:
-  - path: "data/agent/ruin_engine_frontier.json"
+  - module: "data/agent/ruin_engine_frontier.json"
     reason: "written by scripts/ruin_engine.py for a HUMAN to read when ratifying eval size \u2014 the frontier is a decision input, not a machine input, and deliberately so: an automated consumer would let a sizing number propagate without a logged ratification, which is exactly what CLAUDE.md's 'eval sizing is NOT ratified yet' and spec 021's decision_logger requirement exist to prevent. If sizing is ever automated, this stops being a dead artifact and the ratification must move into decision_logger with it."
   - module: "data/daytrade/carry_reconcile.json"
     reason: "written by production code; every reader found is itself an orphan module with no importer outside test files (see ORPHANS) — same D-class disconnect, not fixed here"
