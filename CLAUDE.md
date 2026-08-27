@@ -60,6 +60,28 @@ four in `data/trade_logs/`.
 5. **`.env` is gitignored and stays that way.** Copy `.env.example`, fill in
    real values locally, never commit the real file.
 
+6. **Trade-evidence freeze.** No new module, spec, or verification layer
+   under `daytrade/` or `specs/` until `data/trade_logs/paper_carry_trades.jsonl`
+   has 50 CLOSED records (`status == "closed"` and `R` is not null — an open
+   paper trade is not evidence). Since 2026-07-31 this repo grew 180 commits
+   and +166,722 lines while the paper ledger stayed at 0 closed trades; the
+   freeze exists because that ratio is the failure mode, not a hypothetical
+   one. Enforced by `scripts/check_trade_freeze.py`, wired as a git
+   `commit-msg` hook at `.githooks/commit-msg` — run `sh scripts/install_hooks.sh`
+   once per checkout to activate it (git doesn't track `.git/hooks` itself,
+   so this step is required after every fresh clone/worktree). It blocks
+   (exit 1) on the first offence — a hook that only warns gets ignored, and
+   this repo's own commit history is the demonstration.
+
+   Exempt: edits to existing files (bug fixes, data-integrity fixes normally
+   land as edits); new `test_*.py` / `*_test.py` files; a short, named,
+   expiring allowlist in `check_trade_freeze.py::GRANDFATHERED_PATHS` for
+   work already in flight when the freeze landed (`daytrade/paper_carry_runner.py`,
+   `scripts/paper_carry_log.py`, `scripts/ruin_engine.py` — expires
+   2026-09-09 or when the freeze lifts, whichever comes first). Everything
+   else needs a commit message with a line starting `FREEZE OVERRIDE: <reason>`
+   — logged in history, not a silent bypass.
+
 ## Daily operation
 
 `python3 scripts/carry_buy_gate.py --series sealed --update-state` refreshes the

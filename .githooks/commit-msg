@@ -1,0 +1,19 @@
+#!/bin/sh
+# Trade-evidence freeze — see scripts/check_trade_freeze.py and CLAUDE.md
+# non-negotiable 6. Blocks new files under daytrade/ and specs/ until
+# data/trade_logs/paper_carry_trades.jsonl has 50 closed records.
+#
+# Implemented as a commit-msg hook, not pre-commit, deliberately: git's own
+# pre-commit hook runs BEFORE the commit message is obtained (see
+# githooks(5): "invoked before obtaining the proposed commit log message"),
+# so a pre-commit hook cannot reliably see a FREEZE OVERRIDE phrase passed
+# via `-m`. commit-msg fires after the message is finalized and is given its
+# path as $1 — the earliest point where both the staged diff and the actual
+# message are available together. It still runs before the commit object is
+# created, so it still blocks the commit the same way pre-commit would.
+#
+# This file is tracked in-repo (git does not track .git/hooks itself). One
+# time per checkout, run `scripts/install_hooks.sh` (or
+# `git config core.hooksPath .githooks`) to make git actually invoke it.
+TOPLEVEL="$(git rev-parse --show-toplevel)"
+exec python3 "$TOPLEVEL/scripts/check_trade_freeze.py" --staged --commit-msg-file "$1"
