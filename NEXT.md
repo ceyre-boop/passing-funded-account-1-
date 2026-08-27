@@ -136,6 +136,52 @@ G3 RED — needs a run-once OOS series, G4 GREEN, G5 RED at 0/80).
 The page is red-by-default: state older than 7 days renders NOT READY on
 staleness alone.
 
+## Method notes — parallel agents (learned the hard way 2026-08-26)
+
+**Subagent worktree isolation is NOT automatic.** It happens only with an
+explicit `isolation: "worktree"`. Four separate collisions tonight, every one of
+which I first misread as harmless background noise:
+
+- my own `git add` raced a builder's writes, so commit `20bb131` swept 3 files
+  under a message describing a 4th — one change, two commits, and the second had
+  to say so out loud
+- an agent found an autostash named `concurrent-background-alpha-operator-test`
+  it had not created
+- one agent saw 44 transient failures from another's mid-flight edits to
+  `alpha_operator.py`; another saw 8 from the Kelly workstream
+- three agents independently reported "files changed that I did not touch"
+
+Nothing was lost, but only because their file footprints happened to be nearly
+disjoint. **Decide the footprint before spawning.** If overlap is not obviously
+zero, pass `isolation: "worktree"`.
+
+**"Stop and ask rather than guess" is a soft prompt instruction, not an enforced
+gate.** It worked tonight — the AlphaZero agent genuinely halted with three real
+questions and made zero changes — but that is behaviour, not a guarantee, and it
+degrades over long runs. When it must be enforced rather than hoped for, make
+forward progress structurally conditional on an answer instead of trusting the
+model to remember to ask.
+
+**A general goal does not invoke a different reasoning mode.** A subagent given
+"make this claim true or make the doc honest" runs the same loop as one given a
+micro-spec, with less scaffolding holding it on-path. General goals worked well
+here because the constraints were sharp even where the method was open.
+
+**Nothing is listening on localhost:31337** (verified: HTTP 000, connection
+refused). Claude Code HTTP hooks can only block by returning 200 with
+`"permissionDecision": "deny"` — every connection failure, timeout, or non-2xx
+is non-blocking and the tool call proceeds. So any hook pointed there is
+currently fail-open. Note CLAUDE.md's voice commands also target 31337 with
+`curl -s`, which swallows the error. Decide deliberately whether those are meant
+to enforce or merely log.
+
+**The highest-leverage habit is Opus re-verifying subagent self-reports rather
+than trusting them.** Tonight that caught: a false-positive detector finding, a
+live-path import I had broken myself, a fault injection of mine that was a no-op
+and briefly looked like a decorative test, and a commit whose staging had
+silently drifted. Every one surfaced from re-running the check independently,
+not from reading a report.
+
 ## Method note for whoever picks this up
 
 Two of my predictions were wrong tonight, both the same way: I reasoned about
