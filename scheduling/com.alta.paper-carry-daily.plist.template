@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Template only -- NOT loaded by this repo and never installed by an agent.
+  Install by hand (see scripts/paper_carry_daily_tick.sh's header):
+
+    1. Set PAPER_CARRY_RISK=<fraction> in .env first -- the tick script
+       refuses to run without it (no invented size).
+    2. Replace REPO_ROOT below with the absolute path to this checkout.
+    3. cp this file (dropping .template) to
+       ~/Library/LaunchAgents/com.alta.paper-carry-daily.plist
+    4. launchctl load ~/Library/LaunchAgents/com.alta.paper-carry-daily.plist
+
+  Runs once daily, after both the London/NY sessions' closes have printed
+  (22:00 local) so `_next_open()` can resolve any signal queued the prior
+  day and the resolver's exit-machine step has a real closed daily bar to
+  read. Matches the shape of the two existing com.alta.* LaunchAgents
+  referenced in NEXT.md (alpha-operator, dashboard-publish) -- neither of
+  which is tracked in this repo either; installation is always a manual,
+  reviewed step, never an agent action.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.alta.paper-carry-daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/zsh</string>
+    <string>REPO_ROOT/scripts/paper_carry_daily_tick.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>22</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>REPO_ROOT/data/agent/paper_carry_daily_launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>REPO_ROOT/data/agent/paper_carry_daily_launchd.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

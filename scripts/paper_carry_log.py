@@ -105,9 +105,26 @@ def cmd_open(args):
     # all 80 sprint trades are one asset class (FX carry).
     mechs = [m.strip() for m in (getattr(args, "mechanisms", None) or "").split(",")
              if m.strip()]
+    # spec/dispatch (2026-08-26 paper-loop task): every row must be unmistakably
+    # a paper record, and must carry the honest inputs that produced it — the
+    # buy-gate state at proposal time and the rate-vintage staleness (spec 039)
+    # behind the signal, so a later analysis can separate "the edge failed"
+    # from "the inputs were stale." Both are optional CLI/API inputs; absence
+    # is recorded as None, never invented.
+    rate_staleness = getattr(args, "rate_staleness_days", None)
+    gate_state = getattr(args, "gate_state", None)
+    if isinstance(gate_state, str) and gate_state.strip():
+        gate_state = json.loads(gate_state)
+    elif not gate_state:
+        gate_state = None
+    if isinstance(rate_staleness, str) and rate_staleness.strip():
+        rate_staleness = json.loads(rate_staleness)
+    elif not rate_staleness:
+        rate_staleness = None
     rec = dict(id=trade_id, status="open", pair=args.pair, direction=args.direction,
                entry=args.entry, stop=args.stop, risk_pct=args.risk, qty=args.qty,
-               entry_date=args.date, R=None, mechanisms=mechs)
+               entry_date=args.date, R=None, mechanisms=mechs, paper=True,
+               rate_staleness_days=rate_staleness, gate_state=gate_state)
     records = _read()
     records.append(rec)
     _write(records)
@@ -175,6 +192,12 @@ def main():
     o.add_argument("--firm", default="cti_1step",
                    help="contract supplying account_size for the risk reconciliation")
     o.add_argument("--date", default=date.today().isoformat())
+    o.add_argument("--rate-staleness-days", default=None,
+                   help="JSON dict {country: days_stale} for the macro rate inputs "
+                        "that produced this signal (spec 039). Optional; None if omitted.")
+    o.add_argument("--gate-state", default=None,
+                   help="JSON snapshot of data/agent/carry_buy_gate_state.json at "
+                        "proposal time. Optional; None if omitted.")
     o.set_defaults(fn=cmd_open)
     c = sub.add_parser("close")
     c.add_argument("--id", required=True)

@@ -11,10 +11,12 @@ Run daily (wire into the existing scheduled pipeline alongside health_check.py).
 Output: daily_verdict.html (repo root — served by both localhost and Render/Pages).
 """
 import json
+import sys
 from pathlib import Path
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
 
 def load(path, default=None):
     p = ROOT / path
@@ -34,7 +36,24 @@ def main():
     state = load('data/agent/carry_buy_gate_state.json')
     health = load('data/agent/system_health_verdict.json', {})
     numbers = load('data/research/colin_v1_window_backtest.json', {})
-    paper = load('data/agent/carry_paper_account.json', {})
+
+    # 2026-08-26 paper-loop dispatch: the RUNNING live record, read straight off
+    # the same ledger scripts/paper_carry_daily.py fills and
+    # scripts/carry_buy_gate.py's G5 gate reads — not the dead
+    # data/agent/carry_paper_account.json placeholder (no writer ever existed).
+    paper_ledger_path = ROOT / 'data' / 'trade_logs' / 'paper_carry_trades.jsonl'
+    paper_closed = []
+    if paper_ledger_path.exists():
+        for line in paper_ledger_path.read_text().splitlines():
+            if not line.strip():
+                continue
+            rec = json.loads(line)
+            if rec.get('status') == 'closed' and rec.get('R') is not None:
+                paper_closed.append(rec)
+    paper_n = len(paper_closed)
+    paper_win_rate = (sum(1 for r in paper_closed if r['R'] > 0) / paper_n) if paper_n else None
+    paper_mean_r = (sum(r['R'] for r in paper_closed) / paper_n) if paper_n else None
+    g5 = (state or {}).get('gates', {}).get('G5', {})
 
     # Plain-language translation of each gate (spec 021 P6)
     gate_plain = {
@@ -129,10 +148,24 @@ def main():
 
     numbers_rows = money_row('5-year test', numbers.get('5yr')) + money_row('10-year test', numbers.get('10yr'))
 
-    paper_pnl = paper.get('total_pnl', None)
-    paper_line = (f"Right now, practicing with fake money, we're at "
-                  f"${paper_pnl:,.0f} total (out of {paper.get('n_points','?')} data points)."
-                  if paper_pnl is not None else "No paper-trading data found yet.")
+    if paper_n == 0:
+        paper_line = ("No closed paper trades yet. scripts/paper_carry_daily.py fills "
+                      "this ledger forward, one real signal at a time -- most days are "
+                      "empty by design (macro entries only fire monthly).")
+    else:
+        need = g5.get('need', 80)
+        g5_status = g5.get('status', 'RED')
+        paper_line = (
+            f"{paper_n} closed paper trade{'s' if paper_n != 1 else ''} so far "
+            f"(need {need} for G5). Win rate {paper_win_rate:.0%}, mean R "
+            f"{paper_mean_r:+.3f} -- measured on what the system ACTUALLY did with "
+            f"live data, not the 2015-2024 backtest. G5 (does the live sample still "
+            f"look like the sealed edge?): {g5_status}."
+            + ("" if paper_n >= need else
+               " A full campaign P(pass) estimate (like G3's bootstrap) needs enough "
+               "elapsed calendar days to complete an observation horizon (365/730d) -- "
+               "not yet available at this sample size.")
+        )
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -195,7 +228,7 @@ def main():
 <div class="footer">
   Auto-generated from real files in the repo — data/agent/carry_buy_gate_state.json
   (spec 021), data/agent/system_health_verdict.json,
-  data/research/colin_v1_window_backtest.json, data/agent/carry_paper_account.json.
+  data/research/colin_v1_window_backtest.json, data/trade_logs/paper_carry_trades.jsonl.
   Nothing on this page is invented. A missing number means the underlying data
   doesn't exist yet, not that everything is fine.
 </div>

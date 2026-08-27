@@ -1,309 +1,519 @@
 # Known-and-intentional wiring disconnects for scripts/wiring_audit.py.
-# Every entry MUST have a non-empty `reason` — an entry with no reason is
-# itself flagged as an audit error (the allowlist can't be used to silently
-# suppress findings). Populated 2026-08-26 from the first full run against
-# this repo; see Plans/THE_BIG_PLAN.md for the D1-D4 disconnects several of
-# these entries cite.
-#
-# category keys: ORPHANS | IMPORTED_NOT_CALLED | NO_SUPPLIER | BROKEN_IMPORT | DEAD_ARTIFACT
+# Every entry MUST have a non-empty `reason`.
 
 ORPHANS:
-  - module: "scripts.check_trade_freeze"
-    reason: "standalone CLI + git commit-msg hook target, invoked as `python3 scripts/check_trade_freeze.py --staged` from .githooks/commit-msg \u2014 a shell hook caller is not a Python import, so it correctly shows as an orphan while being genuinely wired. Activated per-checkout by scripts/install_hooks.sh; inert until then."
-  - module: "scripts.ruin_engine"
-    reason: "standalone research CLI (`python3 scripts/ruin_engine.py --firm cti_1step`), same convention as drawdown_margin.py and carry_buy_gate.py. It IMPORTS from carry_buy_gate and drawdown_margin rather than being imported \u2014 a measurement instrument, deliberately not on any live path. Its output (data/agent/ruin_engine_frontier.json) is read by a human deciding eval size, not by code."
-  - module: "daytrade.alphazero_bias"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/alphazero_bias.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.backtest"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/backtest.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.brief"
-    reason: "file's own docstring: \"spec 007. [SKETCH] — DO NOT BUILD YET\" — a stub pending a build decision (file/terminal/scheduled-message), not yet wired to anything because it does not yet exist as a real component"
-  - module: "daytrade.build_cockpit"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/build_cockpit.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.carry_reconcile"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/carry_reconcile.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.carry_sentinel"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/carry_sentinel.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.execution_policy"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/execution_policy.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.exit_evaluator"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/exit_evaluator.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.manual_read_lane"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/manual_read_lane.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.mechanism_fpr_harness"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/mechanism_fpr_harness.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.mutation_check_012"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_013"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_014"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_015_016"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_017"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_019"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_021"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_gate2_wiring"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_guards"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_spine"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.mutation_check_wiring"
-    reason: "mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py` (CLAUDE.md dev rule 6: 'run unit + integration + replay suites before claiming completion'), never imported as a library module"
-  - module: "daytrade.newplan"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/newplan.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.paper_carry_runner"
-    reason: "Phase 2 of Plans/THE_BIG_PLAN.md — the guarded PAPER carry execution path (survival.py/streak.py/portfolio_guard.py gates + decision_logger). Deliberately has NO importer or scheduler yet: it ships ARMED=False, and per CLAUDE.md dev rule 9 no LaunchAgent/cron/shell caller was added in this agent session (the D1 pattern — 'exists, tested, not wired to a scheduler' — reproduced on purpose here, not accidentally). Exercised via `daytrade/test_paper_carry_runner.py` and its own `if __name__ == \"__main__\":` CLI stub; wiring a scheduled caller is a deliberate follow-up decision, not an oversight."
-  - module: "daytrade.ontology_audit"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/ontology_audit.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.regime"
-    reason: "file's own docstring: \"spec 001. NOT BUILT. Next in the build order\" — blocked on a decision per specs/README.md build order, not an abandoned component"
-  - module: "daytrade.regime_vector"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/regime_vector.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.science_loop"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/science_loop.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.scorecard"
-    reason: "file's own docstring: \"spec 004. NOT BUILT. Blocked on regime.py (spec 001)\" — downstream of daytrade.regime, same not-yet-built status"
-  - module: "daytrade.sealed_read_futures_v1"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/sealed_read_futures_v1.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.stack_exam"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/stack_exam.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.thesis"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/thesis.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.trade_skip"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/trade_skip.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "daytrade.wrapper_anomaly"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/wrapper_anomaly.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "sovereign.execution.forex_exit_manager"
-    reason: "CLAUDE.md non-negotiable #2: ships in SHADOW MODE by design — 'flipping it live is a real decision, not a default.' No production caller until that decision is made."
-  - module: "sovereign.features.alexandrian_library"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "sovereign.features.factor_zoo"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 sovereign/features/factor_zoo.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "sovereign.forex.batch_backtester"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "sovereign.forex.carry_engine"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "sovereign.forex.cb_calendar"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 sovereign/forex/cb_calendar.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "sovereign.forex.combat_vetoes"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "sovereign.propfirm.challenge_simulator"
-    reason: "propfirm/ simulation tooling for the ICT-lane, which CLAUDE.md explicitly marks legacy/never-read for this repo's carry-edge purpose (see 'Daily operation' note on prop_challenge_state.json)."
-  - module: "sovereign.propfirm.paper_challenge"
-    reason: "propfirm/ simulation tooling for the ICT-lane; CLAUDE.md marks the ICT lane legacy for this repo (carry edge is the proven strategy) — this simulator has no production caller."
-  - module: "sovereign.risk.kelly_engine"
-    reason: "2026-08-26 Kelly fix: sovereign/risk/layers/kelly.py (the real ceiling on risk_engine.decide()'s sizing path) now imports fractional_kelly/hoeffding_win_rate from the new dependency-free sovereign/risk/kelly_math.py instead of from here, so CLAUDE.md #4's Kelly control actually works. kelly_engine.py itself is left as-is: a thin re-export of kelly_math's functions plus SovereignRiskEngine, a wrapper class copied from a different repo (layer2.*, top-level config.loader — neither exists here) with zero callers. Still flagged separately under BROKEN_IMPORT for the same reason. Genuinely orphaned by design, not vendored/stubbed to hide it — see sovereign/risk/test_kelly_engine.py."
-  - module: "sovereign.risk.risk_engine"
-    reason: "D2 in Plans/THE_BIG_PLAN.md: 'rg kelly_engine|risk_engine outside sovereign/ returns nothing — you cannot bypass a layer that was never on the path.' Characterised and tested, not yet wired onto the live sizing path."
-  - module: "execution.build_backfill_events"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "execution.drift"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 execution/drift.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "execution.eod"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 execution/eod.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "execution.funderpro_executor"
-    reason: "D1 in Plans/THE_BIG_PLAN.md: the execution path is dead — funderpro_executor.py imports sovereign.execution.ctrader_bridge, which does not exist on disk, and no plist/cron/shell caller reaches it."
-  - module: "execution.harness"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 execution/harness.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "execution.paper_trading"
-    reason: "imports integration.production_engine, a module that does not exist on disk anywhere in this repo (also flagged under BROKEN_IMPORT) — genuinely dead, carried over from the general repo's paper-trading harness and never finished here."
-  - module: "execution.postmortem"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 execution/postmortem.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "backtester.hyp104_holdout"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 backtester/hyp104_holdout.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "backtester.hyp105_long_scan"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 backtester/hyp105_long_scan.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "backtester.hyp106_skew"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 backtester/hyp106_skew.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "backtester.megascan"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 backtester/megascan.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "backtester.megascan_v2"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 backtester/megascan_v2.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "backtester.run_corrected_gapper"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 backtester/run_corrected_gapper.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "backtester.walk_forward"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "scripts.build_daily_verdict_page"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/build_daily_verdict_page.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.build_extended_features"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/build_extended_features.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.carry_scan"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/carry_scan.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.colin_v2_campaign_sim"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "scripts.data_health"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/data_health.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.diagnose_repro_gap"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/diagnose_repro_gap.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.eval_lab"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "scripts.eval_lab_carry_fix"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "scripts.friction_ladder"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "scripts.instant_pro_sim"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "scripts.jj_sim_tracker"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/jj_sim_tracker.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.oos_2025_2026_runner"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/oos_2025_2026_runner.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.prove_datasource"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/prove_datasource.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.requirements_map_mc"
-    reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 scripts/requirements_map_mc.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
-  - module: "scripts.select_pass_planner"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "scripts.strategy_sweep"
-    reason: "no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md documents (D1-D4) — detect-only per this task, not fixed here"
-  - module: "scripts.wiring_audit"
-    reason: "this detector itself — a standalone CLI tool invoked by hand (or by scripts/test_wiring_audit.py's subprocess check), never imported as a library"
-
+- module: scripts.check_trade_freeze
+  reason: standalone CLI + git commit-msg hook target, invoked as `python3 scripts/check_trade_freeze.py
+    --staged` from .githooks/commit-msg — a shell hook caller is not a Python import, so it correctly
+    shows as an orphan while being genuinely wired. Activated per-checkout by scripts/install_hooks.sh;
+    inert until then.
+- module: scripts.ruin_engine
+  reason: standalone research CLI (`python3 scripts/ruin_engine.py --firm cti_1step`), same convention
+    as drawdown_margin.py and carry_buy_gate.py. It IMPORTS from carry_buy_gate and drawdown_margin rather
+    than being imported — a measurement instrument, deliberately not on any live path. Its output (data/agent/ruin_engine_frontier.json)
+    is read by a human deciding eval size, not by code.
+- module: daytrade.alphazero_bias
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/alphazero_bias.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.backtest
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/backtest.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its
+    siblings the same way); not designed to be imported as a library module
+- module: daytrade.brief
+  reason: 'file''s own docstring: "spec 007. [SKETCH] — DO NOT BUILD YET" — a stub pending a build decision
+    (file/terminal/scheduled-message), not yet wired to anything because it does not yet exist as a real
+    component'
+- module: daytrade.build_cockpit
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/build_cockpit.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.carry_reconcile
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/carry_reconcile.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.carry_sentinel
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/carry_sentinel.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.execution_policy
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/execution_policy.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: daytrade.exit_evaluator
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/exit_evaluator.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.manual_read_lane
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/manual_read_lane.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: daytrade.mechanism_fpr_harness
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/mechanism_fpr_harness.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: daytrade.mutation_check_012
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_013
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_014
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_015_016
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_017
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_019
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_021
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_gate2_wiring
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_guards
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_spine
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.mutation_check_wiring
+  reason: 'mutation/fault-injection harness under daytrade/ — invoked manually via `python3 daytrade/mutation_check_X.py`
+    (CLAUDE.md dev rule 6: ''run unit + integration + replay suites before claiming completion''), never
+    imported as a library module'
+- module: daytrade.newplan
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/newplan.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its
+    siblings the same way); not designed to be imported as a library module
+- module: daytrade.paper_carry_runner
+  reason: 'Phase 2 of Plans/THE_BIG_PLAN.md — the guarded PAPER carry execution path (survival.py/streak.py/portfolio_guard.py
+    gates + decision_logger). Deliberately has NO importer or scheduler yet: it ships ARMED=False, and
+    per CLAUDE.md dev rule 9 no LaunchAgent/cron/shell caller was added in this agent session (the D1
+    pattern — ''exists, tested, not wired to a scheduler'' — reproduced on purpose here, not accidentally).
+    Exercised via `daytrade/test_paper_carry_runner.py` and its own `if __name__ == "__main__":` CLI stub;
+    wiring a scheduled caller is a deliberate follow-up decision, not an oversight.'
+- module: daytrade.ontology_audit
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/ontology_audit.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.regime
+  reason: 'file''s own docstring: "spec 001. NOT BUILT. Next in the build order" — blocked on a decision
+    per specs/README.md build order, not an abandoned component'
+- module: daytrade.regime_vector
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/regime_vector.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.science_loop
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/science_loop.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.scorecard
+  reason: 'file''s own docstring: "spec 004. NOT BUILT. Blocked on regime.py (spec 001)" — downstream
+    of daytrade.regime, same not-yet-built status'
+- module: daytrade.sealed_read_futures_v1
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/sealed_read_futures_v1.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: daytrade.stack_exam
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/stack_exam.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.thesis
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/thesis.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its
+    siblings the same way); not designed to be imported as a library module
+- module: daytrade.trade_skip
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/trade_skip.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: daytrade.wrapper_anomaly
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/wrapper_anomaly.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: sovereign.execution.forex_exit_manager
+  reason: 'CLAUDE.md non-negotiable #2: ships in SHADOW MODE by design — ''flipping it live is a real
+    decision, not a default.'' No production caller until that decision is made.'
+- module: sovereign.features.alexandrian_library
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: sovereign.features.factor_zoo
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    sovereign/features/factor_zoo.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: sovereign.forex.batch_backtester
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: sovereign.forex.carry_engine
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: sovereign.forex.cb_calendar
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    sovereign/forex/cb_calendar.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: sovereign.forex.combat_vetoes
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: sovereign.propfirm.challenge_simulator
+  reason: propfirm/ simulation tooling for the ICT-lane, which CLAUDE.md explicitly marks legacy/never-read
+    for this repo's carry-edge purpose (see 'Daily operation' note on prop_challenge_state.json).
+- module: sovereign.propfirm.paper_challenge
+  reason: propfirm/ simulation tooling for the ICT-lane; CLAUDE.md marks the ICT lane legacy for this
+    repo (carry edge is the proven strategy) — this simulator has no production caller.
+- module: sovereign.risk.kelly_engine
+  reason: '2026-08-26 Kelly fix: sovereign/risk/layers/kelly.py (the real ceiling on risk_engine.decide()''s
+    sizing path) now imports fractional_kelly/hoeffding_win_rate from the new dependency-free sovereign/risk/kelly_math.py
+    instead of from here, so CLAUDE.md #4''s Kelly control actually works. kelly_engine.py itself is left
+    as-is: a thin re-export of kelly_math''s functions plus SovereignRiskEngine, a wrapper class copied
+    from a different repo (layer2.*, top-level config.loader — neither exists here) with zero callers.
+    Still flagged separately under BROKEN_IMPORT for the same reason. Genuinely orphaned by design, not
+    vendored/stubbed to hide it — see sovereign/risk/test_kelly_engine.py.'
+- module: sovereign.risk.risk_engine
+  reason: 'D2 in Plans/THE_BIG_PLAN.md: ''rg kelly_engine|risk_engine outside sovereign/ returns nothing
+    — you cannot bypass a layer that was never on the path.'' Characterised and tested, not yet wired
+    onto the live sizing path.'
+- module: execution.build_backfill_events
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: execution.drift
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    execution/drift.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its
+    siblings the same way); not designed to be imported as a library module
+- module: execution.eod
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    execution/eod.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings
+    the same way); not designed to be imported as a library module
+- module: execution.funderpro_executor
+  reason: 'D1 in Plans/THE_BIG_PLAN.md: the execution path is dead — funderpro_executor.py imports sovereign.execution.ctrader_bridge,
+    which does not exist on disk, and no plist/cron/shell caller reaches it.'
+- module: execution.harness
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    execution/harness.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its
+    siblings the same way); not designed to be imported as a library module
+- module: execution.paper_trading
+  reason: imports integration.production_engine, a module that does not exist on disk anywhere in this
+    repo (also flagged under BROKEN_IMPORT) — genuinely dead, carried over from the general repo's paper-trading
+    harness and never finished here.
+- module: execution.postmortem
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    execution/postmortem.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: backtester.hyp104_holdout
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    backtester/hyp104_holdout.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: backtester.hyp105_long_scan
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    backtester/hyp105_long_scan.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: backtester.hyp106_skew
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    backtester/hyp106_skew.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: backtester.megascan
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    backtester/megascan.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: backtester.megascan_v2
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    backtester/megascan_v2.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: backtester.run_corrected_gapper
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    backtester/run_corrected_gapper.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: backtester.walk_forward
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: scripts.build_daily_verdict_page
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_daily_verdict_page.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: scripts.build_extended_features
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_extended_features.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: scripts.carry_scan
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/carry_scan.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its
+    siblings the same way); not designed to be imported as a library module
+- module: scripts.colin_v2_campaign_sim
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: scripts.data_health
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/data_health.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: scripts.diagnose_repro_gap
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/diagnose_repro_gap.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: scripts.eval_lab
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: scripts.eval_lab_carry_fix
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: scripts.friction_ladder
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: scripts.instant_pro_sim
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: scripts.jj_sim_tracker
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/jj_sim_tracker.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: scripts.oos_2025_2026_runner
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/oos_2025_2026_runner.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: scripts.prove_datasource
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/prove_datasource.py`), matching this repo's script convention (daytrade/operator_tick.sh calls
+    its siblings the same way); not designed to be imported as a library module
+- module: scripts.requirements_map_mc
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/requirements_map_mc.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module
+- module: scripts.select_pass_planner
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: scripts.strategy_sweep
+  reason: no Python importer and no CLI entry point found; a disconnected component of the class Plans/THE_BIG_PLAN.md
+    documents (D1-D4) — detect-only per this task, not fixed here
+- module: scripts.wiring_audit
+  reason: this detector itself — a standalone CLI tool invoked by hand (or by scripts/test_wiring_audit.py's
+    subprocess check), never imported as a library
+- module: scripts.paper_carry_daily
+  reason: standalone CLI, invoked by scripts/paper_carry_daily_tick.sh (a launchd wrapper, itself not
+    tracked as a Python module) — has `if __name__ == "__main__":` and is invoked directly (`python3 scripts/paper_carry_daily.py`),
+    matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way);
+    not designed to be imported as a library module
 IMPORTED_NOT_CALLED:
-  - module: "daytrade.alpha_operator"
-    target: "daytrade.scenarios"
-    reason: "ALL_SCENARIOS is a tuple constant used via `set(...)` membership comparisons, not invoked — a data constant, not a callable"
-  - module: "daytrade.context_directive"
-    target: "daytrade.stockfish_exit"
-    reason: "INTENT is a constant/dict imported for `in`/membership checks, not invoked"
-  - module: "daytrade.exit_evaluator"
-    target: "daytrade.stockfish_exit"
-    reason: "Stage is an enum used via attribute access and dict keys (Stage.ENTERED, _STAGE_ORD[...]) and comparisons, never called as a function"
-  - module: "daytrade.forecast"
-    target: "daytrade.scenarios"
-    reason: "ALL_SCENARIOS is a tuple constant used via `in`/`set()` membership checks, not invoked — a data constant, not a callable"
-  - module: "daytrade.scenarios"
-    target: "daytrade.stockfish_exit"
-    reason: "INTENT is a constant/dict imported for `in`/membership checks against known exit-policy names, not invoked"
-  - module: "daytrade.stack_exam"
-    target: "daytrade.alpha_operator"
-    reason: "imports `ao` for a type-checking/introspection pass over alpha_operator's own symbols (a research/audit script), no direct call of an ao.* function is needed for what stack_exam checks"
-  - module: "daytrade.stack_exam"
-    target: "daytrade.carry_exit"
-    reason: "CarryState is a dataclass imported for isinstance/type inspection in this audit script, never constructed or called"
-  - module: "daytrade.trade_events"
-    target: "daytrade.stockfish_exit"
-    reason: "Stage is an enum, assigned to `.stage` and compared — genuinely used, never called as a function"
-  - module: "daytrade.trade_events"
-    target: "daytrade.stockfish_constitution"
-    reason: "MUTATING is a constant set used via `in` membership checks, not invoked"
-  - module: "daytrade.trade_skip"
-    target: "daytrade.oracle_audit"
-    reason: "FAMILIES is a dict constant, subscripted (FAMILIES[POLICY_COLUMN]), never called"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.pair_universe"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.macro_engine"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.data_fetcher"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.ict_engine"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.risk_sentiment"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.commodity_engine"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.entry_engine"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.position_sizer"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex"
-    target: "sovereign.forex.forex_specialist"
-    reason: "sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__ itself never calls anything, by design"
-  - module: "sovereign.forex.forex_specialist"
-    target: "sovereign.forex.pair_universe"
-    reason: "ALL_PAIRS is a data constant (pair list), iterated/compared, never called"
-  - module: "sovereign.intelligence.decision_logger"
-    target: "sovereign.intelligence.execution_ledger"
-    reason: "MODES is a constant (enum/tuple of valid modes) used for validation membership checks, not invoked"
-  - module: "execution.eod"
-    target: "execution.context"
-    reason: "Status is an enum used via attribute access and comparisons (Status.OK etc.), never called as a function"
-  - module: "execution.postmortem"
-    target: "execution.context"
-    reason: "Status is an enum used via attribute access and comparisons, never called as a function"
-  - module: "scripts.data_health"
-    target: "sovereign.forex.data_fetcher"
-    reason: "FRED_CPI/FRED_RATES are constant series-id strings, referenced directly, never called"
-  - module: "scripts.oos_2025_2026_runner"
-    target: "sovereign.forex.pair_universe"
-    reason: "PAIR_CONFIG is a data constant (dict), subscripted, never called"
-
+- module: daytrade.alpha_operator
+  target: daytrade.scenarios
+  reason: ALL_SCENARIOS is a tuple constant used via `set(...)` membership comparisons, not invoked —
+    a data constant, not a callable
+- module: daytrade.context_directive
+  target: daytrade.stockfish_exit
+  reason: INTENT is a constant/dict imported for `in`/membership checks, not invoked
+- module: daytrade.exit_evaluator
+  target: daytrade.stockfish_exit
+  reason: Stage is an enum used via attribute access and dict keys (Stage.ENTERED, _STAGE_ORD[...]) and
+    comparisons, never called as a function
+- module: daytrade.forecast
+  target: daytrade.scenarios
+  reason: ALL_SCENARIOS is a tuple constant used via `in`/`set()` membership checks, not invoked — a data
+    constant, not a callable
+- module: daytrade.scenarios
+  target: daytrade.stockfish_exit
+  reason: INTENT is a constant/dict imported for `in`/membership checks against known exit-policy names,
+    not invoked
+- module: daytrade.stack_exam
+  target: daytrade.alpha_operator
+  reason: imports `ao` for a type-checking/introspection pass over alpha_operator's own symbols (a research/audit
+    script), no direct call of an ao.* function is needed for what stack_exam checks
+- module: daytrade.stack_exam
+  target: daytrade.carry_exit
+  reason: CarryState is a dataclass imported for isinstance/type inspection in this audit script, never
+    constructed or called
+- module: daytrade.trade_events
+  target: daytrade.stockfish_exit
+  reason: Stage is an enum, assigned to `.stage` and compared — genuinely used, never called as a function
+- module: daytrade.trade_events
+  target: daytrade.stockfish_constitution
+  reason: MUTATING is a constant set used via `in` membership checks, not invoked
+- module: daytrade.trade_skip
+  target: daytrade.oracle_audit
+  reason: FAMILIES is a dict constant, subscripted (FAMILIES[POLICY_COLUMN]), never called
+- module: sovereign.forex
+  target: sovereign.forex.pair_universe
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex
+  target: sovereign.forex.macro_engine
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex
+  target: sovereign.forex.data_fetcher
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex
+  target: sovereign.forex.ict_engine
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex
+  target: sovereign.forex.risk_sentiment
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex
+  target: sovereign.forex.commodity_engine
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex
+  target: sovereign.forex.entry_engine
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex
+  target: sovereign.forex.position_sizer
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex
+  target: sovereign.forex.forex_specialist
+  reason: sovereign/forex/__init__.py is a package re-export facade — imports each submodule's public
+    symbols solely so `from sovereign.forex import X` works for callers outside the package; the __init__
+    itself never calls anything, by design
+- module: sovereign.forex.forex_specialist
+  target: sovereign.forex.pair_universe
+  reason: ALL_PAIRS is a data constant (pair list), iterated/compared, never called
+- module: sovereign.intelligence.decision_logger
+  target: sovereign.intelligence.execution_ledger
+  reason: MODES is a constant (enum/tuple of valid modes) used for validation membership checks, not invoked
+- module: execution.eod
+  target: execution.context
+  reason: Status is an enum used via attribute access and comparisons (Status.OK etc.), never called as
+    a function
+- module: execution.postmortem
+  target: execution.context
+  reason: Status is an enum used via attribute access and comparisons, never called as a function
+- module: scripts.data_health
+  target: sovereign.forex.data_fetcher
+  reason: FRED_CPI/FRED_RATES are constant series-id strings, referenced directly, never called
+- module: scripts.oos_2025_2026_runner
+  target: sovereign.forex.pair_universe
+  reason: PAIR_CONFIG is a data constant (dict), subscripted, never called
 NO_SUPPLIER:
-  - field: "ExecEvent.intent"
-    reason: "BLOCKED ON D1, the missing order path. There are ZERO production constructors of ExecEvent anywhere \u2014 not merely of this field. execution_policy.py's ledger is fed only by test fixtures because daytrade/broker.py has no scheduled caller and the system places no orders (Plans/THE_BIG_PLAN.md D1). Unblocks with Phase 2's paper execution path, not by a local edit."
-  - field: "ExecEvent.fill_id"
-    reason: "BLOCKED ON D1, the missing order path. Same root cause as ExecEvent.intent \u2014 no production code constructs ExecEvent at all, so no FILL event exists to carry a fill_id. Unblocks with Phase 2's paper execution path."
-  - field: "TradeState.thesis_sl"
-    reason: "NOT AN OVERSIGHT \u2014 a documented inactive layer. stockfish_exit.py:141 sits under '--- inactive layers, awaiting their inputs', and stop_candidates() states the reason at the point of use: 'INACTIVE: needs an invalidation level from the classifier; daytrade/regime.py is a stub'. BLOCKED ON spec 001 (daytrade/regime.py raises NotImplementedError). NOTE: AlphaZero cannot supply this directly \u2014 ContextDirective structurally refuses any stop_price (context_directive.py:105-111), the two-engine boundary working as designed. When regime.py lands, the level must be derived mechanically on the Stockfish side, never handed across the envelope."
-  - field: "RiskState.mc_breach_prob"
-    reason: "own comment says 'from Monte Carlo simulator' — gates.py reads it to halt on breach probability, but nothing in production ever runs that simulator and supplies the value; only sovereign/risk/test_risk_layers.py sets it"
-
+- field: ExecEvent.intent
+  reason: BLOCKED ON D1, the missing order path. There are ZERO production constructors of ExecEvent anywhere
+    — not merely of this field. execution_policy.py's ledger is fed only by test fixtures because daytrade/broker.py
+    has no scheduled caller and the system places no orders (Plans/THE_BIG_PLAN.md D1). Unblocks with
+    Phase 2's paper execution path, not by a local edit.
+- field: ExecEvent.fill_id
+  reason: BLOCKED ON D1, the missing order path. Same root cause as ExecEvent.intent — no production code
+    constructs ExecEvent at all, so no FILL event exists to carry a fill_id. Unblocks with Phase 2's paper
+    execution path.
+- field: TradeState.thesis_sl
+  reason: 'NOT AN OVERSIGHT — a documented inactive layer. stockfish_exit.py:141 sits under ''--- inactive
+    layers, awaiting their inputs'', and stop_candidates() states the reason at the point of use: ''INACTIVE:
+    needs an invalidation level from the classifier; daytrade/regime.py is a stub''. BLOCKED ON spec 001
+    (daytrade/regime.py raises NotImplementedError). NOTE: AlphaZero cannot supply this directly — ContextDirective
+    structurally refuses any stop_price (context_directive.py:105-111), the two-engine boundary working
+    as designed. When regime.py lands, the level must be derived mechanically on the Stockfish side, never
+    handed across the envelope.'
+- field: RiskState.mc_breach_prob
+  reason: own comment says 'from Monte Carlo simulator' — gates.py reads it to halt on breach probability,
+    but nothing in production ever runs that simulator and supplies the value; only sovereign/risk/test_risk_layers.py
+    sets it
 BROKEN_IMPORT:
-  - module: "sovereign.risk.kelly_engine"
-    reason: "CLAUDE.md non-negotiable #4 example verbatim: `from layer2.risk_engine import RiskEngine` — `layer2` does not exist anywhere in this repo. sovereign/risk/test_kelly_engine.py documents this as FINDING #1: kelly_engine.py is unimportable as shipped."
-  - module: "execution.paper_trading"
-    reason: "`from integration.production_engine import EnhancedEntrySignal` — `integration` does not exist anywhere in this repo; carried over from the general repo's paper-trading harness and never finished here (also flagged under ORPHANS)."
-
+- module: sovereign.risk.kelly_engine
+  reason: 'CLAUDE.md non-negotiable #4 example verbatim: `from layer2.risk_engine import RiskEngine` —
+    `layer2` does not exist anywhere in this repo. sovereign/risk/test_kelly_engine.py documents this
+    as FINDING #1: kelly_engine.py is unimportable as shipped.'
+- module: execution.paper_trading
+  reason: '`from integration.production_engine import EnhancedEntrySignal` — `integration` does not exist
+    anywhere in this repo; carried over from the general repo''s paper-trading harness and never finished
+    here (also flagged under ORPHANS).'
 DEAD_ARTIFACT:
-  - module: "data/agent/ruin_engine_frontier.json"
-    reason: "written by scripts/ruin_engine.py for a HUMAN to read when ratifying eval size \u2014 the frontier is a decision input, not a machine input, and deliberately so: an automated consumer would let a sizing number propagate without a logged ratification, which is exactly what CLAUDE.md's 'eval sizing is NOT ratified yet' and spec 021's decision_logger requirement exist to prevent. If sizing is ever automated, this stops being a dead artifact and the ratification must move into decision_logger with it."
-  - module: "data/daytrade/carry_reconcile.json"
-    reason: "written by production code; every reader found is itself an orphan module with no importer outside test files (see ORPHANS) — same D-class disconnect, not fixed here"
-  - module: "data/daytrade/sentinel/manifest.json"
-    reason: "written by production code; every reader found is itself an orphan module with no importer outside test files (see ORPHANS) — same D-class disconnect, not fixed here"
-  - module: "data/daytrade/ceiling_report.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/daytrade/competence_report.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/daytrade/exit_evaluator_report.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/daytrade/mechanism_fpr_report.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/daytrade/residual_model.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/daytrade/sealed_read_futures_v1.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/daytrade/stack_exam.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/daytrade/stockfish_tune_report.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/daytrade/operator/records.jsonl"
-    reason: "test-only reader currently (daytrade/test_mechanisms.py) — the real production reader (alpha_operator.py's own RECORDS handling) references a different constant path; flagged for follow-up, not fixed here"
-  - module: "data/daytrade/wrapper_anomaly.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/propfirm/active_challenge.json"
-    reason: "written by production code; every reader found is itself an orphan module with no importer outside test files (see ORPHANS) — same D-class disconnect, not fixed here"
-  - module: "data/propfirm/challenge_history.jsonl"
-    reason: "written by production code; every reader found is itself an orphan module with no importer outside test files (see ORPHANS) — same D-class disconnect, not fixed here"
-  - module: "data/agent/param_change_log.jsonl"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/execution/heartbeat.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/backtester_audit_log.jsonl"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/scan_results/hyp106_insample.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/scan_results/megascan_v2_summary_20260717.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/agent/carry_buy_gate_state.json"
-    reason: "read by scripts/build_daily_verdict_page.py, the documented daily-operation entrypoint (CLAUDE.md 'Daily operation' section) — that script is invoked directly by hand each session, so it has no Python importer and shows up as an orphan reader, but the artifact is genuinely consumed"
-  - module: "data/agent/drawdown_margin.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/propfirm/jj_sim_account.json"
-    reason: "written by production code; every reader found is itself an orphan module with no importer outside test files (see ORPHANS) — same D-class disconnect, not fixed here"
-  - module: "data/daytrade/datasource_proof.json"
-    reason: "written by production code; no read of this path found anywhere in the scanned tree — a report/log artifact nothing consumes"
-  - module: "data/agent/prop_challenge_state.json"
-    reason: "CLAUDE.md 'Daily operation' section, verbatim: '(data/agent/prop_challenge_state.json and sovereign/propfirm/deployment_checklist.py are ICT-lane legacy — never read.)'"
+- module: data/agent/ruin_engine_frontier.json
+  reason: 'written by scripts/ruin_engine.py for a HUMAN to read when ratifying eval size — the frontier
+    is a decision input, not a machine input, and deliberately so: an automated consumer would let a sizing
+    number propagate without a logged ratification, which is exactly what CLAUDE.md''s ''eval sizing is
+    NOT ratified yet'' and spec 021''s decision_logger requirement exist to prevent. If sizing is ever
+    automated, this stops being a dead artifact and the ratification must move into decision_logger with
+    it.'
+- module: data/daytrade/carry_reconcile.json
+  reason: written by production code; every reader found is itself an orphan module with no importer outside
+    test files (see ORPHANS) — same D-class disconnect, not fixed here
+- module: data/daytrade/sentinel/manifest.json
+  reason: written by production code; every reader found is itself an orphan module with no importer outside
+    test files (see ORPHANS) — same D-class disconnect, not fixed here
+- module: data/daytrade/ceiling_report.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/daytrade/competence_report.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/daytrade/exit_evaluator_report.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/daytrade/mechanism_fpr_report.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/daytrade/residual_model.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/daytrade/sealed_read_futures_v1.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/daytrade/stack_exam.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/daytrade/stockfish_tune_report.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/daytrade/operator/records.jsonl
+  reason: test-only reader currently (daytrade/test_mechanisms.py) — the real production reader (alpha_operator.py's
+    own RECORDS handling) references a different constant path; flagged for follow-up, not fixed here
+- module: data/daytrade/wrapper_anomaly.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/propfirm/active_challenge.json
+  reason: written by production code; every reader found is itself an orphan module with no importer outside
+    test files (see ORPHANS) — same D-class disconnect, not fixed here
+- module: data/propfirm/challenge_history.jsonl
+  reason: written by production code; every reader found is itself an orphan module with no importer outside
+    test files (see ORPHANS) — same D-class disconnect, not fixed here
+- module: data/agent/param_change_log.jsonl
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/execution/heartbeat.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/backtester_audit_log.jsonl
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/scan_results/hyp106_insample.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/scan_results/megascan_v2_summary_20260717.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/agent/carry_buy_gate_state.json
+  reason: read by scripts/build_daily_verdict_page.py, the documented daily-operation entrypoint (CLAUDE.md
+    'Daily operation' section) — that script is invoked directly by hand each session, so it has no Python
+    importer and shows up as an orphan reader, but the artifact is genuinely consumed
+- module: data/agent/drawdown_margin.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/propfirm/jj_sim_account.json
+  reason: written by production code; every reader found is itself an orphan module with no importer outside
+    test files (see ORPHANS) — same D-class disconnect, not fixed here
+- module: data/daytrade/datasource_proof.json
+  reason: written by production code; no read of this path found anywhere in the scanned tree — a report/log
+    artifact nothing consumes
+- module: data/agent/prop_challenge_state.json
+  reason: 'CLAUDE.md ''Daily operation'' section, verbatim: ''(data/agent/prop_challenge_state.json and
+    sovereign/propfirm/deployment_checklist.py are ICT-lane legacy — never read.)'''

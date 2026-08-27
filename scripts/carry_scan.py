@@ -138,51 +138,100 @@ def preflight(as_of: date) -> list[str]:
     return bad
 
 
-def scan(as_of: date):
-    from sovereign.forex.forex_backtester import ForexBacktester
-    from sovereign.forex.pair_universe import PAIR_CONFIG, CB_TO_COUNTRY
+def rate_staleness(as_of: date) -> dict:
+    """Per-{country}_{kind} staleness in days, from the SAME macro cache files
+    `preflight()` checks (spec 039: half the signal weight on AUD/JPY carries
+    a rate-vintage look-ahead in the sealed proof; every paper record needs
+    this attached so a later analysis can separate "the edge failed" from
+    "the inputs were stale"). None where a series is missing/unreadable —
+    never a fabricated day count."""
+    import pandas as pd
+    out: dict[str, Optional[int]] = {}
+    for c in COUNTRIES:
+        for kind in ("rates", "cpi"):
+            f = MACRO_CACHE / f"{c}_{kind}.parquet"
+            key = f"{c}_{kind}"
+            if not f.exists():
+                out[key] = None
+                continue
+            try:
+                last = pd.read_parquet(f).index.max()
+                out[key] = (as_of - last.date()).days
+            except Exception:
+                out[key] = None
+    return out
 
-    pairs = sealed_universe()
+
+def _make_backtester(as_of: date):
+    from sovereign.forex.forex_backtester import ForexBacktester
     # yfinance treats `end` as EXCLUSIVE, so passing as_of drops the as_of bar —
     # which is the one carrying the signal we are looking for.
-    bt = ForexBacktester(
+    return ForexBacktester(
         start=(as_of - timedelta(days=365 * WARMUP_YEARS)).isoformat(),
         end=(as_of + timedelta(days=1)).isoformat())
 
+
+def pair_bar(bt, pair: str):
+    """The latest bar's close/ATR%/signal/hold_days for ONE pair, from the SAME
+    engine call `scan()` and the backtester itself use — never a hand-copy of
+    the rules. Returns None (with a note) if there isn't enough price history.
+
+    Unlike `scan()`'s hits, this returns a bar EVEN WHEN signal == 0 — an
+    already-open position needs today's close/ATR every day it holds, not
+    only on the days a fresh entry signal fires. Shared by `scan()` (entries)
+    and `scripts/paper_carry_resolver.py` (exits on open positions) so both
+    read price/ATR/signal off one code path.
+
+    Returns a dict: pair, bar_date, close, atr_pct, signal, hold_days — or
+    (None, note) on failure.
+    """
+    from sovereign.forex.pair_universe import PAIR_CONFIG, CB_TO_COUNTRY
+
+    cfg = PAIR_CONFIG.get(pair)
+    if not cfg:
+        return None, f"{pair}: absent from PAIR_CONFIG"
+    df = bt._download_price(pair)
+    if df is None or len(df) < 252:
+        return None, f"{pair}: {0 if df is None else len(df)} bars, needs 252"
+
+    sig = bt._get_pair_signals(
+        df=df, pair=pair, hold_days=bt.PAIR_HOLD_OVERRIDES.get(pair, bt.HOLD_DAYS),
+        base_country=CB_TO_COUNTRY[cfg.base_central_bank],
+        quote_country=CB_TO_COUNTRY[cfg.quote_central_bank])
+    if pair in bt.PAIR_VIX_GATES:
+        sig = bt._apply_vix_regime_gate(sig, pair=pair, start=bt.start, end=bt.end)
+
+    close = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
+    atr_pct = float(bt._signals._compute_atr_pct(close, df).iloc[-1])
+    return dict(pair=pair, bar_date=sig.index[-1].date(),
+               close=float(close.iloc[-1]), atr_pct=atr_pct,
+               signal=float(sig["signal"].iloc[-1]),
+               hold_days=int(sig["hold_days"].iloc[-1])), None
+
+
+def scan(as_of: date):
+    bt = _make_backtester(as_of)
+    pairs = sealed_universe()
+
     hits, notes = [], []
     for pair in pairs:
-        cfg = PAIR_CONFIG.get(pair)
-        if not cfg:
-            notes.append(f"{pair}: absent from PAIR_CONFIG")
+        bar, note = pair_bar(bt, pair)
+        if bar is None:
+            notes.append(note)
             continue
-        df = bt._download_price(pair)
-        if df is None or len(df) < 252:
-            notes.append(f"{pair}: {0 if df is None else len(df)} bars, needs 252")
+        if bar["signal"] == 0:
             continue
 
-        sig = bt._get_pair_signals(
-            df=df, pair=pair, hold_days=bt.PAIR_HOLD_OVERRIDES.get(pair, bt.HOLD_DAYS),
-            base_country=CB_TO_COUNTRY[cfg.base_central_bank],
-            quote_country=CB_TO_COUNTRY[cfg.quote_central_bank])
-        if pair in bt.PAIR_VIX_GATES:
-            sig = bt._apply_vix_regime_gate(sig, pair=pair, start=bt.start, end=bt.end)
-
-        s = float(sig["signal"].iloc[-1])
-        sig_bar = sig.index[-1].date()
-        if s == 0:
-            continue
-
-        close = df["Close"] if "Close" in df.columns else df.iloc[:, 0]
-        stop_frac = float(bt._signals._compute_atr_pct(close, df).iloc[-1]) * bt.STOP_ATR_MULT
+        stop_frac = bar["atr_pct"] * bt.STOP_ATR_MULT
 
         # The fill is the NEXT bar's open. Historically that bar exists, so the
         # exact sealed fill can be shown; live it does not exist yet.
         # Fetched separately rather than by widening the signal window, so no
         # post-as_of bar can reach the signal computation.
         fill, fill_bar = _next_open(pair, as_of)
-        hits.append(dict(pair=pair, direction="LONG" if s > 0 else "SHORT",
-                         signal_bar=sig_bar, stop_frac=stop_frac, fill=fill,
-                         fill_bar=fill_bar, hold=int(sig["hold_days"].iloc[-1])))
+        hits.append(dict(pair=pair, direction="LONG" if bar["signal"] > 0 else "SHORT",
+                         signal_bar=bar["bar_date"], stop_frac=stop_frac, fill=fill,
+                         fill_bar=fill_bar, hold=bar["hold_days"]))
     return hits, notes, pairs
 
 
