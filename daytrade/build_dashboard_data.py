@@ -14,6 +14,12 @@ import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import streak as streak_mod                                        # noqa: E402
+
+ET = ZoneInfo("America/New_York")
 
 ROOT = Path(__file__).resolve().parents[1]
 OPDIR = ROOT / "data" / "daytrade" / "operator"
@@ -315,6 +321,35 @@ def build_ontology() -> dict:
     return d
 
 
+def build_streak() -> dict:
+    """Campaign/cooloff state (spec 004) — the ladder's single most important
+    rule (2 consecutive red days -> 5-trading-day cooloff) made visible where
+    a human looks, not just enforced silently in code. Absent state is
+    reported as absent, never guessed."""
+    path = streak_mod.STATE_PATH
+    if not path.exists():
+        return {"available": False,
+                "why": "data/streak.json has not been written yet — "
+                       "no session close has recorded a real result"}
+    state = streak_mod.load_state()
+    today = datetime.now(ET).date()
+    armed = streak_mod.is_armed(state, today)
+    return {
+        "available": True,
+        "green_streak": state.green_streak,
+        "longest_streak": state.longest_streak,
+        "days_since_red": state.days_since_red,
+        "rolling_20d_winrate": state.rolling_20d_winrate,
+        "cumulative_R": state.cumulative_R,
+        "day_pnl": state.day_pnl,
+        "distance_to_goal": state.distance_to_goal,
+        "consecutive_red_days": state.consecutive_red_days,
+        "campaign_cushion": state.campaign_cushion,
+        "cooloff_until": state.cooloff_until,
+        "cooloff_active": not armed,
+    }
+
+
 def build_containment(records: list[dict]) -> dict:
     emitted = sum(1 for r in records if r.get("directive") and not r.get("shadow"))
     suppressed = sum(1 for r in records if r.get("directive") and r.get("shadow"))
@@ -343,6 +378,7 @@ def main() -> int:
         "learning_loop": build_learning_loop(),
         "ontology": build_ontology(),
         "yield_curve": build_yield(load_jsonl(YIELD_LOG)),
+        "streak": build_streak(),
         "four_books": build_books(),
         "disciplines": DISCIPLINES,
         "verification": VERIFICATION,

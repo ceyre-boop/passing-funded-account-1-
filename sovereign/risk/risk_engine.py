@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 import math
-from importlib import import_module
+from importlib import import_module, util as importlib_util
 from pathlib import Path
 
 from sovereign.risk.config.loader import load_risk_config
@@ -30,11 +30,32 @@ _MODULATORS = ("volatility", "drawdown", "regime")   # factor() in [0,1], compou
 _CEILINGS = ("kelly", "portfolio")                   # ceiling() absolute risk_pct, min()
 
 
+def _layer_module_exists(name: str) -> bool:
+    """True if sovereign/risk/layers/{name}.py can be found on disk, regardless
+    of whether importing it actually succeeds. This is the only reliable way to
+    tell "layer genuinely not built yet" (no such file — permissive default is
+    fine) apart from "layer file exists but its own imports are broken" (a real
+    bug that must never be treated as an absent, harmless layer).
+    """
+    try:
+        return importlib_util.find_spec(f"sovereign.risk.layers.{name}") is not None
+    except ModuleNotFoundError:
+        # A missing parent package on the spec-resolution path also means the
+        # layer itself cannot exist.
+        return False
+
+
 def _modulator(name, signal, state, cfg) -> float:
     try:
         mod = import_module(f"sovereign.risk.layers.{name}")
-    except ImportError:
-        return 1.0                                   # not built yet → identity
+    except ImportError as e:
+        if _layer_module_exists(name):
+            raise ImportError(
+                f"risk modulator layer '{name}' exists on disk but failed to "
+                f"import — refusing to silently treat a broken layer as "
+                f"identity (factor 1.0): {e}"
+            ) from e
+        return 1.0                                   # genuinely not built yet → identity
     f = float(mod.factor(signal, state, cfg))        # errors here propagate (fail loud)
     if not (0.0 <= f <= 1.0):
         return max(0.0, min(1.0, f))                 # clamp: a modulator can never amplify
@@ -44,8 +65,14 @@ def _modulator(name, signal, state, cfg) -> float:
 def _ceiling(name, signal, state, cfg) -> float:
     try:
         mod = import_module(f"sovereign.risk.layers.{name}")
-    except ImportError:
-        return math.inf                              # not built yet → no constraint
+    except ImportError as e:
+        if _layer_module_exists(name):
+            raise ImportError(
+                f"risk ceiling layer '{name}' exists on disk but failed to "
+                f"import — refusing to silently return no constraint "
+                f"(math.inf) for a broken layer: {e}"
+            ) from e
+        return math.inf                              # genuinely not built yet → no constraint
     c = float(mod.ceiling(signal, state, cfg))       # errors propagate (fail loud)
     return max(0.0, c)
 

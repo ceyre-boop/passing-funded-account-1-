@@ -17,6 +17,12 @@ ET_DATE=$(TZ=America/New_York date +%F)
 python3 "$REPO/daytrade/exit_quality.py" \
   || echo "!! exit_quality failed — panel will publish with a STALE badge"
 
+# Streak/cooloff tracker (spec 004) — the session-close hook. Non-fatal, same
+# pattern as exit_quality above: it prints an honest SKIP when today's real
+# outcome can't be sourced rather than fabricating a day (see streak_close.py).
+python3 "$REPO/daytrade/streak_close.py" \
+  || echo "!! streak_close failed (non-fatal) — streak.json left unchanged"
+
 if python3 "$REPO/daytrade/build_dashboard_data.py"; then
   echo "$ET_DATE" > "$STAMP"
   cd "$REPO" \

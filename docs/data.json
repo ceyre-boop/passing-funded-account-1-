@@ -1,7 +1,7 @@
 {
  "alphazero": {
   "abstain_rate": 0.615,
-  "age_hours": 95.7,
+  "age_hours": 99.8,
   "chance_scenario": 0.2,
   "decisive_accuracy_quotable": false,
   "direction_accuracy": 0.308,
@@ -523,7 +523,7 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-26T20:40:03.630128+00:00",
+ "generated_at": "2026-08-27T00:42:23.877702+00:00",
  "latest_judgment": {
   "abstention": {
    "detail": "newest bar 28 min old (> 15)",
@@ -548,7 +548,7 @@
   "verdict": "ABSTAIN"
  },
  "learning_loop": {
-  "age_hours": 95.7,
+  "age_hours": 99.8,
   "alphazero": {
    "by_verdict": {
     "ABSTAIN": {
@@ -715,7 +715,7 @@
   }
  },
  "ontology": {
-  "age_hours": 67.6,
+  "age_hours": 71.7,
   "available": true,
   "generated_at": "2026-08-21T22:53:03.808786+00:00",
   "k_subsamples": 8,
@@ -935,7 +935,7 @@
   "total_usd": 0.9491
  },
  "stockfish": {
-  "age_hours": 23.5,
+  "age_hours": 0.0,
   "available": true,
   "by_class": {
    "CASH_INDEX": {
@@ -4672,6 +4672,10 @@
    }
   ],
   "stale": false
+ },
+ "streak": {
+  "available": false,
+  "why": "data/streak.json has not been written yet \u2014 no session close has recorded a real result"
  },
  "verdicts": {
   "abstain_reasons": {

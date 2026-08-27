@@ -44,6 +44,14 @@ WEIGHTS = {
     'hurst':              0.10,
 }
 
+#: Macro fields that rate_diff_momentum (30% weight) and irp_z (25% weight) are
+#: directly computed from (see ForexMacroEngine.score_pair). If either country's
+#: ForexDataFetcher output flags one of these as synthetic (fallback_static /
+#: manual_prior — see data_fetcher.py's source_map), those two weights are being
+#: driven by non-live data, not a live macro read.
+MACRO_DEPENDENT_FIELDS = {'rate', 'cpi_yoy'}
+
+
 @dataclass
 class ForexSignal:
     pair: str
@@ -59,6 +67,8 @@ class ForexSignal:
     spot: float
     base_cycle: str
     quote_cycle: str
+    degraded: bool = False              # True when built on synthetic macro data
+    degraded_fields: tuple = ()         # which source fields were synthetic
 
 
 class ForexMacroEngine:
@@ -81,6 +91,35 @@ class ForexMacroEngine:
 
         base_macro = self._fetcher.get_country_macro(base_country)
         quote_macro = self._fetcher.get_country_macro(quote_country)
+
+        # ── Synthetic-macro refusal gate ──────────────────────────────── #
+        # rate_diff_momentum (30% weight) and irp_z (25% weight) — 55% of the
+        # composite score — are computed directly from base_macro['rate'] /
+        # ['cpi_yoy'] and quote_macro['rate'] / ['cpi_yoy'] (see fv_signal and
+        # rdm_score below). If ForexDataFetcher had to fall back to its static
+        # tables for either of those fields on either leg of the pair, more
+        # than half the score's weight is riding on non-live data. Refuse to
+        # emit a directional read on that: force NEUTRAL, same pattern as the
+        # SNB/BOJ gates below, rather than let a synthetic-macro number pass as
+        # a real signal.
+        degraded_fields = tuple(sorted(
+            {f for f in base_macro.get('synthetic_fields', []) if f in MACRO_DEPENDENT_FIELDS}
+            | {f for f in quote_macro.get('synthetic_fields', []) if f in MACRO_DEPENDENT_FIELDS}
+        ))
+        if degraded_fields:
+            logger.warning(
+                "%s: refusing directional macro signal — synthetic macro inputs %s "
+                "feed rate_diff_momentum/irp_z (55%% combined weight)",
+                pair, degraded_fields,
+            )
+            return ForexSignal(
+                pair=pair, direction='NEUTRAL', conviction=0.0,
+                hold_period_estimate=0, primary_driver='MACRO_DEGRADED',
+                rate_differential=0.0, irp_z=0.0, ppp_z=0.0,
+                cycle_divergence=0.0, hurst=0.5, spot=0.0,
+                base_cycle='UNKNOWN', quote_cycle='UNKNOWN',
+                degraded=True, degraded_fields=degraded_fields,
+            )
 
         # ── USDCHF: SNB suppression gate ────────────────────────────── #
         # CHF is a managed safe-haven. SNB actively suppresses CHF strength.
