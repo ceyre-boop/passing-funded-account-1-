@@ -319,6 +319,11 @@ ORPHANS:
 - module: scripts.vintage_signal_delta
   reason: spec 039 standalone CLI — compares the macro layer's monthly sign under both vintages; a measurement
     harness, deliberately not on any production path
+- module: scripts.refresh_macro_cache
+  reason: standalone CLI tool — has `if __name__ == "__main__":` and is invoked directly (`python3 scripts/refresh_macro_cache.py`),
+    matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way);
+    not designed to be imported as a library module. Added 2026-08-26 as the single documented command
+    for refreshing CACHE_STALE macro series (see scripts/data_health.py).
 IMPORTED_NOT_CALLED:
 - module: daytrade.alpha_operator
   target: daytrade.scenarios

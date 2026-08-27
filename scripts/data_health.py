@@ -77,8 +77,11 @@ def _load_env_key() -> str | None:
 
 
 def check_macro(as_of: date, offline: bool):
-    """Per-country rate and CPI: cache vs FRED vs today."""
-    from sovereign.forex.data_fetcher import FRED_RATES, FRED_CPI
+    """Per-country rate and CPI: cache vs FRED (or, for NON_FRED_CPI_SOURCES,
+    the live replacement source) vs today."""
+    from sovereign.forex.data_fetcher import (
+        FRED_RATES, FRED_CPI, NON_FRED_CPI_SOURCES, ForexDataFetcher,
+    )
     import pandas as pd
 
     key = _load_env_key()
@@ -113,6 +116,37 @@ def check_macro(as_of: date, offline: bool):
                              "SYNTHETIC",
                              f"cache is a FLAT LINE ({d.iloc[0, 0]}) across {len(d)} rows — "
                              f"a hardcoded fallback written to disk, not observed data"))
+                continue
+
+            # CPI for countries whose FRED mirror is SOURCE_DEAD (see
+            # NON_FRED_CPI_SOURCES) is now fetched live from ONS/ABS instead
+            # of FRED — compare against that source, not the dead FRED series.
+            if kind == "cpi" and c in NON_FRED_CPI_SOURCES and not offline:
+                src_label = NON_FRED_CPI_SOURCES[c]
+                src_end = None
+                try:
+                    fetcher = ForexDataFetcher.__new__(ForexDataFetcher)
+                    if c == "UK":
+                        src_end = fetcher._fetch_ons_uk_cpi_yoy(
+                            "2015-01-01").index.max().date()
+                    elif c == "AU":
+                        src_end = fetcher._fetch_abs_au_cpi_index(
+                            "2015-01-01").index.max().date()
+                except Exception as e:
+                    rows.append((f"{c}_{kind}", src_label, cache_end, None,
+                                 "SOURCE_UNREACHABLE",
+                                 f"live {src_label} fetch failed: {type(e).__name__}: {e}"))
+                    continue
+                if src_end is None:
+                    state, note = "UNKNOWN", f"{src_label} not queried"
+                elif cache_end is None:
+                    state, note = "MISSING", "no local cache"
+                elif cache_end < src_end:
+                    state = "CACHE_STALE"
+                    note = f"{src_label} has data to {src_end}; refreshable"
+                else:
+                    state, note = "OK", ""
+                rows.append((f"{c}_{kind}", src_label, cache_end, src_end, state, note))
                 continue
 
             if not sid:
@@ -257,7 +291,8 @@ def main() -> int:
     # verdict of "sound" that only means "not checked" is the exact false green
     # this tool exists to stop.
     bad = {r[0]: r[4] for r in macro
-           if r[4] in ("SOURCE_DEAD", "NO_SERIES", "MISSING", "SYNTHETIC", "UNKNOWN")}
+           if r[4] in ("SOURCE_DEAD", "NO_SERIES", "MISSING", "SYNTHETIC",
+                       "UNKNOWN", "SOURCE_UNREACHABLE")}
     print("\nPER-PAIR SIGNAL INTEGRITY  (real_rate_diff needs BOTH legs' rate AND cpi)")
     unsound = 0
     for pair, (b, q) in sorted(PAIR_LEGS.items()):

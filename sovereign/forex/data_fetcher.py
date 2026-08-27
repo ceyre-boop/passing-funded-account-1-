@@ -17,9 +17,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import requests
 from dotenv import load_dotenv
-
-from sovereign.forex import rate_vintage
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -60,7 +59,44 @@ FRED_CPI: Dict[str, str] = {
 # CPI series that are quarterly (4 periods = 1 year, not 12)
 QUARTERLY_CPI = {'AU', 'NZ'}
 
-DIRECT_YOY_CPI: set = set()  # reserved for future direct-% series
+# UK's FRED-mirrored CPI (GBRCPIALLMINMEI, OECD MEI feed) stopped publishing
+# 2025-03-01 (verified live 2026-08-26) — FRED's whole OECD MEI CPI feed for
+# UK/AU/JP died in that window, not just this one series (every COICOP-family
+# UK/AU/JP series on FRED shares that same last_updated cluster). Replaced by
+# a direct fetch from ONS (Office for National Statistics) series D7G7,
+# dataset MM23 — "CPI ANNUAL RATE 00: ALL ITEMS 2015=100" — which is already
+# a YoY % figure, so it goes straight into DIRECT_YOY_CPI rather than through
+# the index-level pct_change(12) path.
+DIRECT_YOY_CPI: set = {'UK'}
+
+# Countries whose CPI now comes from a non-FRED live source because FRED's
+# copy is SOURCE_DEAD (see scripts/data_health.py). 'JP' deliberately absent:
+# FRED never had a working JP CPI series (FRED_CPI['JP'] == ''), and Japan's
+# official e-Stat API requires an appId this repo's .env does not have —
+# JP_cpi stays on the synthetic FALLBACK_CPI constant until that credential
+# exists. Do not add a guessed source for it.
+NON_FRED_CPI_SOURCES = {'UK': 'ons', 'AU': 'abs'}
+
+# ONS "Consumer Price Index Annual Rate" — d7g7/mm23 — already a YoY % figure.
+ONS_UK_CPI_YOY_URL = (
+    "https://api.beta.ons.gov.uk/v1/data"
+    "?uri=/economy/inflationandpriceindices/timeseries/d7g7/mm23"
+)
+
+# ABS SDMX data API. AUSCPIALLQINMEI (the FRED mirror) died 2025-01-01 because
+# it was sourced from OECD MEI, which ABS itself does not maintain — this
+# calls the Australian Bureau of Statistics directly. Key:
+# MEASURE=1 (Index numbers) . INDEX=10001 (All groups CPI) . TSEST=10
+# (Original) . REGION=50 (Australia, weighted avg of 8 capital cities) . FREQ=Q
+# MEASURE=3 ("Percentage change from previous year") does not exist for this
+# exact slice (verified live 2026-08-26 — only measures 1/2/4 are published
+# for national all-groups original), so this fetches the index level and
+# reuses the SAME pct_change(4)*100 YoY path AU already used with FRED's
+# quarterly index, preserving that computation unchanged.
+ABS_AU_CPI_INDEX_URL = (
+    "https://data.api.abs.gov.au/rest/data/ABS,CPI,2.0.0/1.10001.10.50.Q"
+    "?format=jsondata"
+)
 
 FRED_GDP: Dict[str, str] = {
     'US': 'GDP',
@@ -158,20 +194,17 @@ class ForexDataFetcher:
         return macro
 
     def get_rate_history(
-        self, country: str, start: str = '2015-01-01'
+        self, country: str, start: str = '2015-01-01', refresh: bool = False
     ) -> pd.Series:
         """
         Returns historical rate series for backtesting.
-        Cached as parquet.
+        Cached as parquet. ``refresh=True`` bypasses the 30-day cache-age
+        gate and re-fetches unconditionally — used by
+        scripts/refresh_macro_cache.py so a stale-but-not-yet-30-day-old
+        cache can still be forced fresh on demand.
         """
-        if not rate_vintage.is_sealed():
-            path = rate_vintage.require_cache(
-                rate_vintage.macro_cache_dir() / f'{country}_rates.parquet'
-            )
-            return pd.read_parquet(path).squeeze()
-
         cache_path = CACHE_DIR / f'{country}_rates.parquet'
-        if cache_path.exists():
+        if not refresh and cache_path.exists():
             age = (datetime.now() - datetime.fromtimestamp(
                 cache_path.stat().st_mtime
             )).days
@@ -184,22 +217,12 @@ class ForexDataFetcher:
         return series if series is not None else pd.Series(dtype=float)
 
     def get_cpi_history(
-        self, country: str, start: str = '2015-01-01'
+        self, country: str, start: str = '2015-01-01', refresh: bool = False
     ) -> pd.Series:
-        if not rate_vintage.is_sealed():
-            if not FRED_CPI.get(country):
-                # No FRED CPI series configured (JP). The engine's documented
-                # behaviour is FALLBACK_CPI; an empty series routes there. The
-                # sealed tree's JP_cpi.parquet is a flat 3.2 line — the same
-                # constant, laundered through a parquet.
-                return pd.Series(dtype=float)
-            path = rate_vintage.require_cache(
-                rate_vintage.macro_cache_dir() / f'{country}_cpi.parquet'
-            )
-            return pd.read_parquet(path).squeeze()
-
+        """``refresh=True`` bypasses the 30-day cache-age gate — see
+        ``get_rate_history``."""
         cache_path = CACHE_DIR / f'{country}_cpi.parquet'
-        if cache_path.exists():
+        if not refresh and cache_path.exists():
             age = (datetime.now() - datetime.fromtimestamp(
                 cache_path.stat().st_mtime
             )).days
@@ -396,9 +419,95 @@ class ForexDataFetcher:
         current = FALLBACK_RATES.get(country, 2.0)
         return pd.Series(current, index=idx, name=f'{country}_rate')
 
+    def _fetch_ons_uk_cpi_yoy(self, start: str) -> pd.Series:
+        """UK CPI annual rate direct from ONS (series D7G7, dataset MM23).
+        Raises on any failure — never returns a fabricated fallback. Live
+        endpoint, no API key required."""
+        r = requests.get(ONS_UK_CPI_YOY_URL, timeout=15)
+        r.raise_for_status()
+        d = r.json()
+        months = d.get("months", [])
+        if not months:
+            raise RuntimeError("ONS response had no monthly observations")
+        rows = []
+        for m in months:
+            try:
+                ts = pd.Timestamp(f"{m['year']}-{m['month']}-01")
+            except Exception:
+                continue
+            try:
+                rows.append((ts, float(m["value"])))
+            except (TypeError, ValueError):
+                continue
+        if not rows:
+            raise RuntimeError("ONS response had no parseable observations")
+        s = pd.Series({t: v for t, v in rows}).sort_index()
+        s = s[s.index >= pd.Timestamp(start)]
+        if s.empty:
+            raise RuntimeError(f"ONS series has no observations on/after {start}")
+        s.name = "UK_cpi_yoy"
+        return s
+
+    def _fetch_abs_au_cpi_index(self, start: str) -> pd.Series:
+        """Australia CPI index numbers direct from the ABS SDMX data API
+        (MEASURE=1, INDEX=10001 all-groups, REGION=50 national, quarterly).
+        Raises on any failure — never returns a fabricated fallback. Live
+        endpoint, no API key required."""
+        start_q = f"{pd.Timestamp(start).year}-Q1"
+        r = requests.get(
+            ABS_AU_CPI_INDEX_URL, params={"startPeriod": start_q}, timeout=20
+        )
+        r.raise_for_status()
+        d = r.json()
+        datasets = d.get("data", {}).get("dataSets", [])
+        if not datasets or "series" not in datasets[0]:
+            raise RuntimeError(f"ABS response had no series: {d!r}"[:300])
+        series_block = datasets[0]["series"]
+        # single-slice key is always all-zero indices for a fully-keyed query
+        obs = next(iter(series_block.values()))["observations"]
+        structures = d["data"]["structures"][0]
+        timedim = next(
+            x for x in structures["dimensions"]["observation"]
+            if x["id"] == "TIME_PERIOD"
+        )
+        values = timedim["values"]
+        rows = []
+        for k, v in obs.items():
+            idx = int(k.split(":")[0])
+            period = values[idx]["id"]           # e.g. "2026-Q2"
+            ts = pd.Timestamp(values[idx]["start"])
+            rows.append((ts, float(v[0])))
+        if not rows:
+            raise RuntimeError("ABS response had no observations")
+        s = pd.Series({t: v for t, v in rows}).sort_index()
+        s = s[s.index >= pd.Timestamp(start)]
+        if s.empty:
+            raise RuntimeError(f"ABS series has no observations on/after {start}")
+        s.name = "AU_cpi_index"
+        return s
+
     def _fetch_cpi_history(
         self, country: str, start: str
     ) -> Optional[pd.Series]:
+        if country in NON_FRED_CPI_SOURCES:
+            try:
+                if country == "UK":
+                    yoy = self._fetch_ons_uk_cpi_yoy(start)
+                elif country == "AU":
+                    idx = self._fetch_abs_au_cpi_index(start)
+                    periods = 4 if country in QUARTERLY_CPI else 12
+                    yoy = (idx.pct_change(periods) * 100).dropna()
+                else:
+                    raise RuntimeError(f"no fetcher wired for {country!r}")
+                yoy = yoy.asfreq("B").ffill()
+                yoy.name = f"{country}_cpi_yoy"
+                return yoy
+            except Exception as e:
+                logger.warning(
+                    f"live {NON_FRED_CPI_SOURCES[country]} CPI fetch for "
+                    f"{country}: {e} — falling back to FRED (likely SOURCE_DEAD)"
+                )
+
         if self._fred_ok and country in FRED_CPI:
             try:
                 s = self._fred.get_series(

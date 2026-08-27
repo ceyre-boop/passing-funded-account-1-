@@ -66,8 +66,51 @@ MACRO_CACHE = ROOT / "data" / "cache" / "macro"
 CB_DECISIONS = ROOT / "data" / "cache" / "cb_decisions.json"
 
 WARMUP_YEARS = 5          # >= 252 price bars and >= 200 SPY bars for the VIX gate
-MACRO_MAX_STALE_DAYS = 45  # rate/CPI series older than this cannot price today's carry
 COUNTRIES = ("US", "EU", "UK", "JP", "AU")   # the legs of the four sealed pairs
+
+# A single global staleness limit is unsatisfiable by construction for some
+# of these series (spec 039): the OECD MEI monthly rate proxies (JP/AU rates)
+# publish with a real ~45-day lag FROM OBSERVATION MONTH-START, so worst case
+# — checked right before the next print — a healthy, just-refreshed cache can
+# read up to ~2 monthly cycles old. Measured live 2026-08-26: JP_rates/
+# AU_rates both sat at exactly their FRED source_end (not CACHE_STALE) while
+# reading 86d old. A uniform 45-day cutoff fails series like this EVERY time,
+# for the wrong reason — that is its own kind of dishonesty, not a working
+# guard. Limits below reflect each source's real publication cadence with
+# slack for that worst-case reporting delay (verified live against
+# FRED/ONS/ABS 2026-08-26):
+#   daily     (EU/UK rates: ECBDFR, IUDSOIA)        -> 12d
+#   monthly   (US/JP/AU rates, US/EU/UK CPI)        -> 100d (observed
+#             worst case 86d for JP/AU rates; 100d leaves slack without
+#             admitting a genuinely dead series — the AU/UK CPI SOURCE_DEAD
+#             cases this investigation found were 543d/602d, an order of
+#             magnitude past any of these limits)
+#   quarterly (AU CPI, ABS quarter-start dating)    -> 200d
+# (200d because ABS dates a quarter's reading by its QUARTER-START, not its
+# release date — a freshly-published Q2 reading published in early August is
+# already ~120d "old" by that dating convention, and stays the newest
+# available reading for up to another ~90d until Q3 is released.)
+MACRO_STALE_LIMITS: dict[str, int] = {
+    "EU_rates": 12, "UK_rates": 12,
+    "US_rates": 100, "JP_rates": 100, "AU_rates": 100,
+    "US_cpi": 100, "EU_cpi": 100, "UK_cpi": 100,
+    "AU_cpi": 200,
+    "JP_cpi": 100,  # unreachable in practice — JP_cpi is SYNTHETIC (see below),
+                     # which is caught by the flatline check before staleness
+                     # is ever evaluated. Kept here so the dict stays total
+                     # over rate_staleness()'s key space.
+}
+
+# cb_decisions.json is a different cadence question (event data, not a
+# level series) — kept as its own constant rather than folded into
+# MACRO_STALE_LIMITS.
+CB_DECISIONS_MAX_STALE_DAYS = 45
+
+# MACRO_STALE_LIMITS is total over COUNTRIES x ("rates","cpi"), so this
+# should never actually be reached — it exists so a future country added to
+# COUNTRIES without an entry fails loud (via this permissive default) rather
+# than crashing on a KeyError.
+DEFAULT_MACRO_STALE_DAYS = 45
 
 
 def sealed_universe() -> list[str]:
@@ -97,18 +140,32 @@ def preflight(as_of: date) -> list[str]:
     import pandas as pd
     for c in COUNTRIES:
         for kind in ("rates", "cpi"):
-            f = MACRO_CACHE / f"{c}_{kind}.parquet"
+            key = f"{c}_{kind}"
+            f = MACRO_CACHE / f"{key}.parquet"
             if not f.exists():
-                bad.append(f"{c}_{kind}: cache missing")
+                bad.append(f"{key}: cache missing")
                 continue
             try:
-                last = pd.read_parquet(f).index.max()
+                df = pd.read_parquet(f)
+                # A hardcoded fallback persisted to disk (data_fetcher's
+                # FALLBACK_RATES/FALLBACK_CPI, e.g. JP_cpi's flat 3.2) is
+                # indistinguishable from a healthy cache by date alone — it
+                # gets ffilled daily, so it always looks "fresh". Only the
+                # value spread reveals it (same check as data_health.py).
+                if len(df) > 30 and df.iloc[:, 0].nunique() == 1:
+                    bad.append(f"{key}: cache is a FLAT LINE "
+                               f"({df.iloc[0, 0]}) across {len(df)} rows — a "
+                               f"hardcoded fallback written to disk, not "
+                               f"observed data (run scripts/data_health.py)")
+                    continue
+                last = df.index.max()
                 stale = (as_of - last.date()).days
-                if stale > MACRO_MAX_STALE_DAYS:
-                    bad.append(f"{c}_{kind}: ends {str(last)[:10]} ({stale}d stale, "
-                               f"limit {MACRO_MAX_STALE_DAYS}d)")
+                limit = MACRO_STALE_LIMITS.get(key, DEFAULT_MACRO_STALE_DAYS)
+                if stale > limit:
+                    bad.append(f"{key}: ends {str(last)[:10]} ({stale}d stale, "
+                               f"limit {limit}d)")
             except Exception as e:
-                bad.append(f"{c}_{kind}: unreadable ({type(e).__name__})")
+                bad.append(f"{key}: unreadable ({type(e).__name__})")
 
     if not CB_DECISIONS.exists():
         bad.append("cb_decisions.json missing — the CB-surprise layer cannot fire")
@@ -119,7 +176,7 @@ def preflight(as_of: date) -> list[str]:
         dates = [r.get("date", "") for r in recs if r.get("date")]
         if dates:
             stale = (as_of - date.fromisoformat(max(dates)[:10])).days
-            if stale > MACRO_MAX_STALE_DAYS:
+            if stale > CB_DECISIONS_MAX_STALE_DAYS:
                 bad.append(
                     f"cb_decisions.json: ends {max(dates)[:10]} ({stale}d stale) "
                     f"and is UNREPRODUCIBLE — entry_engine.py:23 and :99 name "

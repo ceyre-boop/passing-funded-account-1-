@@ -8,6 +8,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,9 +46,58 @@ def test_preflight_flags_missing_fred_key(monkeypatch, tmp_path):
     assert any("FRED_API_KEY absent" in b for b in cs.preflight(date(2026, 8, 15)))
 
 
-def test_stale_limit_is_tight_enough_to_matter():
-    """A limit loose enough to admit a quarter-old CPI would not be a guard."""
-    assert cs.MACRO_MAX_STALE_DAYS <= 60
+def test_stale_limits_are_tight_enough_to_matter():
+    """A limit loose enough to admit the SOURCE_DEAD cases this investigation
+    found (AU_cpi 602d, UK_cpi 543d) would not be a guard at all."""
+    for key, limit in cs.MACRO_STALE_LIMITS.items():
+        assert limit < 300, f"{key} limit {limit}d is loose enough to admit a dead source"
+
+
+def test_stale_limits_cover_every_series():
+    """Fault: adding a country to COUNTRIES without a matching limit falls
+    through to DEFAULT_MACRO_STALE_DAYS silently instead of failing loud."""
+    for c in cs.COUNTRIES:
+        for kind in ("rates", "cpi"):
+            assert f"{c}_{kind}" in cs.MACRO_STALE_LIMITS
+
+
+def test_monthly_oecd_lag_series_does_not_fail_by_construction(monkeypatch, tmp_path):
+    """spec 039: a uniform 45-day limit fails JP/AU rates EVERY time, even
+    healthy, because of their real ~45-90d OECD MEI publication lag. A
+    just-refreshed cache sitting at that natural lag must NOT be flagged."""
+    import pandas as pd
+    cache = tmp_path / "macro"
+    cache.mkdir()
+    monkeypatch.setattr(cs, "MACRO_CACHE", cache)
+    monkeypatch.setattr(cs, "CB_DECISIONS", tmp_path / "nope.json")
+    as_of = date(2026, 8, 26)
+    # JP_rates dated 86d before as_of — the real, live-verified worst case
+    # for this series family, still short of MACRO_STALE_LIMITS["JP_rates"].
+    idx = pd.date_range("2020-01-01", as_of - pd.Timedelta(days=86), freq="B")
+    vals = 0.5 + 0.001 * np.arange(len(idx))   # varying, not a fabricated flatline
+    pd.Series(vals, index=idx, name="rate").to_frame("rate").to_parquet(
+        cache / "JP_rates.parquet")
+    bad = cs.preflight(as_of)
+    assert not any(b.startswith("JP_rates:") for b in bad), \
+        f"JP_rates flagged at its own real publication lag: {bad}"
+
+
+def test_preflight_flags_flatline_fabricated_cache(monkeypatch, tmp_path):
+    """Fault: a hardcoded FALLBACK_CPI constant persisted to disk (e.g.
+    JP_cpi's flat 3.2) is date-fresh every day because it gets ffilled — only
+    the value spread reveals it is fabricated, not observed. This is the gap
+    that let JP_cpi pass preflight silently before this fix."""
+    import pandas as pd
+    cache = tmp_path / "macro"
+    cache.mkdir()
+    monkeypatch.setattr(cs, "MACRO_CACHE", cache)
+    monkeypatch.setattr(cs, "CB_DECISIONS", tmp_path / "nope.json")
+    as_of = date(2026, 8, 26)
+    idx = pd.date_range("2020-01-01", as_of, freq="B")
+    pd.Series(3.2, index=idx, name="cpi").to_frame("cpi").to_parquet(
+        cache / "JP_cpi.parquet")
+    bad = cs.preflight(as_of)
+    assert any("FLAT LINE" in b and "JP_cpi" in b for b in bad), bad
 
 
 @pytest.mark.network
