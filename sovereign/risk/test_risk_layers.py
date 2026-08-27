@@ -6,25 +6,29 @@ CONTEXT (2026-08-26): CLAUDE.md non-negotiable #4 claims
 "sovereign/risk/kelly_engine.py computes proper quarter-Kelly ... then
 sovereign/risk/layers/prop.py applies the funded-account ceiling on top."
 `layers/prop.py` DOES exist (confirmed below by test_prop_module_exists). The
-"Kelly ... then prop ceiling on top" framing is accurate only for the config/math
-design — see TestKellyCeilingBugContradictsCLAUDEmd below for the load-bearing
-finding that the Kelly ceiling was not actually reaching decide() (silently
-becoming math.inf on any ImportError, whether or not the layer was genuinely
-absent).
+Kelly half used to be false: `sovereign/risk/layers/kelly.py` imported
+`fractional_kelly`/`hoeffding_win_rate` from `sovereign/risk/kelly_engine.py`, whose
+OWN module-level imports (`layer2.risk_engine`, `layer2.dynamic_rr_engine` — see
+test_kelly_engine.py) don't exist in this repo, so `import
+sovereign.risk.layers.kelly` raised `ModuleNotFoundError` and `risk_engine.py`'s
+`_ceiling()`/`_modulator()` fix (still in place, see
+TestLayerExistenceGuardDistinguishesAbsentFromBroken below) made `decide()` refuse
+loudly rather than silently treat the broken layer as no constraint.
 
-FIX (2026-08-26): `_ceiling()`/`_modulator()` in risk_engine.py now distinguish
-"layer file genuinely absent" (permissive default, unchanged) from "layer file
-exists but its own imports are broken" (a hard, loud ImportError — never a
-silent no-constraint default). `sovereign/risk/layers/kelly.py` DOES exist on
-disk, so with the real (broken) import chain in this repo, calling
-risk_engine.decide() now RAISES instead of silently returning kelly_ceiling ==
-math.inf. See TestKellyCeilingBugContradictsCLAUDEmd for both the diagnosis and
-the fix's effect.
+FIX (2026-08-26): the pure math (`fractional_kelly`, `hoeffding_win_rate`) was split
+out to sovereign/risk/kelly_math.py, which has no dependency on `layer2`/`config` at
+all. `sovereign/risk/layers/kelly.py` now imports from kelly_math.py directly, so it
+imports cleanly, and `risk_engine.decide()` genuinely uses a computed Kelly ceiling —
+see TestKellyLayerIsWired below for both the fix verification and, separately,
+continuing coverage that a *hypothetically* broken ceiling layer would still make
+decide() refuse rather than silently widen (kelly_engine.py's SovereignRiskEngine
+class remains genuinely broken/unused — see test_kelly_engine.py — but it is no
+longer on the path anything needs).
 
-Nothing in scripts/, daytrade/, or execution/ calls sovereign.risk.risk_engine.decide
-or SovereignRiskEngine.compute (confirmed by `rg kelly_engine|risk_engine` outside
-sovereign/ returning nothing) — this whole cascade is fully wired to itself but has
-zero callers anywhere else in the repo. It is not on any live sizing path today.
+`rg kelly_engine|risk_engine` outside sovereign/ still returns nothing — this whole
+cascade is fully wired to itself but has zero callers anywhere else in the repo. It
+is not on any live sizing path today; fixing the wiring makes CLAUDE.md's sentence
+true of the code that exists, not of anything actually placing an order.
 """
 import math
 import sys
@@ -63,16 +67,16 @@ def _state(**overrides):
 
 
 def _install_working_kelly_stand_in(monkeypatch, ceiling_value=math.inf):
-    """Install a WORKING (not broken) sovereign.risk.layers.kelly stand-in.
+    """Install a WORKING sovereign.risk.layers.kelly stand-in with a FIXED ceiling
+    value (default math.inf = no constraint).
 
     Tests below that exercise gates/prop/the final-risk invariant care about
-    layers other than Kelly. Now that a present-but-broken kelly.py raises
-    (by design — see TestKellyCeilingBugContradictsCLAUDEmd), those tests need
-    a kelly layer that actually imports so they can isolate their own target
-    behaviour instead of tripping over the unrelated, already-documented Kelly
-    import bug. `ceiling_value=math.inf` reproduces "no constraint" the honest
-    way: via a real layer that says so, not via a broken one masquerading as
-    absent.
+    layers other than Kelly. The real kelly.py now imports cleanly and computes a
+    genuine, edge_stats-dependent ceiling (see TestKellyLayerIsWired) — good for
+    Kelly's own tests, but a moving target for tests that just want to isolate
+    some OTHER layer's behaviour. This stand-in pins Kelly to a known, fixed value
+    (math.inf by default = no constraint) so those tests aren't coupled to Kelly's
+    config/formula.
     """
     fake_kelly = types.ModuleType("sovereign.risk.layers.kelly")
     fake_kelly.ceiling = lambda signal, state, cfg: ceiling_value
@@ -87,59 +91,72 @@ class TestLayersPropExists:
         assert hasattr(prop_mod, "prop_ceiling")
 
 
-class TestKellyCeilingBugContradictsCLAUDEmd:
-    """THE central finding. CLAUDE.md #4 implies Kelly is an active control on the
-    sizing path. `sovereign/risk/layers/kelly.py` imports `fractional_kelly` and
-    `hoeffding_win_rate` from `sovereign/risk/kelly_engine.py`, whose own
-    module-level imports (`layer2.risk_engine`, `layer2.dynamic_rr_engine` — see
-    test_kelly_engine.py) do not exist in this repo. So
-    `import sovereign.risk.layers.kelly` raises ModuleNotFoundError.
+class TestKellyLayerIsWired:
+    """THE central finding, now fixed. CLAUDE.md #4 implies Kelly is an active
+    control on the sizing path. `sovereign/risk/layers/kelly.py` used to import
+    `fractional_kelly`/`hoeffding_win_rate` from `sovereign/risk/kelly_engine.py`,
+    whose own module-level imports (`layer2.risk_engine`, `layer2.dynamic_rr_engine`
+    — see test_kelly_engine.py) do not exist in this repo, so
+    `import sovereign.risk.layers.kelly` raised ModuleNotFoundError and (after the
+    earlier `_ceiling()` fix — see TestLayerExistenceGuardDistinguishesAbsentFromBroken)
+    `decide()` refused outright rather than silently treating Kelly as unconstrained.
 
-    Before the fix, risk_engine.py's `_ceiling()` helper treated ANY ImportError on
-    a layer module as "not built yet -> no constraint" (returned math.inf). That
-    fallback is designed for layers genuinely not written yet. It could not
-    distinguish that case from a layer module that exists, is wired into
-    `_CEILINGS`, and is completely broken — so the Kelly ceiling silently became
-    infinite (no constraint at all), not the quarter-Kelly cap CLAUDE.md describes.
-
-    AFTER the fix, `_ceiling()` checks whether the layer file exists on disk
-    (`importlib.util.find_spec`) before treating an ImportError as "not built yet".
-    `layers/kelly.py` DOES exist, so the same ImportError now propagates as a loud
-    failure out of `decide()` instead of being swallowed into math.inf.
+    FIX (2026-08-26): `layers/kelly.py` now imports `fractional_kelly`/
+    `hoeffding_win_rate` from `sovereign/risk/kelly_math.py`, which has no
+    `layer2`/`contracts`/`config` dependency at all. The import chain works, so
+    Kelly is now a genuinely computed ceiling on `decide()`'s sizing path — not a
+    stand-in, not math.inf.
     """
 
-    def test_kelly_layer_is_unreachable_in_this_repo(self):
-        # Reproduces the exact ModuleNotFoundError chain risk_engine.py catches.
-        for mod in ("sovereign.risk.layers.kelly", "sovereign.risk.kelly_engine",
-                    "layer2", "layer2.risk_engine", "layer2.dynamic_rr_engine"):
+    def test_kelly_layer_imports_cleanly_now(self):
+        for mod in ("sovereign.risk.layers.kelly", "sovereign.risk.kelly_math"):
             sys.modules.pop(mod, None)
-        with pytest.raises(ModuleNotFoundError, match="layer2"):
-            __import__("sovereign.risk.layers.kelly")
+        mod = __import__("sovereign.risk.layers.kelly", fromlist=["ceiling"])
+        assert hasattr(mod, "ceiling")
 
-    def test_kelly_layer_file_exists_on_disk_despite_being_unimportable(self):
-        """The load-bearing precondition for the fix: this is a present-but-broken
-        layer, not a genuinely-absent one, so the guard in _ceiling() must trigger
-        against the real case, not just a synthetic one."""
+    def test_kelly_layer_file_exists_on_disk_and_is_now_importable(self):
         assert risk_engine._layer_module_exists("kelly") is True
+        for mod in ("sovereign.risk.layers.kelly", "sovereign.risk.kelly_math"):
+            sys.modules.pop(mod, None)
+        __import__("sovereign.risk.layers.kelly")  # must not raise
 
-    def test_decide_now_refuses_instead_of_treating_broken_kelly_as_no_constraint(self):
-        """FIX VERIFICATION: decide() no longer silently returns
-        kelly_ceiling == math.inf for a present-but-broken layer. It raises,
-        surfacing the real ModuleNotFoundError chain, so the engine refuses to
-        produce a sizing decision rather than silently sizing unbounded."""
-        for mod in ("sovereign.risk.layers.kelly", "sovereign.risk.kelly_engine"):
+    def test_decide_no_longer_raises_on_kelly_and_uses_a_real_ceiling(self):
+        """FIX VERIFICATION: decide() used to raise ImportError here. It now
+        succeeds and reports a genuinely computed (not math.inf, not a stand-in)
+        Kelly ceiling."""
+        for mod in ("sovereign.risk.layers.kelly", "sovereign.risk.kelly_math"):
             sys.modules.pop(mod, None)
         sig = _signal(grade="A")
-        state = _state()
-        with pytest.raises(ImportError, match="kelly"):
-            risk_engine.decide(sig, state, _cfg())
+        state = _state()  # no edge_stats -> thin-data floor path
+        decision = risk_engine.decide(sig, state, _cfg())
+        cfg = _cfg()
+        assert decision.layer_budgets["kelly_ceiling"] == pytest.approx(
+            cfg["kelly"]["fixed_fractional_floor"]
+        )
+        assert decision.layer_budgets["kelly_ceiling"] != math.inf
 
-    def test_decide_WOULD_honor_a_kelly_ceiling_if_the_import_actually_worked(self, monkeypatch):
-        """Contrast test proving the math.inf above is purely an artifact of the
-        broken import chain, not a deliberate design choice: if layers/kelly is
-        replaced with a working stand-in, decide() immediately uses it and it can
-        become the binding constraint. This isolates the bug to the import, not to
-        risk_engine.py's cascade logic (which is correct)."""
+    def test_decide_computes_quarter_kelly_from_real_edge_stats(self):
+        """With enough trades in state.edge_stats, the Kelly ceiling is the actual
+        quarter-Kelly formula output (via kelly_math.fractional_kelly), not the
+        thin-data floor and not math.inf — and it can bind as the tightest
+        constraint, exactly as CLAUDE.md #4 describes."""
+        from sovereign.risk.kelly_math import fractional_kelly, hoeffding_win_rate
+
+        cfg = _cfg()
+        n, p, b = 200, 0.60, 2.0
+        state = _state(edge_stats={"forex_macro": {"n_trades": n, "win_rate": p, "payoff": b}})
+        decision = risk_engine.decide(_signal(grade="A"), state, cfg)
+
+        p_adj = hoeffding_win_rate(p, n)
+        expected = fractional_kelly(
+            p_adj, b, 1.0, fraction=cfg["kelly"]["fraction"], floor=0.0, ceiling=cfg["kelly"]["hard_cap"],
+        )
+        assert decision.layer_budgets["kelly_ceiling"] == pytest.approx(max(0.0, expected))
+        assert decision.layer_budgets["kelly_ceiling"] != math.inf
+
+    def test_decide_still_honors_a_stand_in_kelly_layer(self, monkeypatch):
+        """Unchanged behaviour, still worth asserting: risk_engine.py's cascade
+        logic honors whatever `layers/kelly.py` reports, real or stand-in."""
         fake_kelly = types.ModuleType("sovereign.risk.layers.kelly")
         fake_kelly.ceiling = lambda signal, state, cfg: 0.001  # deliberately tiny
         monkeypatch.setitem(sys.modules, "sovereign.risk.layers.kelly", fake_kelly)
@@ -157,12 +174,31 @@ class TestLayerExistenceGuardDistinguishesAbsentFromBroken:
     'genuinely not built yet' (permissive default preserved) vs 'file exists,
     import is broken' (loud failure, never silently permissive)."""
 
-    def test_present_but_broken_ceiling_raises_not_math_inf(self):
-        """Fails if a present-but-broken layer still yields math.inf."""
-        for mod in ("sovereign.risk.layers.kelly", "sovereign.risk.kelly_engine"):
-            sys.modules.pop(mod, None)
-        with pytest.raises(ImportError):
-            risk_engine._ceiling("kelly", _signal(), _state(), _cfg())
+    def test_present_but_broken_ceiling_raises_not_math_inf(self, monkeypatch):
+        """Fails if a present-but-broken ceiling layer still yields math.inf.
+
+        Uses a synthetic broken layer name (like the modulator test below) rather
+        than kelly: as of 2026-08-26 `layers/kelly.py` genuinely imports (see
+        TestKellyLayerIsWired), so it can no longer stand in for 'present but
+        broken' — this guard must be proven independently of which real layer
+        happens to be broken today."""
+        broken_name = "portfolio"
+        real_spec_find = risk_engine.importlib_util.find_spec
+
+        def _fake_find_spec(name, *a, **kw):
+            if name == f"sovereign.risk.layers.{broken_name}":
+                return object()  # "the file exists" — any non-None sentinel
+            return real_spec_find(name, *a, **kw)
+
+        def _fake_import(name, *a, **kw):
+            if name == f"sovereign.risk.layers.{broken_name}":
+                raise ImportError("simulated broken import for portfolio")
+            raise ImportError(name)
+
+        monkeypatch.setattr(risk_engine.importlib_util, "find_spec", _fake_find_spec)
+        monkeypatch.setattr(risk_engine, "import_module", _fake_import)
+        with pytest.raises(ImportError, match="portfolio"):
+            risk_engine._ceiling("portfolio", _signal(), _state(), _cfg())
 
     def test_present_but_broken_modulator_raises_not_identity(self, monkeypatch):
         """Same guard, exercised on the _modulator() path (factor 1.0 identity)
@@ -266,7 +302,7 @@ class TestGatesHaltOnEveryConfiguredCondition:
         assert run_gates(_signal(), _state(), _cfg()) is None
 
     def test_decide_zeroes_size_and_risk_when_a_gate_fires(self, monkeypatch):
-        _install_working_kelly_stand_in(monkeypatch)  # isolate: test gates, not the Kelly bug
+        _install_working_kelly_stand_in(monkeypatch)  # isolate from real Kelly's edge_stats-dependent value; test gates in isolation
         state = _state(health_ok=False)
         decision = risk_engine.decide(_signal(), state, _cfg())
         assert decision.halt is True
@@ -350,17 +386,32 @@ class TestPropCeilingAppliesOnTopOfWhateverElseBinds:
         ])
         assert prop_ceiling(_signal(), state, _cfg()) == 0.0
 
-    def test_decide_now_refuses_before_prop_can_bind_when_kelly_is_broken(self):
-        """Post-fix: with the real (broken) kelly layer import in play, decide()
-        raises before it ever gets to combine prop with the other ceilings — the
-        engine refuses outright rather than silently letting prop paper over a
-        broken Kelly layer. This replaces the pre-fix test that asserted prop
-        quietly bound anyway while kelly_ceiling was math.inf; that was exactly
-        the silent-widening failure mode this fix closes."""
-        for mod in ("sovereign.risk.layers.kelly", "sovereign.risk.kelly_engine"):
-            sys.modules.pop(mod, None)
+    def test_decide_still_refuses_before_prop_can_bind_when_a_ceiling_layer_is_broken(self, monkeypatch):
+        """The general guard, no longer demonstrable via kelly (fixed 2026-08-26 —
+        see TestKellyLayerIsWired): if ANY wired ceiling layer is present-but-broken,
+        decide() must still refuse outright rather than silently letting prop paper
+        over it. Synthesizes brokenness on portfolio instead."""
+        broken_name = "portfolio"
+        real_spec_find = risk_engine.importlib_util.find_spec
+        real_import = risk_engine.import_module
+
+        def _fake_find_spec(name, *a, **kw):
+            if name == f"sovereign.risk.layers.{broken_name}":
+                return object()
+            return real_spec_find(name, *a, **kw)
+
+        def _fake_import(name, *a, **kw):
+            if name == f"sovereign.risk.layers.{broken_name}":
+                raise ImportError("simulated broken import for portfolio")
+            return real_import(name, *a, **kw)  # other layers (volatility, drawdown,
+            # regime, kelly) must still import for real — decide() runs the whole
+            # cascade, not just the layer under test.
+
+        monkeypatch.setattr(risk_engine.importlib_util, "find_spec", _fake_find_spec)
+        monkeypatch.setattr(risk_engine, "import_module", _fake_import)
+
         state = _state(equity=98_800.0, daily_realized_pnl=-1200.0)
-        with pytest.raises(ImportError, match="kelly"):
+        with pytest.raises(ImportError, match="portfolio"):
             risk_engine.decide(_signal(grade="A+"), state, _cfg())
 
     def test_prop_ceiling_binds_on_its_own_once_kelly_is_a_working_layer(self, monkeypatch):
@@ -386,7 +437,7 @@ class TestFinalRiskInvariant:
     final_risk <= every ceiling, always."""
 
     def test_final_never_exceeds_base_or_any_ceiling(self, monkeypatch):
-        _install_working_kelly_stand_in(monkeypatch)  # isolate: test the invariant, not the Kelly bug
+        _install_working_kelly_stand_in(monkeypatch)  # isolate from real Kelly's edge_stats-dependent value; test the invariant in isolation
         for grade in ("A+", "A", "B", "C"):
             state = _state()
             decision = risk_engine.decide(_signal(grade=grade), state, _cfg())
@@ -397,7 +448,7 @@ class TestFinalRiskInvariant:
             assert decision.final_risk_pct <= lb["prop_ceiling"] + 1e-12
 
     def test_final_is_zero_and_never_negative_at_the_edge(self, monkeypatch):
-        _install_working_kelly_stand_in(monkeypatch)  # isolate: test the invariant, not the Kelly bug
+        _install_working_kelly_stand_in(monkeypatch)  # isolate from real Kelly's edge_stats-dependent value; test the invariant in isolation
         state = _state(equity=91_000.0, daily_realized_pnl=-9000.0)
         decision = risk_engine.decide(_signal(), state, _cfg())
         assert decision.final_risk_pct == 0.0

@@ -1,7 +1,9 @@
 """Layer 2 — KELLY CEILING. Quarter-Kelly from live edge stats, hard-guarded.
 
-Reuses sovereign/risk/kelly_engine.py (fractional_kelly + hoeffding_win_rate). Kelly is
-hypersensitive, so:
+Reuses sovereign/risk/kelly_math.py (fractional_kelly + hoeffding_win_rate) — the pure
+math, not sovereign/risk/kelly_engine.py's SovereignRiskEngine wrapper, which depends on
+foreign layer2/contracts/config packages that do not exist in this repo (see kelly_math.py's
+docstring and test_kelly_engine.py). Kelly is hypersensitive, so:
   • n_trades < min_sample  → fixed_fractional_floor (don't trust Kelly on thin data)
   • full_kelly <= 0 (no edge) → 0 (don't trade a non-edge)
   • clamp to [0, hard_cap] so a bad estimate can't explode
@@ -10,7 +12,7 @@ Returns an absolute risk_pct ceiling (binds via min()).
 """
 from __future__ import annotations
 
-from sovereign.risk.kelly_engine import fractional_kelly, hoeffding_win_rate
+from sovereign.risk.kelly_math import fractional_kelly, hoeffding_win_rate
 
 
 def ceiling(signal, state, cfg) -> float:
