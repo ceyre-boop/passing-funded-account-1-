@@ -50,6 +50,9 @@ from context_directive import (ContextDirective, Scope, Abstention,       # noqa
 from scenarios import ALL_SCENARIOS                                       # noqa: E402
 import news_claude                                                        # noqa: E402
 import bars as bars_mod                                                   # noqa: E402
+from stockfish_exit import _satisfiable                                   # noqa: E402
+from shadow import run_shadow                                             # noqa: E402
+import regret as regret_mod                                               # noqa: E402
 
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +67,14 @@ PLAN = OUT / "plan.json"
 
 MODEL_VERSION_BASE = "alpha-operator-v1"
 PROMPT_VERSION = "op-1"
+
+# The shadow tournament regret is graded against (spec 014). Deliberately the
+# three policies that are both auto-emittable and satisfiable by any plan with
+# no extra fields (unlike EVENT, which needs flatten_at_et, and SALVAGE /
+# SCRATCH_FAST, which stockfish_exit.NOT_AUTO_EMITTABLE reserves for a signal
+# that does not exist yet) — DEFEND and RIDE are the pair the 2026-08-03
+# ceiling measurement's own comment names as the ones that genuinely diverge.
+SHADOW_TOURNAMENT_POLICIES = ("DEFEND", "HARVEST", "RIDE")
 DEFAULT_MODEL = "claude-sonnet-5"
 DEFAULT_HORIZON_MIN = 60
 DIRECTIVE_TTL_MIN = 45
@@ -329,6 +340,10 @@ def load_ledger() -> ForecastLedger:
         elif kind == "prereg_score":
             pass                       # spec 024: scored pre-registration rows
                                        # live beside the ledger, not inside 017
+        elif kind == "regret":
+            pass                       # policy_regret_r's WHY; travels beside the
+                                       # ledger, same as prereg_score — Resolution
+                                       # already carries the graded value itself
         else:
             raise OperatorError(f"unknown row kind {kind!r} in {FC_LOG.name}")
     return led
@@ -1130,6 +1145,71 @@ def _aware(ts: str) -> datetime:
     return datetime.fromisoformat(ts.replace("Z", "+00:00"))
 
 
+def _regret_for(f: Forecast, window) -> tuple[Optional[float], str]:
+    """Supply Resolution.policy_regret_r (D3 in THE_BIG_PLAN.md) from a real
+    graded outcome, never from a guess.
+
+    Grades the policy this forecast actually RECOMMENDED against the same
+    shadow tournament run_shadow() runs (spec 014), using the plan on file
+    and the real bars the resolution window covers as the cycle stream.
+    `policy_regret_r` is derived (this call site's decision, NOT a change to
+    regret.grade() or RegretReport) as realized_r minus the best counterfactual
+    in the tournament — i.e. -max(counterfactual_delta_r.values()): <= 0 when
+    some modeled policy would have done better, 0 when the followed policy WAS
+    the best of the tournament, and it can go positive when the followed
+    policy beat every modeled counterfactual.
+
+    Returns (policy_regret_r, reason). reason is '' on success; on any refusal
+    policy_regret_r is None and reason states why — never a defaulted 0.0
+    (CLAUDE.md rule 3, same class of bug as a silently dropped caveat)."""
+    if f.recommendation is None:
+        return None, "forecast carried no recommendation — no policy was followed, nothing to grade"
+    if not PLAN.exists():
+        return None, "no plan.json on file — no trade to grade against this forecast"
+    try:
+        plan = json.loads(PLAN.read_text())
+    except json.JSONDecodeError as e:
+        return None, f"plan.json is not valid JSON: {e}"
+    if plan.get("symbol") != f.symbol:
+        return None, f"plan on file is for {plan.get('symbol')!r}, not {f.symbol!r}"
+    if plan.get("entry") is None or plan.get("sl") is None:
+        return None, "plan on file has no entry/sl — trade risk is undefined"
+    try:
+        risk = abs(float(plan["entry"]) - float(plan["sl"]))
+    except (TypeError, ValueError):
+        return None, "plan entry/sl are not numeric"
+    if risk <= 0:
+        return None, "plan risk (|entry - sl|) is zero"
+    if len(window) < 2:
+        return None, "fewer than 2 bars in the resolution window — nothing to grade against"
+    if not _satisfiable(f.recommendation, plan):
+        return None, (f"recommended policy {f.recommendation!r} is not satisfiable "
+                      "by the plan on file")
+
+    cycles = [(float(row.Close), ts.tz_convert(ET).strftime("%H:%M"))
+             for ts, row in window.iterrows()]
+    policies = sorted(set(SHADOW_TOURNAMENT_POLICIES) | {f.recommendation})
+    try:
+        results = run_shadow(plan, cycles, policies)
+    except ValueError as e:
+        return None, f"shadow tournament refused: {e}"
+
+    actual = results[f.recommendation]
+    if not actual.closed:
+        return None, (f"{f.recommendation} did not close within the resolution "
+                      "window — regret on a still-open position is refused "
+                      "(regret.grade() would raise on it)")
+    try:
+        rep = regret_mod.grade(trade_id=f.forecast_id, realized_r=actual.realized_r,
+                               closed=True, plan=plan, cycles=cycles,
+                               shadow_results=results)
+    except regret_mod.RegretError as e:
+        return None, str(e)
+
+    best_delta = max(rep.counterfactual_delta_r.values(), default=0.0)
+    return -best_delta, ""
+
+
 def resolve_open(now: Optional[datetime] = None) -> int:
     """Close every open forecast whose horizon has passed. Missing bars leave
     the forecast open with a printed reason — nothing resolves partially."""
@@ -1187,11 +1267,20 @@ def resolve_open(now: Optional[datetime] = None) -> int:
         # stalest possible context, so it counts as stale, never as fresh.
         was_stale = (rec.get("bar_age_min") is None
                      or rec["bar_age_min"] > STALE_BAR_MIN)
+        policy_regret_r, regret_reason = _regret_for(f, window)
         r = Resolution(forecast_id=fid, resolved_at=_iso(now),
                        outcome_scenario=scenario, outcome_direction=direction,
-                       shock_occurred=shock, was_stale=was_stale)
+                       shock_occurred=shock, was_stale=was_stale,
+                       policy_regret_r=policy_regret_r)
         ledger.resolve(r)                   # 017 refuses early resolution
         _append_jsonl(FC_LOG, {"kind": "resolution", **r.__dict__})
+        # policy_regret_r's WHY travels separately (same pattern as
+        # unscoreable_reason on prereg_score): a None regret and a computed
+        # one are different facts, and the reason must stay auditable even
+        # though Resolution itself carries no reason field (spec 017 schema).
+        _append_jsonl(FC_LOG, {"kind": "regret", "forecast_id": fid,
+                               "policy_regret_r": policy_regret_r,
+                               "reason": regret_reason})
         prereg_row = _score_pre_registration(rec, f, window)
         if prereg_row is not None:
             _append_jsonl(FC_LOG, prereg_row)

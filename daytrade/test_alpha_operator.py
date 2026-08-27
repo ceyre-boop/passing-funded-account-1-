@@ -821,3 +821,152 @@ def test_grade_runs_on_resolved_forecasts(sandbox, monkeypatch, capsys):
     assert ao.grade("claude-sonnet-5") == 0
     outp = capsys.readouterr().out
     assert "brier" in outp and "directional_accuracy" in outp
+
+
+# ------------------------------------------------------- regret wiring (D3)
+#
+# `forecast.Resolution.policy_regret_r` has a consumer (promotion_decision)
+# and, until this wiring, no supplier — THE_BIG_PLAN.md's D3. `_regret_for`
+# grades the forecast's recommended policy against the shadow tournament
+# using the plan on file and the actual resolution-window bars.
+
+_REGRET_PLAN = {"symbol": "NVDA", "direction": 1, "entry": 200.0, "qty": 100.0,
+                "sl": 199.0, "tp1": 201.0, "tp2": 202.14, "trail_dist": 0.5,
+                "goal_fraction": 0.5}
+
+# Same fixture as test_shadow_regret.py's CYCLES: a genuine peak-and-fade so
+# DEFEND/HARVEST/RIDE diverge and the recommended policy (RIDE) leaves real,
+# non-zero R on the table relative to the best counterfactual (HARVEST).
+_REGRET_CYCLES_CLOSING = [(200.4, "09:35"), (201.2, "09:40"), (202.5, "09:45"),
+                         (203.8, "09:50"), (203.1, "09:55"), (202.4, "10:00"),
+                         (201.9, "10:05")]
+
+# Mild path: never reaches tp1 or sl, so every policy in the tournament stays
+# OPEN through the window's end — the "regret is unmeasurable" fixture.
+_REGRET_CYCLES_OPEN = [(200.1, "09:35"), (200.2, "09:40"), (200.0, "09:45")]
+
+
+def _window_df(cycles, date="2026-08-14"):
+    import pandas as pd
+    idx = pd.DatetimeIndex([pd.Timestamp(f"{date} {t}", tz="America/New_York")
+                            .tz_convert("UTC") for _, t in cycles])
+    return pd.DataFrame({"Close": [p for p, _ in cycles]}, index=idx)
+
+
+def _regret_forecast(recommendation, *, fid="fc-regret-1"):
+    from forecast import Forecast
+    return Forecast(forecast_id=fid, model_version="alpha-operator-v1/claude",
+                    prompt_version="op-1", as_of=NOW.isoformat(), symbol="NVDA",
+                    horizon_min=60, scenario_probs={"bull_continuation": 0.6,
+                                                    "range_consolidation": 0.4},
+                    direction="up", recommendation=recommendation,
+                    interrupt=None, confidence=0.6)
+
+
+def test_regret_none_when_no_recommendation_never_zero(sandbox, monkeypatch):
+    """Fault injection target: a forecast that named no policy has NOTHING to
+    grade. The wiring must leave policy_regret_r None with a stated reason —
+    silently defaulting to 0.0 would be indistinguishable from 'graded, no
+    regret found' (CLAUDE.md rule 3)."""
+    monkeypatch.setattr(ao, "PLAN", sandbox["tmp"] / "plan.json")
+    (sandbox["tmp"] / "plan.json").write_text(json.dumps(_REGRET_PLAN))
+    f = _regret_forecast(None)
+    window = _window_df(_REGRET_CYCLES_CLOSING)
+    val, reason = ao._regret_for(f, window)
+    assert val is None
+    assert val != 0.0
+    assert "recommendation" in reason
+
+
+def test_regret_none_when_still_open_never_zero(sandbox, monkeypatch):
+    """Fault injection target: regret.grade() itself refuses an open trade.
+    The wiring must respect that refusal — never substitute 0.0 for a
+    position that never closed within the resolution window."""
+    monkeypatch.setattr(ao, "PLAN", sandbox["tmp"] / "plan.json")
+    (sandbox["tmp"] / "plan.json").write_text(json.dumps(_REGRET_PLAN))
+    f = _regret_forecast("DEFEND")
+    window = _window_df(_REGRET_CYCLES_OPEN)
+    val, reason = ao._regret_for(f, window)
+    assert val is None
+    assert val != 0.0
+    assert "did not close" in reason or "open" in reason.lower()
+
+
+def test_regret_computed_from_real_closed_outcome(sandbox, monkeypatch):
+    """Happy path: recommended policy actually closes within the window ->
+    a real, non-zero regret number, matching an independent hand computation
+    via regret.grade() + shadow.run_shadow() over the identical fixture."""
+    monkeypatch.setattr(ao, "PLAN", sandbox["tmp"] / "plan.json")
+    (sandbox["tmp"] / "plan.json").write_text(json.dumps(_REGRET_PLAN))
+    f = _regret_forecast("RIDE")
+    window = _window_df(_REGRET_CYCLES_CLOSING)
+    val, reason = ao._regret_for(f, window)
+    assert reason == ""
+    assert val is not None
+    assert val == pytest.approx(-0.04999999999999716, abs=1e-6)
+    assert val != 0.0
+
+
+def test_resolve_open_never_drops_resolution_when_regret_unmeasurable(sandbox, monkeypatch):
+    """Fault injection target: an unmeasurable regret must not cost the
+    resolution itself. The forecast still resolves; only policy_regret_r
+    (and its recorded reason) reflect the missing input."""
+    _write_bars(sandbox["tmp"], monkeypatch, [100 + i * 0.1 for i in range(13)])
+    fid = _seed_forecast(sandbox, horizon=60)          # production forecasts
+    ao.resolve_open(now=NOW + timedelta(minutes=61))   # never set recommendation
+    rows = ao._read_jsonl(ao.FC_LOG)
+    res = [r for r in rows if r["kind"] == "resolution"]
+    assert len(res) == 1 and res[0]["forecast_id"] == fid
+    assert res[0]["policy_regret_r"] is None
+    regret_rows = [r for r in rows if r["kind"] == "regret"]
+    assert len(regret_rows) == 1
+    assert regret_rows[0]["policy_regret_r"] is None
+    assert regret_rows[0]["reason"]                     # WHY is recorded, not silent
+    # and load_ledger() round-trips it without choking on the new row kind
+    led = ao.load_ledger()
+    assert led.forecast(fid).forecast_id == fid
+
+
+def test_promotion_gate_reachable_with_real_regret_data():
+    """The end of D3: once real graded outcomes supply policy_regret_r, the
+    promotion gate's REGRET_DATA_MISSING is no longer structurally guaranteed
+    — it depends on the model's actual track record, not on a wiring gap."""
+    from dataclasses import replace
+    from forecast import (Forecast, ForecastLedger, PromotionThresholds,
+                          Resolution, promotion_decision)
+    window = _window_df(_REGRET_CYCLES_CLOSING)
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        import pathlib
+        plan_path = pathlib.Path(td) / "plan.json"
+        plan_path.write_text(json.dumps(_REGRET_PLAN))
+        import alpha_operator as ao_
+        orig_plan = ao_.PLAN
+        ao_.PLAN = plan_path
+        try:
+            led = ForecastLedger()
+            n = 60
+            for i in range(n):
+                fid = f"fc-regret-{i}"
+                f = Forecast(forecast_id=fid, model_version="alpha-operator-v1/claude",
+                            prompt_version="op-1", as_of=NOW.isoformat(), symbol="NVDA",
+                            horizon_min=60, scenario_probs={"bull_continuation": 0.6,
+                                                            "range_consolidation": 0.4},
+                            direction="up", recommendation="RIDE", interrupt=None,
+                            confidence=0.6)
+                led.record(f)
+                val, _ = ao_._regret_for(f, window)
+                led.resolve(Resolution(
+                    forecast_id=fid, resolved_at=(NOW + timedelta(minutes=60)).isoformat(),
+                    outcome_scenario="bull_continuation", outcome_direction="up",
+                    shock_occurred=False, was_stale=False, policy_regret_r=val))
+            rep = led.grade("alpha-operator-v1/claude", oos=True)
+            assert rep.worst_policy_regret is not None
+            inc = replace(rep, brier=rep.brier + 0.1)   # a strictly worse incumbent
+            d = promotion_decision(inc, rep, PromotionThresholds(),
+                                   per_regime_incumbent={"trend": 0.1},
+                                   per_regime_challenger={"trend": 0.1},
+                                   ref="p")
+            assert "REGRET_DATA_MISSING" not in d.failed_gates
+        finally:
+            ao_.PLAN = orig_plan
