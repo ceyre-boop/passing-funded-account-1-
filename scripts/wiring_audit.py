@@ -510,20 +510,37 @@ def find_orphans(modules: dict[str, ParsedModule], all_module_names: set[str]) -
 
 def _names_used_as_call_func(tree: ast.Module) -> set[str]:
     """Local binding names that appear as the direct func of some Call, OR as
-    the base of an attribute access that is itself called (Y.foo(...))."""
+    the base of an attribute access that is itself called (Y.foo(...)), OR as
+    a bare (unparenthesized) decorator (`@imported_func`). A parameterized
+    decorator (`@imported_func(...)`) is already an ast.Call sitting inside
+    decorator_list, so ast.walk() reaches it via the branch above — only the
+    bare-name/attribute form needs its own handling, since Python's grammar
+    does not wrap it in a Call node."""
     used: set[str] = set()
     for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        func = node.func
-        if isinstance(func, ast.Name):
-            used.add(func.id)
-        elif isinstance(func, ast.Attribute):
-            base = func.value
-            while isinstance(base, ast.Attribute):
-                base = base.value
-            if isinstance(base, ast.Name):
-                used.add(base.id)
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Name):
+                used.add(func.id)
+            elif isinstance(func, ast.Attribute):
+                base = func.value
+                while isinstance(base, ast.Attribute):
+                    base = base.value
+                if isinstance(base, ast.Name):
+                    used.add(base.id)
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            for dec in node.decorator_list:
+                if isinstance(dec, ast.Call):
+                    continue  # handled by the ast.Call branch above
+                target = dec
+                if isinstance(target, ast.Attribute):
+                    base = target.value
+                    while isinstance(base, ast.Attribute):
+                        base = base.value
+                    if isinstance(base, ast.Name):
+                        used.add(base.id)
+                elif isinstance(target, ast.Name):
+                    used.add(target.id)
     return used
 
 
@@ -600,46 +617,250 @@ def _is_none_literal(node: ast.AST) -> bool:
     return isinstance(node, ast.Constant) and node.value is None
 
 
+def _annotation_is_classvar(annotation: Optional[ast.AST]) -> bool:
+    if annotation is None:
+        return False
+    node = annotation
+    # ClassVar[...] -> Subscript(value=Name/Attribute('ClassVar'), ...)
+    if isinstance(node, ast.Subscript):
+        node = node.value
+    if isinstance(node, ast.Name):
+        return node.id == "ClassVar"
+    if isinstance(node, ast.Attribute):
+        return node.attr == "ClassVar"
+    return False
+
+
+def _field_call_has_false_init(value: ast.AST) -> bool:
+    """True for `field(init=False, ...)` — such a field is not part of the
+    generated __init__'s positional/keyword signature at all, so it must not
+    be counted when resolving positional argument order."""
+    if not (isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == "field"):
+        return False
+    for kw in value.keywords:
+        if kw.arg == "init" and isinstance(kw.value, ast.Constant) and kw.value.value is False:
+            return True
+    return False
+
+
+def _dataclass_field_order(tree: ast.Module) -> dict[str, list[str]]:
+    """class_name -> ordered list of __init__ positional/keyword field names,
+    for every @dataclass-decorated class in this module. Mirrors the order
+    the stdlib `dataclasses` module uses to build __init__: class-body
+    declaration order, skipping ClassVar-annotated attributes and fields
+    declared with `field(init=False)` (neither participates in the generated
+    constructor's positional signature).
+
+    This exists because a dataclass instance can be — and in this repo IS —
+    constructed with positional arguments instead of keywords. The original
+    version of find_no_supplier() only recognised keyword arguments and
+    attribute assignments as "supplying" a field, so it reported
+    ConstitutionViolation.action_kind (daytrade/stockfish_constitution.py,
+    commit 083e09e) as NO_SUPPLIER despite 10 production call sites passing
+    it as the 5th positional argument — a false positive that was acted on
+    before this fix existed. Positional-argument resolution against real
+    declaration order closes that hole.
+    """
+    out: dict[str, list[str]] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ClassDef):
+            continue
+        is_dataclass = any(
+            (isinstance(d, ast.Name) and d.id == "dataclass")
+            or (isinstance(d, ast.Call) and isinstance(d.func, ast.Name) and d.func.id == "dataclass")
+            for d in node.decorator_list
+        )
+        if not is_dataclass:
+            continue
+        fields: list[str] = []
+        for stmt in node.body:
+            if not isinstance(stmt, ast.AnnAssign) or not isinstance(stmt.target, ast.Name):
+                continue
+            if _annotation_is_classvar(stmt.annotation):
+                continue
+            if stmt.value is not None and _field_call_has_false_init(stmt.value):
+                continue
+            fields.append(stmt.target.id)
+        out[node.name] = fields
+    return out
+
+
+def _callee_class_name(func: ast.AST) -> Optional[str]:
+    """Class name a Call's func expression targets, for both bare `Class(...)`
+    and attribute-chained `module.Class(...)` construction."""
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
+def _callee_base_local_name(func: ast.AST) -> Optional[str]:
+    """The local name a Call's func expression is rooted in — the bare name
+    itself for `Class(...)`, or the leftmost identifier for attribute-chained
+    `module.Class(...)` / `pkg.module.Class(...)`."""
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        base = func.value
+        while isinstance(base, ast.Attribute):
+            base = base.value
+        if isinstance(base, ast.Name):
+            return base.id
+    return None
+
+
 def find_no_supplier(modules: dict[str, ParsedModule]) -> list[dict]:
+    all_module_names = set(modules.keys())
     candidates: dict[str, list[tuple[str, str]]] = {}  # module -> [(class, field)]
+    # dataclass field order, scoped per DEFINING module — two classes with the
+    # same bare name in different modules (e.g. daytrade.stockfish_exit's
+    # TradeState vs sovereign.execution.forex_exit_manager's own unrelated
+    # TradeState) must not collapse into one global entry; that reintroduces
+    # exactly the cross-class collision this whole rewrite exists to close.
+    field_order_by_module: dict[str, dict[str, list[str]]] = {}
     for pm in modules.values():
         if pm.tree is None:
             continue
         fields = _dataclass_none_default_fields(pm.tree, pm.module_name)
         if fields:
             candidates[pm.module_name] = fields
+        field_order_by_module[pm.module_name] = _dataclass_field_order(pm.tree)
 
     all_field_names = {f for fields in candidates.values() for (_, f) in fields}
     if not all_field_names:
         return []
 
+    def _resolve_callee(pm: ParsedModule, import_edges: list["ImportEdge"], func: ast.AST) -> tuple[Optional[str], Optional[str], Optional[list[str]]]:
+        """(class_name, defining_module, field_order) the call's func
+        expression resolves to, using this module's actual import bindings —
+        not a same-named class in some unrelated module."""
+        class_name = _callee_class_name(func)
+        if class_name is None:
+            return None, None, None
+        base_local = _callee_base_local_name(func)
+        target_module = None
+        if isinstance(func, ast.Name):
+            # bare `Class(...)`: either imported directly under this local
+            # name, or defined in this module itself.
+            for e in import_edges:
+                if e.local_name == class_name and e.symbol is not None:
+                    target_module = e.target_module
+                    break
+            if target_module is None and class_name in field_order_by_module.get(pm.module_name, {}):
+                target_module = pm.module_name
+        elif isinstance(func, ast.Attribute) and base_local is not None:
+            # `module.Class(...)`: base_local is bound to a whole-module
+            # import (or a symbol re-exported under that name); resolve it.
+            for e in import_edges:
+                if e.local_name == base_local:
+                    if e.symbol is None:
+                        target_module = e.target_module
+                    break
+        if target_module is None:
+            return class_name, None, None
+        return class_name, target_module, field_order_by_module.get(target_module, {}).get(class_name)
+
     reads: dict[str, list[str]] = {f: [] for f in all_field_names}   # field -> [locations]
-    supplies: dict[str, list[str]] = {f: [] for f in all_field_names}
+    # Call-based supplies (keyword arg, positional arg) are scoped to
+    # (class_name, field_name): once positional resolution is in play, two
+    # unrelated dataclasses can legitimately share a field name (e.g.
+    # ExecEvent.intent and execution_policy.py's own _Intent.intent), and a
+    # positional/keyword supply to ONE of them must not be read as evidence
+    # for the OTHER — that would be a false negative, the failure mode this
+    # whole audit exists to avoid. Attribute-assignment (`obj.field = x`) and
+    # setattr() supplies stay field-name-scoped only, same as before: static
+    # analysis has no type information for `obj`, so class-scoping them isn't
+    # tractable without executing the code (which this script deliberately
+    # never does).
+    supplies_by_class: dict[tuple[str, str, str], list[str]] = {}  # (defining_module, class, field) -> locs
+    supplies_unscoped: dict[str, list[str]] = {f: [] for f in all_field_names}
+
+    def _record_class_supply(defining_module: str, class_name: str, field_name: str, loc: str) -> None:
+        supplies_by_class.setdefault((defining_module, class_name, field_name), []).append(loc)
 
     for pm in modules.values():
         if pm.tree is None:
             continue
+        import_edges = module_imports(pm, all_module_names)
         for node in ast.walk(pm.tree):
             # reads: attribute Load access `.field`
             if isinstance(node, ast.Attribute) and node.attr in all_field_names and isinstance(node.ctx, ast.Load):
                 if not pm.is_test:
                     reads[node.attr].append(f"{rel_str(pm.path)}:{node.lineno}")
-            # supplies (production only): keyword arg with non-None value
+            # supplies (production only)
             if not pm.is_test:
                 if isinstance(node, ast.Call):
+                    class_name, defining_module, class_fields = _resolve_callee(pm, import_edges, node.func)
+
+                    # keyword arg with non-None value, scoped to the resolved
+                    # target class when the call's callee is known to be a
+                    # dataclass constructor defined in a specific module;
+                    # otherwise fall back to the old, unscoped field-name
+                    # match (e.g. dataclasses.replace(obj, field=value),
+                    # where the callee isn't the class itself, or the
+                    # class/module couldn't be resolved).
                     for kw in node.keywords:
-                        if kw.arg in all_field_names and not _is_none_literal(kw.value):
-                            supplies[kw.arg].append(f"{rel_str(pm.path)}:{node.lineno} (constructor kwarg)")
+                        if kw.arg not in all_field_names or _is_none_literal(kw.value):
+                            continue
+                        loc = f"{rel_str(pm.path)}:{node.lineno} (constructor kwarg)"
+                        if class_fields is not None and kw.arg in class_fields:
+                            _record_class_supply(defining_module, class_name, kw.arg, loc)
+                        elif class_fields is None:
+                            supplies_unscoped[kw.arg].append(loc)
+                        # else: callee resolved to a KNOWN dataclass that does
+                        # NOT have this field — not a plausible supply for any
+                        # candidate, scoped or not; don't record anything.
+
+                    # positional args, resolved against the target class's
+                    # real declared field order (see _dataclass_field_order).
+                    if class_fields:
+                        for i, arg in enumerate(node.args):
+                            if isinstance(arg, ast.Starred):
+                                # *args splat — cannot determine which field(s)
+                                # this covers positionally. Do not flag: treat
+                                # as inconclusive rather than guessing either
+                                # way — but also do NOT record it as a supply,
+                                # since that would risk masking a genuinely
+                                # unsupplied field (a false negative, the
+                                # worse failure here).
+                                break
+                            if i >= len(class_fields):
+                                break
+                            fname = class_fields[i]
+                            if fname in all_field_names and not _is_none_literal(arg):
+                                _record_class_supply(
+                                    defining_module, class_name, fname,
+                                    f"{rel_str(pm.path)}:{node.lineno} (positional arg {i})",
+                                )
+
+                    # setattr(obj, "field", value) — not an Attribute Store
+                    # node, so the check below never sees it; handled here.
+                    # Unscoped, same limitation as attribute assignment.
+                    if (
+                        isinstance(node.func, ast.Name)
+                        and node.func.id == "setattr"
+                        and len(node.args) >= 3
+                        and isinstance(node.args[1], ast.Constant)
+                        and isinstance(node.args[1].value, str)
+                    ):
+                        fname = node.args[1].value
+                        if fname in all_field_names and not _is_none_literal(node.args[2]):
+                            supplies_unscoped[fname].append(f"{rel_str(pm.path)}:{node.lineno} (setattr)")
                 # supplies: attribute Store assignment `.field = non-None`
                 if isinstance(node, ast.Attribute) and node.attr in all_field_names and isinstance(node.ctx, ast.Store):
-                    supplies[node.attr].append(f"{rel_str(pm.path)}:{node.lineno} (attribute assignment)")
+                    supplies_unscoped[node.attr].append(f"{rel_str(pm.path)}:{node.lineno} (attribute assignment)")
 
     findings = []
     for mod_name, fields in candidates.items():
         for class_name, field_name in fields:
             if not reads.get(field_name):
                 continue  # never read at all — not a wiring problem, just an unused field
-            if supplies.get(field_name):
+            supplied = (
+                bool(supplies_by_class.get((mod_name, class_name, field_name)))
+                or bool(supplies_unscoped.get(field_name))
+            )
+            if supplied:
                 continue  # has at least one non-test, non-None supplier
             findings.append({
                 "module": mod_name,

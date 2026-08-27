@@ -194,6 +194,179 @@ class TestNoSupplier:
         findings = wa.find_no_supplier(modules)
         assert any(f["field"] == "Thing.x" for f in findings)
 
+    def test_field_supplied_only_positionally_is_not_flagged(self):
+        """THE REAL HISTORICAL CASE. daytrade/stockfish_constitution.py at
+        commit 083e09e defined `ConstitutionViolation` with 5 fields and had
+        10 production call sites passing all 5 as POSITIONAL arguments — zero
+        as `action_kind=`. find_no_supplier() only recognised keyword args
+        and attribute assignments as "supplying" a field, so it reported
+        ConstitutionViolation.action_kind as NO_SUPPLIER even though it was
+        supplied every single time. That false finding was acted on before
+        this fix (and this test) existed. A dataclass with 5 fields,
+        constructed with 5 positional args and no keywords, must NOT be
+        reported as NO_SUPPLIER for its last field."""
+        src = """
+            from dataclasses import dataclass
+            from typing import Optional
+
+            @dataclass
+            class ConstitutionViolation:
+                rule_id: str
+                rule: str
+                detail: str
+                state_revision: int
+                action_kind: Optional[str] = None
+
+            def validate(k):
+                return ConstitutionViolation("C009", "some rule", "detail text", 3, k)
+
+            def read_it(v):
+                return v.action_kind
+        """
+        modules = {"daytrade.__synth_positional__": _pm(src, "daytrade/__synth_positional__.py")}
+        findings = wa.find_no_supplier(modules)
+        assert not any(f["field"] == "ConstitutionViolation.action_kind" for f in findings)
+
+    def test_field_supplied_only_via_starred_call_is_not_flagged_but_not_treated_as_wired_either(self):
+        """*args splats make positional resolution impossible — the detector
+        must not guess. It must not crash, and (per the "false negative is
+        worse" rule) it must not silently mark the field wired off an
+        unprovable splat: a genuinely unsupplied field behind a splat-only
+        call site should stay flagged."""
+        src = """
+            from dataclasses import dataclass
+            from typing import Optional
+
+            @dataclass
+            class Thing:
+                a: str
+                b: str
+                x: Optional[float] = None
+
+            def make(args):
+                return Thing(*args)
+
+            def read_it(t):
+                return t.x
+        """
+        modules = {"daytrade.__synth_starred__": _pm(src, "daytrade/__synth_starred__.py")}
+        findings = wa.find_no_supplier(modules)
+        assert any(f["field"] == "Thing.x" for f in findings)
+
+    def test_positional_supply_does_not_leak_across_same_named_classes(self):
+        """Two unrelated dataclasses sharing a field name (and, here, even a
+        class name in different modules) must not cross-contaminate: a
+        positional/keyword supply to ONE class's field must not be read as
+        evidence that an unrelated class's same-named field is supplied. This
+        guards the exact regression the (defining_module, class, field)
+        scoping in find_no_supplier() fixes."""
+        src_a = """
+            from dataclasses import dataclass
+            from typing import Optional
+
+            @dataclass
+            class Holder:
+                intent: Optional[str] = None
+
+            def make():
+                return Holder("wired")
+
+            def read_a(h):
+                return h.intent
+        """
+        src_b = """
+            from dataclasses import dataclass
+            from typing import Optional
+
+            @dataclass
+            class Holder:
+                kind: str
+                order_id: str
+                intent: Optional[str] = None
+
+            def read_b(h):
+                return h.intent
+        """
+        modules = {
+            "daytrade.__synth_holder_a__": _pm(src_a, "daytrade/__synth_holder_a__.py"),
+            "daytrade.__synth_holder_b__": _pm(src_b, "daytrade/__synth_holder_b__.py"),
+        }
+        findings = wa.find_no_supplier(modules)
+        # Holder.intent in module B is genuinely never supplied and must still
+        # be flagged, even though module A's same-named class/field IS
+        # supplied.
+        assert any(
+            f["module"] == "daytrade.__synth_holder_b__" and f["field"] == "Holder.intent"
+            for f in findings
+        )
+        assert not any(
+            f["module"] == "daytrade.__synth_holder_a__" and f["field"] == "Holder.intent"
+            for f in findings
+        )
+
+    def test_field_supplied_via_setattr_is_not_flagged(self):
+        src = """
+            from dataclasses import dataclass
+            from typing import Optional
+
+            @dataclass
+            class Thing:
+                x: Optional[float] = None
+
+            def read_it(t):
+                return t.x
+
+            def make(t):
+                setattr(t, "x", 1.0)
+        """
+        modules = {"daytrade.__synth_setattr__": _pm(src, "daytrade/__synth_setattr__.py")}
+        findings = wa.find_no_supplier(modules)
+        assert not any(f["field"] == "Thing.x" for f in findings)
+
+    def test_field_never_reached_by_short_positional_call_is_still_flagged(self):
+        """A genuinely unsupplied field must still be caught: a positional
+        call that doesn't reach far enough to cover the target field's index
+        is not a supply. Guards against over-correcting the positional fix
+        into blindness the other way."""
+        src = """
+            from dataclasses import dataclass
+            from typing import Optional
+
+            @dataclass
+            class Thing:
+                a: str
+                b: str
+                x: Optional[float] = None
+
+            def make():
+                return Thing("a", "b")
+
+            def read_it(t):
+                return t.x
+        """
+        modules = {"daytrade.__synth_short_call__": _pm(src, "daytrade/__synth_short_call__.py")}
+        findings = wa.find_no_supplier(modules)
+        assert any(f["field"] == "Thing.x" for f in findings)
+
+
+class TestImportedNotCalledDecoratorBlindspot:
+    def test_bare_decorator_use_of_imported_symbol_is_not_flagged(self):
+        """A parameterized decorator (`@foo(...)`) is an ast.Call and was
+        already handled. A bare decorator (`@foo`, no parens) is NOT a Call
+        node in the AST — Python's grammar applies it directly — so the
+        original `_names_used_as_call_func` never saw it as a "use",
+        risking a false-positive IMPORTED_NOT_CALLED for modules that only
+        ever use an imported symbol as a bare decorator."""
+        modules = {
+            "daytrade.__synth_dec_a__": _pm("def deco(f):\n    return f\n", "daytrade/__synth_dec_a__.py"),
+            "daytrade.__synth_dec_b__": _pm(
+                "from __synth_dec_a__ import deco\n\n@deco\ndef handler():\n    pass\n",
+                "daytrade/__synth_dec_b__.py",
+            ),
+        }
+        findings = wa.find_imported_not_called(modules, set(modules.keys()))
+        assert not any(f["module"] == "daytrade.__synth_dec_b__" for f in findings)
+
 
 class TestBrokenImport:
     def test_unresolvable_top_level_import_is_flagged(self):

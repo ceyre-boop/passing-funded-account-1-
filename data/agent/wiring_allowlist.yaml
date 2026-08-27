@@ -237,8 +237,6 @@ NO_SUPPLIER:
     reason: "BLOCKED ON D1, the missing order path. There are ZERO production constructors of ExecEvent anywhere \u2014 not merely of this field. execution_policy.py's ledger is fed only by test fixtures because daytrade/broker.py has no scheduled caller and the system places no orders (Plans/THE_BIG_PLAN.md D1). Unblocks with Phase 2's paper execution path, not by a local edit."
   - field: "ExecEvent.fill_id"
     reason: "BLOCKED ON D1, the missing order path. Same root cause as ExecEvent.intent \u2014 no production code constructs ExecEvent at all, so no FILL event exists to carry a fill_id. Unblocks with Phase 2's paper execution path."
-  - field: "ConstitutionViolation.action_kind"
-    reason: "every production ConstitutionViolation(...) call site uses positional args (rule_id, rule, detail, state_revision) only — action_kind's 5th positional/keyword slot is never supplied"
   - field: "TradeState.thesis_sl"
     reason: "NOT AN OVERSIGHT \u2014 a documented inactive layer. stockfish_exit.py:141 sits under '--- inactive layers, awaiting their inputs', and stop_candidates() states the reason at the point of use: 'INACTIVE: needs an invalidation level from the classifier; daytrade/regime.py is a stub'. BLOCKED ON spec 001 (daytrade/regime.py raises NotImplementedError). NOTE: AlphaZero cannot supply this directly \u2014 ContextDirective structurally refuses any stop_price (context_directive.py:105-111), the two-engine boundary working as designed. When regime.py lands, the level must be derived mechanically on the Stockfish side, never handed across the envelope."
   - field: "RiskState.mc_breach_prob"
