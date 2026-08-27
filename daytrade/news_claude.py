@@ -57,6 +57,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -218,6 +219,16 @@ def check_budget(cap: float, *, now: Optional[datetime] = None) -> float:
 
 
 def record_spend(model: str, usage, cost: float, kind: str) -> None:
+    """Append + fsync. Same discipline as alpha_operator._append_jsonl, and for
+    the same reason stated there: a row the OS buffered but never flushed is a
+    row that never happened at the worst possible moment — here, that moment is
+    a crash right after a paid call, which would let spent_today() undercount
+    and check_budget() let the next call through past the true daily cap.
+
+    Mirrored rather than imported: alpha_operator imports news_claude at module
+    scope (`import news_claude` near its top), so `from alpha_operator import
+    _append_jsonl` here would be circular.
+    """
     SPEND.parent.mkdir(parents=True, exist_ok=True)
     with SPEND.open("a") as fh:
         fh.write(json.dumps({
@@ -227,6 +238,8 @@ def record_spend(model: str, usage, cost: float, kind: str) -> None:
             "cache_read": getattr(usage, "cache_read_input_tokens", 0) or 0,
             "cost_usd": round(cost, 8),
         }) + "\n")
+        fh.flush()
+        os.fsync(fh.fileno())
 
 
 # ------------------------------------------------------------- the judgment
@@ -415,26 +428,23 @@ def _blocks(symbol: str, headlines: list[dict], context: str):
 
 def read_news(symbol: str, headlines: list[dict], context: str, *,
               model: str, cap: float, effort: str, kind: str):
-    used = check_budget(cap)
-    client = _client()
+    """Delegates to _call() so there is exactly ONE billed code path.
+
+    This used to be a second, independent billed call site using
+    messages.parse(), with record_spend() AFTER it. That is the same
+    billed-but-not-ledgered defect _call() was restructured to remove:
+    messages.parse() runs its validator inside the SDK, so a schema failure
+    raises before `usage` is ever visible to us — the call is billed and no
+    ledger row is ever written.
+
+    It had no callers, so nothing was silently losing money today. It is
+    routed through _call() rather than repaired in place because two billed
+    paths mean two chances to get the ledger discipline wrong, and the second
+    one is always the one that gets forgotten.
+    """
     system, user = _blocks(symbol, headlines, context)
-
-    kw = {"model": model, "max_tokens": 1024, "system": system,
-          "messages": [{"role": "user", "content": user}], "output_format": NewsRead}
-    # Thinking ON at LOW effort rather than disabled: on Opus 5 a disabled-thinking
-    # path can leak internal tags into the output, and low effort is the cheaper,
-    # safer lever anyway.
-    if model.startswith(("claude-opus-5", "claude-sonnet-5")):
-        kw["thinking"] = {"type": "adaptive"}
-        kw["output_config"] = {"effort": effort}
-
-    r = client.messages.parse(**kw)
-    cost = cost_of(r.usage, model)
-    record_spend(model, r.usage, cost, kind)
-    print(f"  [{model} {kind}] ${cost:.5f}  (today ${used + cost:.4f} / ${cap:.2f} daily cap)  "
-          f"in {r.usage.input_tokens} cache_r {getattr(r.usage,'cache_read_input_tokens',0) or 0} "
-          f"out {r.usage.output_tokens}")
-    return r.parsed_output, cost
+    return _call(system, user, NewsRead,
+                 model=model, cap=cap, effort=effort, kind=kind)
 
 
 class TruncatedResponse(RuntimeError):
@@ -452,16 +462,24 @@ MAX_TOKENS = {"morning": 8000, "delta": 2048}
 def _call(system, user, schema, *, model: str, cap: float, effort: str, kind: str):
     """One priced, ledgered API call. Every call in this file goes through here.
 
-    Uses create() + manual parse rather than messages.parse() for one reason:
-    parse() validates inside the SDK's response handler, so a validation failure
-    raises before any of our code sees `usage` — the call is billed and the
-    ledger never hears about it. A budget guard that under-counts on exactly the
-    calls that went wrong is worse than none. Here `usage` is recorded FIRST and
-    parsing happens after, so every cent that leaves the account is on the ledger.
+    Uses create() + manual parse rather than messages.parse() deliberately:
+    parse() validates the response INSIDE the SDK's own response handler (its
+    post_parser runs before self._post() ever returns to us), so a validation
+    failure raises before any of our code sees `usage` on the object it was
+    about to hand back — billed, never ledgered. A budget guard that
+    under-counts on exactly the calls that went wrong is worse than none.
+    record_spend() below runs on the raw create() response BEFORE any parsing
+    or validation is attempted, in every branch, with no exception path that
+    can reach a `return` or a re-raise without going through it first.
 
-    Note this leans on two private SDK helpers (anthropic.lib._parse). If a
-    version bump moves them, the fallback below keeps working with the ledger gap
-    stated out loud rather than hidden.
+    Schema-to-JSON-Schema transform and the post-hoc validate step normally use
+    two private SDK helpers (anthropic.lib._parse). If a version bump moves
+    them, the except ImportError branch below falls back to pydantic's public
+    API for both — plainer JSON Schema (schema.model_json_schema(), no strict-
+    mode narrowing) and plain schema.model_validate_json() instead of the
+    private TypeAdapter(...).validate_json() equivalent. Either way the call
+    still goes through create() first, so the ledger is never at risk from
+    this fallback — only the strictness of API-side schema enforcement is.
     """
     used = check_budget(cap)
     client = _client()
@@ -475,47 +493,44 @@ def _call(system, user, schema, *, model: str, cap: float, effort: str, kind: st
         from pydantic import TypeAdapter
         from anthropic.lib._parse._transform import transform_schema
         from anthropic.lib._parse._response import parse_text
-        oc["format"] = {"type": "json_schema",
-                        "schema": transform_schema(TypeAdapter(schema).json_schema())}
-        kw = {"model": model, "max_tokens": max_tok, "system": system,
-              "messages": [{"role": "user", "content": user}], "output_config": oc}
-        if model.startswith(("claude-opus-5", "claude-sonnet-5")):
-            kw["thinking"] = {"type": "adaptive"}
-
-        try:
-            r = client.messages.create(**kw)
-        except Exception as e:
-            if "credit balance is too low" in str(e):
-                raise NoApiCredit(
-                    "the Anthropic account has no credit — every judgment is "
-                    "blocked until it is topped up at console.anthropic.com "
-                    "(Plans & Billing). The local $ cap is unrelated and still "
-                    f"has headroom: ${spent_so_far():.4f} spent.") from None
-            raise
-        cost = cost_of(r.usage, model)
-        record_spend(model, r.usage, cost, kind)          # BEFORE parsing. Always.
-        _report(model, kind, effort, cost, used, r.usage, max_tok)
-
-        if r.stop_reason == "max_tokens":
-            raise TruncatedResponse(
-                f"{model} hit max_tokens={max_tok} on a {kind} read — the JSON body is "
-                f"cut off. The call was still billed (${cost:.5f}) and is on the ledger. "
-                f"Raise MAX_TOKENS[{kind!r}].")
-        text = next(b.text for b in r.content if b.type == "text")
-        return parse_text(text, schema), cost
-
+        schema_dict = transform_schema(TypeAdapter(schema).json_schema())
+        def _validate(text: str):
+            return parse_text(text, schema)
     except ImportError:
-        print("  !! SDK private parse helpers moved — falling back to messages.parse().\n"
-              "     A validation failure on this path is billed but NOT ledgered.")
-        kw = {"model": model, "max_tokens": max_tok, "system": system,
-              "messages": [{"role": "user", "content": user}], "output_format": schema}
-        if oc:
-            kw["output_config"], kw["thinking"] = oc, {"type": "adaptive"}
-        r = client.messages.parse(**kw)
-        cost = cost_of(r.usage, model)
-        record_spend(model, r.usage, cost, kind)
-        _report(model, kind, effort, cost, used, r.usage, max_tok)
-        return r.parsed_output, cost
+        print("  !! SDK private parse helpers moved — using pydantic's public "
+              "schema/validate API instead. The ledger is unaffected either way: "
+              "record_spend() always runs on the raw response before this.")
+        schema_dict = schema.model_json_schema()
+        def _validate(text: str):
+            return schema.model_validate_json(text)
+
+    oc["format"] = {"type": "json_schema", "schema": schema_dict}
+    kw = {"model": model, "max_tokens": max_tok, "system": system,
+          "messages": [{"role": "user", "content": user}], "output_config": oc}
+    if model.startswith(("claude-opus-5", "claude-sonnet-5")):
+        kw["thinking"] = {"type": "adaptive"}
+
+    try:
+        r = client.messages.create(**kw)
+    except Exception as e:
+        if "credit balance is too low" in str(e):
+            raise NoApiCredit(
+                "the Anthropic account has no credit — every judgment is "
+                "blocked until it is topped up at console.anthropic.com "
+                "(Plans & Billing). The local $ cap is unrelated and still "
+                f"has headroom: ${spent_so_far():.4f} spent.") from None
+        raise
+    cost = cost_of(r.usage, model)
+    record_spend(model, r.usage, cost, kind)          # BEFORE parsing. Always.
+    _report(model, kind, effort, cost, used, r.usage, max_tok)
+
+    if r.stop_reason == "max_tokens":
+        raise TruncatedResponse(
+            f"{model} hit max_tokens={max_tok} on a {kind} read — the JSON body is "
+            f"cut off. The call was still billed (${cost:.5f}) and is on the ledger. "
+            f"Raise MAX_TOKENS[{kind!r}].")
+    text = next(b.text for b in r.content if b.type == "text")
+    return _validate(text), cost
 
 
 def _report(model, kind, effort, cost, used, usage, max_tok) -> None:
