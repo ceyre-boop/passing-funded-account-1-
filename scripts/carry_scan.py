@@ -53,6 +53,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -167,7 +168,19 @@ def preflight(as_of: date) -> list[str]:
             except Exception as e:
                 bad.append(f"{key}: unreadable ({type(e).__name__})")
 
-    if not CB_DECISIONS.exists():
+    # CB_LAYER_DISABLED is declared once in entry_engine.py and read from
+    # there everywhere — never re-declared here.
+    from sovereign.forex.entry_engine import CB_LAYER_DISABLED
+    if CB_LAYER_DISABLED:
+        # Deliberately off (fabricated source, quarantined 2026-08-27; see
+        # data/cache/cb_decisions.FABRICATED.md). This is visible but is NOT
+        # a preflight failure — a disabled-by-design layer must never look
+        # like a broken one.
+        print("  i cb_decisions.json layer: DISABLED by design (fabricated "
+              "source quarantined 2026-08-27 — see "
+              "data/cache/cb_decisions.FABRICATED.md). Not counted as a "
+              "preflight failure.")
+    elif not CB_DECISIONS.exists():
         bad.append("cb_decisions.json missing — the CB-surprise layer cannot fire")
     else:
         import json
@@ -193,6 +206,56 @@ def preflight(as_of: date) -> list[str]:
         bad.append(f"regime-gate data unreachable: {type(e).__name__}: {e}")
 
     return bad
+
+
+_COUNTRY_PROBLEM_RE = re.compile(r"^([A-Z]{2})_(rates|cpi):")
+
+
+def _pair_countries() -> dict[str, tuple[str, str]]:
+    """{pair: (base_country, quote_country)} for the sealed universe, derived
+    from sovereign.forex.pair_universe.PAIR_CONFIG + CB_TO_COUNTRY — the same
+    pair->country mapping pair_bar() above and entry_engine.py already use.
+    Never re-declared as a second constant."""
+    from sovereign.forex.pair_universe import PAIR_CONFIG, CB_TO_COUNTRY
+    out: dict[str, tuple[str, str]] = {}
+    for pair in sealed_universe():
+        cfg = PAIR_CONFIG.get(pair)
+        if not cfg:
+            continue
+        out[pair] = (CB_TO_COUNTRY[cfg.base_central_bank],
+                    CB_TO_COUNTRY[cfg.quote_central_bank])
+    return out
+
+
+def preflight_by_pair(as_of: date, problems: list[str] | None = None) -> dict[str, list[str]]:
+    """Re-scopes `preflight()`'s flat problem list to per-pair blocklists.
+
+    A `{COUNTRY}_{rates|cpi}: ...` problem blocks a pair only if that country
+    is one of the pair's two legs (e.g. JP_cpi blocks USDJPY=X, not
+    EURUSD=X). Every other problem string — including any that fails to
+    parse as country-scoped — is global and blocks every pair; this is a
+    fail-safe default, not a loosening. A pair with an empty list is clear.
+    """
+    if problems is None:
+        problems = preflight(as_of)
+
+    pair_countries = _pair_countries()
+    blocked: dict[str, list[str]] = {pair: [] for pair in pair_countries}
+
+    for p in problems:
+        m = _COUNTRY_PROBLEM_RE.match(p)
+        country = m.group(1) if m else None
+        if country is not None and country in COUNTRIES:
+            for pair, legs in pair_countries.items():
+                if country in legs:
+                    blocked[pair].append(p)
+        else:
+            # Global problem (FRED key, yfinance/SPY/VIX, cb_decisions.json)
+            # or an unrecognised string — never silently dropped, blocks all.
+            for pair in blocked:
+                blocked[pair].append(p)
+
+    return blocked
 
 
 def rate_staleness(as_of: date) -> dict:
@@ -266,12 +329,13 @@ def pair_bar(bt, pair: str):
                hold_days=int(sig["hold_days"].iloc[-1])), None
 
 
-def scan(as_of: date):
+def scan(as_of: date, only_pairs: list[str] | None = None):
     bt = _make_backtester(as_of)
     pairs = sealed_universe()
+    scan_pairs = pairs if only_pairs is None else [p for p in pairs if p in only_pairs]
 
     hits, notes = [], []
-    for pair in pairs:
+    for pair in scan_pairs:
         bar, note = pair_bar(bt, pair)
         if bar is None:
             notes.append(note)
@@ -323,22 +387,38 @@ def main() -> int:
 
     print(f"\nCARRY SCAN — v015, as of {as_of}")
     problems = preflight(as_of)
+    blocked = preflight_by_pair(as_of, problems)
+    clear_pairs = [pair for pair, reasons in blocked.items() if not reasons]
+    dark_pairs = [pair for pair, reasons in blocked.items() if reasons]
+
     if problems:
         print("\nPREFLIGHT FAILED — these inputs cannot price today's carry:")
         for p in problems:
             print(f"  ! {p}")
-        if not a.ignore_preflight:
-            print("\nRefusing to emit signals. A scan on degraded inputs is "
-                  "indistinguishable from 'no setup today', which is exactly the "
-                  "failure this guard exists to prevent.\n"
-                  "Re-run with --ignore-preflight only to inspect.\n")
-            return 2
-        print("\n  --ignore-preflight set: output below is NOT tradeable.\n")
+        if not clear_pairs:
+            if not a.ignore_preflight:
+                print("\nRefusing to emit signals. A scan on degraded inputs is "
+                      "indistinguishable from 'no setup today', which is exactly the "
+                      "failure this guard exists to prevent.\n"
+                      "Re-run with --ignore-preflight only to inspect.\n")
+                return 2
+            print("\n  --ignore-preflight set: output below is NOT tradeable.\n")
+        else:
+            print(f"\n  preflight: {len(clear_pairs)}/{len(blocked)} pairs clear — "
+                  f"{', '.join(clear_pairs)}")
+            for pair in dark_pairs:
+                print(f"  preflight: {pair} DARK — {'; '.join(blocked[pair])}")
+            if not a.ignore_preflight:
+                print("\n  Refusing to emit signals for the DARK pairs above; "
+                      "proceeding for the clear pairs only.\n")
     else:
         print("preflight: ok")
 
-    hits, notes, pairs = scan(as_of)
+    scan_pairs = None if (a.ignore_preflight or not problems) else clear_pairs
+    hits, notes, pairs = scan(as_of, only_pairs=scan_pairs)
     print(f"universe (from sealed record): {', '.join(pairs)}")
+    if scan_pairs is not None:
+        print(f"scanned (preflight-clear): {', '.join(scan_pairs) or '(none)'}")
     print("=" * 68)
     for n in notes:
         print(f"  ! {n}")

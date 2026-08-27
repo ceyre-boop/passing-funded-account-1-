@@ -3,13 +3,35 @@ unblock write_baseline_plan.py (the writer was reading load_sessions, whose
 70-bar completeness gate excludes today's session until ~15:20 ET even though
 find_entry only ever needs bars through TRIGGER_END, 11:00).
 
-Every fixture here is built by TRUNCATING a real cached session
-(NVDA 2026-08-21, a genuine 78-bar complete day already in
-data/daytrade/bars/NVDA_5m.parquet) — no price is fabricated anywhere in this
-file, per CLAUDE.md rule 10 (never modify sealed evaluation data) and the
-project-wide "never fabricate a bar" doctrine in bars.py itself.
+Every fixture here is built from FROZEN SNAPSHOTS of real cached sessions —
+committed under daytrade/fixtures/ — never from the live, mutable
+data/daytrade/bars/NVDA_5m.parquet, which the com.alta.alpha-operator
+LaunchAgent rewrites every 5 minutes during market hours. Reading that file
+directly made these tests intermittently fail depending on whether a live
+tick happened to land mid-run (see NEXT.md / MEMORY for the incident).
+
+No price is fabricated anywhere in this file, per CLAUDE.md rule 10 (never
+modify sealed evaluation data) and the project-wide "never fabricate a bar"
+doctrine in bars.py itself:
+
+- daytrade/fixtures/NVDA_5m_2026-08-20.parquet holds the genuine, unmodified
+  78-bar 2026-08-21... -1 day, i.e. 2026-08-20, RTH session for NVDA, snapshot
+  taken 2026-08-27 from data/daytrade/bars/NVDA_5m.parquet while that session
+  was still frozen history (refresh_cache never rewrites an existing
+  session). Used by the load_partial_session truncation tests below.
+- daytrade/fixtures/NVDA_5m_load_sessions_sample.parquet holds every RTH
+  session strictly before 2026-08-21 that was present in the same live cache
+  at snapshot time (73 sessions, 2026-05-07..2026-08-20, each a confirmed
+  complete 78-bar day — verified before writing the fixture). Used by
+  test_load_sessions_unchanged_on_real_cache so that test's session-count
+  assertion is pinned to a frozen population instead of the ever-growing
+  live cache (which was itself the same root cause of intermittent
+  failure: the count changes as the operator appends new sessions, and the
+  newest session in the live file is sometimes still forming).
 """
 from __future__ import annotations
+
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -17,16 +39,19 @@ import pytest
 import bars
 import ceiling
 
-REAL_CACHE = bars.ROOT / "data" / "daytrade" / "bars" / "NVDA_5m.parquet"
-DAY = pd.Timestamp("2026-08-21").date()
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+SINGLE_DAY_FIXTURE = FIXTURES / "NVDA_5m_2026-08-20.parquet"
+LOAD_SESSIONS_FIXTURE = FIXTURES / "NVDA_5m_load_sessions_sample.parquet"
+DAY = pd.Timestamp("2026-08-20").date()
 
 
 def _real_day_bars() -> pd.DataFrame:
-    """The genuine, unmodified 78-bar 2026-08-21 session from the real cache."""
-    df = pd.read_parquet(REAL_CACHE)
+    """The genuine, unmodified 78-bar 2026-08-20 session, frozen into a
+    committed fixture (see module docstring for provenance)."""
+    df = pd.read_parquet(SINGLE_DAY_FIXTURE)
     df.index = pd.to_datetime(df.index, utc=True).tz_convert(bars.ET)
     day_bars = df[df.index.date == DAY]
-    assert len(day_bars) == 78, "fixture assumption: 2026-08-21 is a full session"
+    assert len(day_bars) == 78, "fixture assumption: 2026-08-20 is a full session"
     return day_bars
 
 
@@ -102,13 +127,19 @@ def test_no_data_for_day_returns_none(tmp_path, monkeypatch):
     assert bars.load_partial_session("NVDA", other_day, ceiling.TRIGGER_END, "5m") is None
 
 
-def test_load_sessions_unchanged_on_real_cache():
+def test_load_sessions_unchanged_on_real_cache(tmp_path, monkeypatch):
     """load_sessions' own completeness rule, exclusions, and session count on
-    the real, untouched cache are unaffected by adding load_partial_session —
-    this hits the real file directly, not a monkeypatched CACHE."""
+    a frozen, previously-real cache are unaffected by adding
+    load_partial_session — this hits a monkeypatched CACHE seeded with the
+    frozen fixture (73 confirmed-complete real sessions), not the live,
+    still-growing data/daytrade/bars/NVDA_5m.parquet, so the assertion below
+    does not depend on when the test happens to run."""
+    fixture = pd.read_parquet(LOAD_SESSIONS_FIXTURE)
+    _write_cache(tmp_path, monkeypatch, fixture)
+
     sessions = bars.load_sessions("NVDA", "5m", allow_fetch=False)
-    assert len(sessions) == 74
+    assert len(sessions) == 73
     assert all(len(s) >= bars.MIN_SESSION_BARS_5M for s in sessions)
-    # every session is either the 78-bar full day or a >=70-bar reduced day —
-    # never a partial/forming day slipping into the population
-    assert all(70 <= len(s) <= 78 for s in sessions)
+    # every session in the frozen fixture is the full 78-bar day — never a
+    # partial/forming day slipping into the population
+    assert all(len(s) == 78 for s in sessions)

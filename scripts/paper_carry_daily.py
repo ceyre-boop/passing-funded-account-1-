@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -67,7 +68,12 @@ import carry_scan  # noqa: E402
 import paper_carry_log as pcl  # noqa: E402
 import paper_carry_resolver as pcr  # noqa: E402
 
-PENDING_PATH = ROOT / "data" / "agent" / "paper_carry_pending_signals.json"
+# PAPER_CARRY_PENDING_PATH — replay isolation (see scripts/carry_replay.py and
+# scripts/paper_carry_log.py's PAPER_CARRY_LOG_PATH docstring). Defaults to
+# the live path unchanged when unset.
+_DEFAULT_PENDING_PATH = ROOT / "data" / "agent" / "paper_carry_pending_signals.json"
+PENDING_PATH = Path(os.environ["PAPER_CARRY_PENDING_PATH"]) if os.environ.get(
+    "PAPER_CARRY_PENDING_PATH") else _DEFAULT_PENDING_PATH
 GATE_STATE_PATH = ROOT / "data" / "agent" / "carry_buy_gate_state.json"
 
 
@@ -134,14 +140,37 @@ def step_fill_pending(as_of: date, firm: str, risk: float) -> list:
 def step_scan(as_of: date, ignore_preflight: bool = False) -> tuple[list, list]:
     """Queue today's fresh signals as pending. Refuses to scan on degraded
     inputs (preflight failure) unless explicitly told to inspect only —
-    matches carry_scan.py's own CLI discipline."""
+    matches carry_scan.py's own CLI discipline.
+
+    A preflight problem only blocks the pair(s) it actually applies to
+    (e.g. JP_cpi blocks USDJPY=X, not EURUSD=X/GBPUSD=X/AUDUSD=X) — see
+    carry_scan.preflight_by_pair(). Only when EVERY sealed pair is blocked
+    does this fall back to the old all-or-nothing refusal."""
     problems = carry_scan.preflight(as_of)
-    if problems and not ignore_preflight:
+    blocked = carry_scan.preflight_by_pair(as_of, problems)
+    clear_pairs = [pair for pair, reasons in blocked.items() if not reasons]
+    dark_pairs = [pair for pair, reasons in blocked.items() if reasons]
+
+    if problems and not clear_pairs and not ignore_preflight:
         return [], problems
+
+    pair_notes = []
+    if problems:
+        if ignore_preflight:
+            pair_notes.append("--ignore-preflight set: scanning ALL pairs "
+                              "including DARK ones — NOT tradeable")
+            pair_notes.extend(problems)
+        else:
+            pair_notes.append(f"preflight: {len(clear_pairs)}/{len(blocked)} "
+                              f"pairs clear — {', '.join(clear_pairs) or '(none)'}")
+            for pair in dark_pairs:
+                pair_notes.append(f"preflight: {pair} DARK — "
+                                  f"{'; '.join(blocked[pair])}")
 
     pending = _load_pending()
     busy = _pairs_with_open_or_pending(pending)
-    hits, notes, _pairs = carry_scan.scan(as_of)
+    scan_pairs = None if (ignore_preflight or not problems) else clear_pairs
+    hits, notes, _pairs = carry_scan.scan(as_of, only_pairs=scan_pairs)
     staleness = carry_scan.rate_staleness(as_of)
     gate_state = _gate_state_snapshot()
 
@@ -157,7 +186,7 @@ def step_scan(as_of: date, ignore_preflight: bool = False) -> tuple[list, list]:
                             gate_state=gate_state))
         queued.append(h["pair"])
     _save_pending(pending)
-    return queued, problems + notes
+    return queued, pair_notes + notes
 
 
 def main() -> int:

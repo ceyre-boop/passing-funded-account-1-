@@ -1,0 +1,95 @@
+{
+ "timestamp": "2026-08-27T19:42:21",
+ "status": "PARTIAL",
+ "sealed_n": 411,
+ "rig_n": 387,
+ "matched": 386,
+ "missing": 25,
+ "rig_only_extra": 1,
+ "attribution": {
+  "cache_gap": 0,
+  "macro_history_truncation": 0,
+  "macro_ready_by_pair": {
+   "EURUSD=X": "2015-01-01",
+   "GBPUSD=X": "2015-01-01",
+   "USDJPY=X": "2015-01-01",
+   "AUDUSD=X": "2015-01-01"
+  },
+  "macro_warmup_days": 365,
+  "unattributed_residual": 25,
+  "residual_by_year": {
+   "2016": 24,
+   "2017": 1
+  },
+  "size_only_causes_ruled_out": [
+   "^VIX3M",
+   "^TNX",
+   "COT cache"
+  ]
+ },
+ "first_divergence": {
+  "pair": "USDJPY=X",
+  "entry": "2016-01-05"
+ },
+ "cache_coverage": {
+  "AUDUSD.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-07-02",
+   "rows": 3146
+  },
+  "AUDUSD_ohlc.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-07-03",
+   "rows": 3147
+  },
+  "EURUSD.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-07-02",
+   "rows": 3146
+  },
+  "EURUSD_ohlc.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-07-03",
+   "rows": 3147
+  },
+  "GBPUSD.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-07-02",
+   "rows": 3146
+  },
+  "GBPUSD_ohlc.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-07-03",
+   "rows": 3147
+  },
+  "SPY.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-06-29",
+   "rows": 3037
+  },
+  "USDJPY.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-07-02",
+   "rows": 3146
+  },
+  "USDJPY_ohlc.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-07-03",
+   "rows": 3147
+  },
+  "VIX.parquet": {
+   "start": "2014-06-02",
+   "end": "2026-06-29",
+   "rows": 3038
+  }
+ },
+ "restore_list": [
+  "data/research/spot_cache/VIX3M_ohlc.parquet (^VIX3M) \u2014 size fidelity",
+  "data/research/spot_cache/TNX_ohlc.parquet (^TNX) \u2014 size fidelity",
+  "data/cache/cot/{EUR,GBP,JPY,AUD,USD}_cot.parquet \u2014 size fidelity",
+  "scripts/build_cb_decisions.py \u2014 cb_decisions.json regenerator",
+  "writer script for data/oos_trades_2025_2026.json \u2014 OOS artifact provenance",
+  "the sealed CSV's generator (v015 engine + data vintage) \u2014 the only way to attribute residual entry-count divergence"
+ ],
+ "note": "PARTIAL: residual divergence needs the ~/quant generator/data vintage; G2 stays RED unless a waiver is logged via decision_logger."
+}

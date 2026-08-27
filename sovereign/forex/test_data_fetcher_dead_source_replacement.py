@@ -131,17 +131,21 @@ def test_abs_fetch_raises_on_no_series_never_fabricates(monkeypatch):
         _fetcher()._fetch_abs_au_cpi_index("2015-01-01")
 
 
-def test_fetch_cpi_history_falls_back_to_fred_when_live_source_fails(monkeypatch):
+def test_fetch_cpi_history_returns_none_when_live_source_fails(monkeypatch):
     """Fault: if ONS/ABS is briefly unreachable, _fetch_cpi_history must not
-    crash the whole signal path — it degrades to the existing FRED branch
-    (which is itself SOURCE_DEAD for UK/AU, so this still ultimately reaches
-    the honest FALLBACK_CPI constant, not a fabricated live-looking value)."""
+    crash the whole signal path — but it also must not fabricate a
+    replacement value once the FRED branch (itself SOURCE_DEAD for UK/AU)
+    also can't run.
+
+    Prior to the 2026-08-27 data-integrity pass this fell all the way
+    through to a flat FALLBACK_CPI series persisted to disk indistinguishable
+    from real data — exactly how JP_cpi.parquet became a 3040-row flat line
+    at 3.2. The contract now is: no source available -> return None, and
+    let get_cpi_history's caller decide (it does not cache None)."""
     monkeypatch.setattr(
         "sovereign.forex.data_fetcher.requests.get",
         lambda *a, **k: _FakeResponse({}, status=500),
     )
     f = _fetcher()   # _fred_ok=False, so the FRED branch also can't run
     s = f._fetch_cpi_history("UK", "2020-01-01")
-    # falls all the way through to the flat FALLBACK_CPI series, not a crash
-    assert s is not None
-    assert s.nunique() == 1
+    assert s is None

@@ -9,6 +9,7 @@ from datetime import date
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +17,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import carry_scan as cs  # noqa: E402
+from sovereign.forex import entry_engine  # noqa: E402
 
 
 def test_universe_comes_from_the_sealed_record():
@@ -31,9 +33,51 @@ def test_preflight_flags_stale_macro_cache(monkeypatch, tmp_path):
     empty scan that is indistinguishable from a genuine 'no setup today'."""
     monkeypatch.setattr(cs, "MACRO_CACHE", tmp_path / "absent")
     monkeypatch.setattr(cs, "CB_DECISIONS", tmp_path / "nope.json")
+    # CB layer enabled here on purpose — this test targets the macro-cache
+    # check, not the CB-disabled path (see the dedicated tests below).
+    monkeypatch.setattr(entry_engine, "CB_LAYER_DISABLED", False)
     bad = cs.preflight(date(2026, 8, 15))
     assert any("cache missing" in b for b in bad)
     assert any("cb_decisions.json missing" in b for b in bad)
+
+
+def test_preflight_reports_no_problem_when_cb_layer_disabled(monkeypatch, tmp_path, capsys):
+    """CB_LAYER_DISABLED=True (the current, real state — cb_decisions.json was
+    fabricated and quarantined 2026-08-27) must NOT show up as a preflight
+    failure. A deliberately-off layer must never look like a broken one."""
+    monkeypatch.setattr(cs, "MACRO_CACHE", tmp_path / "absent")
+    monkeypatch.setattr(cs, "CB_DECISIONS", tmp_path / "nope.json")
+    monkeypatch.setattr(entry_engine, "CB_LAYER_DISABLED", True)
+    bad = cs.preflight(date(2026, 8, 15))
+    assert not any("cb_decisions" in b for b in bad), bad
+    # But it must still be visible to the operator, just not as a failure.
+    out = capsys.readouterr().out
+    assert "DISABLED by design" in out
+
+
+def test_preflight_still_flags_missing_cb_file_when_layer_enabled(monkeypatch, tmp_path):
+    """Proves the disabled-path check didn't just delete the missing-file
+    check: with the layer explicitly enabled, a genuinely absent
+    cb_decisions.json must still be a preflight failure."""
+    monkeypatch.setattr(cs, "MACRO_CACHE", tmp_path / "absent")
+    monkeypatch.setattr(cs, "CB_DECISIONS", tmp_path / "nope.json")
+    monkeypatch.setattr(entry_engine, "CB_LAYER_DISABLED", False)
+    bad = cs.preflight(date(2026, 8, 15))
+    assert any("cb_decisions.json missing" in b for b in bad), bad
+
+
+def test_cb_event_trigger_yields_no_events_when_disabled(monkeypatch):
+    """CBEventTrigger must produce no events, silently, when the layer is
+    disabled — even if a (fabricated or otherwise) file happens to exist at
+    CB_DECISIONS_PATH."""
+    monkeypatch.setattr(entry_engine, "CB_LAYER_DISABLED", True)
+    trigger = entry_engine.CBEventTrigger()
+    trigger._load()
+    assert trigger._decisions == []
+    assert trigger.check("US", "EU", pd.Timestamp("2024-01-15")) is None
+    assert trigger.check_historical(
+        "US", "EU", pd.Timestamp("2020-01-01"), pd.Timestamp("2024-01-01"),
+    ) == []
 
 
 def test_preflight_flags_missing_fred_key(monkeypatch, tmp_path):
@@ -98,6 +142,64 @@ def test_preflight_flags_flatline_fabricated_cache(monkeypatch, tmp_path):
         cache / "JP_cpi.parquet")
     bad = cs.preflight(as_of)
     assert any("FLAT LINE" in b and "JP_cpi" in b for b in bad), bad
+
+
+def test_preflight_by_pair_scopes_country_problem_to_its_pair():
+    """JP_cpi has no bearing on EURUSD/GBPUSD/AUDUSD — only USDJPY has a JPY
+    leg. This is the bug this whole change fixes: a global refusal on a
+    country-scoped problem darkens pairs that don't touch that country."""
+    blocked = cs.preflight_by_pair(date(2026, 8, 15), problems=["JP_cpi: cache missing"])
+    assert blocked["USDJPY=X"] == ["JP_cpi: cache missing"]
+    for pair in ("EURUSD=X", "GBPUSD=X", "AUDUSD=X"):
+        assert blocked[pair] == [], f"{pair} wrongly blocked by a JP-only problem"
+
+
+def test_preflight_by_pair_us_rates_blocks_every_sealed_pair():
+    """Every sealed pair has a USD leg (EUR/GBP/JPY/AUD all quote or base
+    against USD) — this proves the scoping is real attribution, not just
+    'ignore Japan'."""
+    blocked = cs.preflight_by_pair(date(2026, 8, 15),
+                                   problems=["US_rates: ends 2026-01-01 (57d stale, limit 100d)"])
+    for pair in ("EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X"):
+        assert blocked[pair], f"{pair} must be blocked by a US_rates problem"
+
+
+def test_preflight_by_pair_global_problem_blocks_all_four():
+    """FRED_KEY absent (and the other global gate-input problems) are
+    country-agnostic — they must darken the whole universe."""
+    blocked = cs.preflight_by_pair(
+        date(2026, 8, 15),
+        problems=["FRED_API_KEY absent — rate/CPI series fall back to FLAT CONSTANTS"])
+    for pair in ("EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X"):
+        assert blocked[pair], f"{pair} must be blocked by a global problem"
+
+
+def test_preflight_by_pair_unparseable_string_fails_safe_to_blocking_all():
+    """A problem string that doesn't match the {COUNTRY}_{rates|cpi}: shape
+    must never be silently dropped — the fail-safe default is 'blocks
+    everything', not 'ignored'."""
+    blocked = cs.preflight_by_pair(date(2026, 8, 15), problems=["some future novel problem"])
+    for pair in ("EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X"):
+        assert blocked[pair] == ["some future novel problem"]
+
+
+def test_preflight_by_pair_all_pairs_clear_when_no_problems():
+    blocked = cs.preflight_by_pair(date(2026, 8, 15), problems=[])
+    assert all(reasons == [] for reasons in blocked.values())
+    assert set(blocked) == {"EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X"}
+
+
+def test_step_scan_emits_nothing_when_every_pair_is_blocked(monkeypatch, tmp_path):
+    """Old all-or-nothing behaviour must be preserved for the one case where
+    it's still correct: every sealed pair genuinely blocked."""
+    import paper_carry_daily as pcd
+
+    monkeypatch.setattr(pcd, "PENDING_PATH", tmp_path / "pending.json")
+    monkeypatch.setattr(cs, "preflight",
+                        lambda as_of: ["FRED_API_KEY absent — rate/CPI series fall back"])
+    queued, notes = pcd.step_scan(date(2026, 8, 15))
+    assert queued == []
+    assert notes == ["FRED_API_KEY absent — rate/CPI series fall back"]
 
 
 @pytest.mark.network

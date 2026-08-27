@@ -304,6 +304,11 @@ ORPHANS:
     tracked as a Python module) — has `if __name__ == "__main__":` and is invoked directly (`python3 scripts/paper_carry_daily.py`),
     matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way);
     not designed to be imported as a library module
+- module: scripts.carry_replay
+  reason: standalone CLI (2026-08-27 replay dispatch) — `python3 scripts/carry_replay.py --start ... --end
+    ... --risk ...` drives the existing paper_carry_daily step functions day-by-day over a historical
+    window; imports paper_carry_daily/carry_scan rather than being imported, matching this repo's script
+    convention. Has `if __name__ == "__main__":` and is invoked directly, never as a library module.
 - module: scripts.build_rate_vintages
   reason: spec 039 standalone CLI — `python3 scripts/build_rate_vintages.py` rebuilds the nominal/publication
     macro caches from FRED+ALFRED; run by hand (needs FRED_API_KEY, hits the network), never imported
@@ -324,7 +329,18 @@ ORPHANS:
     matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way);
     not designed to be imported as a library module. Added 2026-08-26 as the single documented command
     for refreshing CACHE_STALE macro series (see scripts/data_health.py).
+- module: scripts.paper_tsmom_daily
+  reason: 'standalone daily CLI (python3 scripts/paper_tsmom_daily.py), same convention as its paper_carry_daily
+    sibling — a shell/scheduler caller is not a Python import. NOTE: this module and scripts/carry_replay.py
+    appeared in the working tree from a CONCURRENT process on 2026-08-27, not from this session''s dispatch.
+    Allowlisted so the audit is not red on someone else''s in-flight work; NOT reviewed or vouched for
+    here. Whoever owns it should confirm the reason or replace it.'
 IMPORTED_NOT_CALLED:
+- module: scripts.carry_scan
+  target: sovereign.forex.entry_engine
+  reason: CB_LAYER_DISABLED is a boolean constant read for a branch test, not invoked. It is declared
+    once in entry_engine.py and imported here so the disabled state has a single source of truth rather
+    than being re-declared in carry_scan (quarantined 2026-08-27 — see data/cache/cb_decisions.FABRICATED.md)
 - module: daytrade.alpha_operator
   target: daytrade.scenarios
   reason: ALL_SCENARIOS is a tuple constant used via `set(...)` membership comparisons, not invoked —

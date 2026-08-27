@@ -25,6 +25,12 @@ CB_EVENT_TRIGGER (Edge 3 — Post-Decision Drift):
   Conviction: 0.50 + abs(surprise_bps) / 200  [capped at 0.90]
   Hold: 10–20 days
   Adds ~6-8 signals per pair per year historically.
+
+  DISABLED 2026-08-27 — see CB_LAYER_DISABLED below. The source file was
+  fabricated (market-rate step-differences mislabelled as CB decisions) and
+  has no reproducible builder. Quarantined, not deleted:
+  data/cache/cb_decisions.json.FABRICATED /
+  data/cache/cb_decisions.FABRICATED.md.
 """
 from __future__ import annotations
 
@@ -60,6 +66,26 @@ CB_DECISIONS_PATH = Path(__file__).parents[2] / 'data' / 'cache' / 'cb_decisions
 CB_MIN_SURPRISE_BPS = 25
 CB_ENTRY_WINDOW_DAYS = 5   # entry valid for 5 business days after decision
 
+# CB-surprise layer, deliberately disabled 2026-08-27 by owner decision.
+# data/cache/cb_decisions.json was found to be FABRICATED: it is the
+# step-difference of *market* rate series (SONIA, effective fed funds,
+# monthly OECD proxies) mislabelled as central-bank policy decisions
+# (47.7% of moves are +-1bp, 16.5% fall on weekends, 313/313 FED/BOJ/RBA
+# entries are dated the 1st of a month, 83.6% have expected_change_bps == 0).
+# Its named builder, scripts/build_cb_decisions.py, has never existed in
+# this repo's history. Only the file was quarantined, not deleted:
+# data/cache/cb_decisions.json.FABRICATED, evidence trail in
+# data/cache/cb_decisions.FABRICATED.md.
+#
+# This flag is the single source of truth for the disabled state — every
+# consumer (CBEventTrigger below, scripts/carry_scan.py's preflight()) reads
+# it from here rather than re-declaring it. When True, the layer is meant to
+# produce no events, silently and by design (no warning — a warning implies
+# a fault, and there is none). If the file is genuinely missing while this
+# flag is False, the existing loud FileNotFoundError warning path below is
+# unchanged.
+CB_LAYER_DISABLED = True
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,6 +114,12 @@ class CBEventTrigger:
 
     def _load(self) -> None:
         if self._loaded:
+            return
+        if CB_LAYER_DISABLED:
+            # Deliberately disabled — see CB_LAYER_DISABLED comment above.
+            # No events, no warning: this is by design, not a fault.
+            self._decisions = []
+            self._loaded = True
             return
         try:
             with open(CB_DECISIONS_PATH) as f:

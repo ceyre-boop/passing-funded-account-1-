@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from dataclasses import dataclass
 from datetime import date
@@ -58,7 +59,14 @@ from sovereign.execution.forex_exit_manager import (  # noqa: E402
 import carry_scan  # noqa: E402
 import paper_carry_log as pcl  # noqa: E402
 
-STATE_PATH = ROOT / "data" / "exec" / "paper_carry_exit_state.json"
+# PAPER_CARRY_EXIT_STATE_PATH — replay isolation (see scripts/carry_replay.py
+# and paper_carry_log.py's PAPER_CARRY_LOG_PATH docstring). This state file
+# (per-trade trailing-stop/hold-count state between daily runs) is as much a
+# live artifact as the ledger it resolves against — a replay run must never
+# read or write the live file. Defaults to the live path unchanged when unset.
+_DEFAULT_STATE_PATH = ROOT / "data" / "exec" / "paper_carry_exit_state.json"
+STATE_PATH = Path(os.environ["PAPER_CARRY_EXIT_STATE_PATH"]) if os.environ.get(
+    "PAPER_CARRY_EXIT_STATE_PATH") else _DEFAULT_STATE_PATH
 STATE_VERSION = 1
 
 _REQUIRED_FIELDS = ("id", "pair", "direction", "entry", "stop", "entry_date", "status")

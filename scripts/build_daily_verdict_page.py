@@ -17,6 +17,15 @@ from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(ROOT))
+
+from sovereign.risk.layers.prop import (  # noqa: E402
+    MissingContractInput,
+    eval_size,
+    funded_size,
+)
+
+SIZING_FIRM = "cti_1step"  # the only firm with a ruin_engine frontier on disk today
 
 def load(path, default=None):
     p = ROOT / path
@@ -148,6 +157,39 @@ def main():
 
     numbers_rows = money_row('5-year test', numbers.get('5yr')) + money_row('10-year test', numbers.get('10yr'))
 
+    # Eval vs funded sizing -- two opposite objective functions, surfaced
+    # side by side (sovereign/risk/layers/prop.py: eval_size / funded_size).
+    # Neither is wired into an order path; this is compute-and-display only,
+    # per the unratified-sizing constraint in CLAUDE.md.
+    try:
+        eval_result = eval_size(SIZING_FIRM)
+        eval_sizing_html = f"""
+        <div class="strat-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+          <strong>Eval — maximize P(pass), no rebuy</strong>
+          <span>Plateau {eval_result['plateau_risk_lo_pct']:.2%}–{eval_result['plateau_risk_hi_pct']:.2%}
+          per trade ({eval_result['plateau_n_cells']} risk levels, all inside one confidence
+          interval around {eval_result['argmax_p_pass']:.0%} P(pass)). Not a single precise
+          number on purpose -- the peak is a plateau, not a point.</span>
+        </div>"""
+    except (FileNotFoundError, ValueError) as e:
+        eval_sizing_html = f"""
+        <div class="strat-row"><span class="strat-reason">Eval sizing not available: {e}</span></div>"""
+
+    try:
+        funded_result = funded_size(SIZING_FIRM, profit_split=0.8, payout_interval_days=14)
+        funded_sizing_html = f"""
+        <div class="strat-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+          <strong>Funded — maximize E[payout], free to lose</strong>
+          <span>{funded_result['recommended_risk_pct']:.2%} per trade
+          ({'drawdown ceiling binds' if funded_result['dd_ceiling_binds'] else 'growth-optimal Kelly binds'},
+          full-Kelly point {funded_result['growth_optimal_risk_pct']:.2%}). ILLUSTRATIVE ONLY --
+          computed with a placeholder profit_split=80% / payout every 14 days because
+          data/propfirm/firm_contracts.yaml does not carry either field for any firm yet.</span>
+        </div>"""
+    except MissingContractInput as e:
+        funded_sizing_html = f"""
+        <div class="strat-row"><span class="strat-reason">Funded sizing not available: {e}</span></div>"""
+
     if paper_n == 0:
         paper_line = ("No closed paper trades yet. scripts/paper_carry_daily.py fills "
                       "this ledger forward, one real signal at a time -- most days are "
@@ -220,6 +262,11 @@ def main():
 {numbers_rows if numbers_rows else '<tr><td colspan="5">Run scripts/colin_v1_window_backtest.py to fill this in.</td></tr>'}
 </table>
 <p style="font-size:12px;color:#898781;margin-top:8px;">At 1% risk per trade, on the real sealed trade log. Not a guess — this is what actually would have happened.</p>
+
+<h2>Eval sizing vs. funded sizing — opposite problems, not one ceiling</h2>
+<p style="font-size:13px;color:#3a3a38;margin-bottom:8px;">Evaluation maximizes P(pass before drawdown) — a ruin problem with an interior optimum. Once funded, further losses cost nothing until the account is pulled, so the objective flips to maximizing E[payout] — a Kelly problem, structurally much larger. Both are size-only, compute-and-display — unratified, not wired into any order path.</p>
+{eval_sizing_html}
+{funded_sizing_html}
 
 <div class="paper-note">
   <strong>Practice account right now:</strong> {paper_line}

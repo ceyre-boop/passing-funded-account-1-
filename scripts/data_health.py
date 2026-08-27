@@ -118,9 +118,10 @@ def check_macro(as_of: date, offline: bool):
                              f"a hardcoded fallback written to disk, not observed data"))
                 continue
 
-            # CPI for countries whose FRED mirror is SOURCE_DEAD (see
-            # NON_FRED_CPI_SOURCES) is now fetched live from ONS/ABS instead
-            # of FRED — compare against that source, not the dead FRED series.
+            # CPI for countries whose FRED mirror is SOURCE_DEAD, or which
+            # FRED never had (JP), is now fetched live from ONS/ABS/e-Stat
+            # instead of FRED — compare against that source, not the dead/
+            # nonexistent FRED series.
             if kind == "cpi" and c in NON_FRED_CPI_SOURCES and not offline:
                 src_label = NON_FRED_CPI_SOURCES[c]
                 src_end = None
@@ -128,6 +129,9 @@ def check_macro(as_of: date, offline: bool):
                     fetcher = ForexDataFetcher.__new__(ForexDataFetcher)
                     if c == "UK":
                         src_end = fetcher._fetch_ons_uk_cpi_yoy(
+                            "2015-01-01").index.max().date()
+                    elif c == "JP":
+                        src_end = fetcher._fetch_estat_jp_cpi_yoy(
                             "2015-01-01").index.max().date()
                     elif c == "AU":
                         src_end = fetcher._fetch_abs_au_cpi_index(

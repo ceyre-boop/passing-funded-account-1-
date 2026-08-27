@@ -10,6 +10,22 @@ Every open/close also goes through sovereign/intelligence/decision_logger per
 repo non-negotiable 3. This CLI adds no signal logic: it records what the
 existing scan produced.
 
+REPLAY ISOLATION (scripts/carry_replay.py, 2026-08-27)
+-------------------------------------------------------
+Two env vars exist SOLELY so a historical replay can drive this exact code
+without touching the live paper ledger or the live decision log. Both
+default to today's exact live behaviour when unset — the launchd-scheduled
+daily tick is unaffected either way:
+
+  PAPER_CARRY_LOG_PATH  — overrides LOG_PATH (default: unchanged, the live
+                          data/trade_logs/paper_carry_trades.jsonl).
+  PAPER_CARRY_REPLAY    — when set (any truthy value), cmd_open/cmd_close
+                          skip the sovereign/intelligence/decision_logger
+                          calls entirely rather than redirect them. A
+                          replay trade must never produce a row that a
+                          later reader of the live decision log could
+                          mistake for a live decision.
+
 Usage:
   paper_carry_log.py open  --pair EURUSD=X --direction LONG --entry 1.0850 \
       --stop 1.0790 --risk 0.02 [--date 2026-08-10]
@@ -21,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import uuid
 from datetime import date
@@ -31,7 +48,10 @@ sys.path.insert(0, str(ROOT))
 
 from sovereign.propfirm.firm_contracts import load_contract  # noqa: E402
 
-LOG_PATH = ROOT / "data" / "trade_logs" / "paper_carry_trades.jsonl"
+_DEFAULT_LOG_PATH = ROOT / "data" / "trade_logs" / "paper_carry_trades.jsonl"
+LOG_PATH = Path(os.environ["PAPER_CARRY_LOG_PATH"]) if os.environ.get(
+    "PAPER_CARRY_LOG_PATH") else _DEFAULT_LOG_PATH
+REPLAY_MODE = bool(os.environ.get("PAPER_CARRY_REPLAY"))
 G5_MIN_N = 80  # must match scripts/carry_buy_gate.py
 
 
@@ -125,16 +145,24 @@ def cmd_open(args):
                entry=args.entry, stop=args.stop, risk_pct=args.risk, qty=args.qty,
                entry_date=args.date, R=None, mechanisms=mechs, paper=True,
                rate_staleness_days=rate_staleness, gate_state=gate_state)
+    if REPLAY_MODE:
+        # Unmistakable replay tagging (see module docstring) — a replay row
+        # must never be confusable with a live decision by a later reader.
+        rec["replay"] = True
+        window = os.environ.get("PAPER_CARRY_REPLAY_WINDOW")
+        if window:
+            rec["replay_window"] = window
     records = _read()
     records.append(rec)
     _write(records)
-    from sovereign.intelligence.decision_logger import log_forex_decision
-    log_forex_decision(pair=args.pair, direction=args.direction,
-                       entry_level=args.entry, stop_loss=args.stop,
-                       hold_days=0, risk_pct=args.risk,
-                       signal_layers=["paper_carry_sprint_021"] + mechs,
-                       extra=dict(paper_trade_id=trade_id, qty=args.qty,
-                                  mechanisms=mechs))
+    if not REPLAY_MODE:
+        from sovereign.intelligence.decision_logger import log_forex_decision
+        log_forex_decision(pair=args.pair, direction=args.direction,
+                           entry_level=args.entry, stop_loss=args.stop,
+                           hold_days=0, risk_pct=args.risk,
+                           signal_layers=["paper_carry_sprint_021"] + mechs,
+                           extra=dict(paper_trade_id=trade_id, qty=args.qty,
+                                      mechanisms=mechs))
     print(f"opened {trade_id}: {args.pair} {args.direction} @ {args.entry} "
           f"stop {args.stop} qty {args.qty} risk {args.risk:.2%} on {args.date}")
 
@@ -156,10 +184,11 @@ def cmd_close(args):
     rec.update(status="closed", exit=args.exit, exit_date=args.date,
                hold_days=hold, R=round(r, 6), exit_reason=args.reason)
     _write(records)
-    from sovereign.intelligence.decision_logger import update_outcome
-    update_outcome(pair=rec["pair"], entry_timestamp=rec["entry_date"],
-                   outcome="WIN" if r > 0 else "LOSS", r_realized=r,
-                   exit_timestamp=args.date, system="FOREX")
+    if not REPLAY_MODE:
+        from sovereign.intelligence.decision_logger import update_outcome
+        update_outcome(pair=rec["pair"], entry_timestamp=rec["entry_date"],
+                       outcome="WIN" if r > 0 else "LOSS", r_realized=r,
+                       exit_timestamp=args.date, system="FOREX")
     print(f"closed {args.id}: R={r:+.3f} over {hold}d ({args.reason})")
     cmd_status(args)
 
