@@ -47,7 +47,35 @@ Carry returns are autocorrelated (shared macro/rate-differential drivers
 across overlapping holds; regime persistence). IID resampling destroys that
 structure and overstates P(pass). This uses the same block convention as
 `carry_buy_gate.bootstrap_pass` (`BOOT_BLOCK` calendar-index blocks,
-imported, not re-picked).
+imported, not re-picked) for the edge AND for both controls below — a
+control sampled IID against a block-bootstrapped edge would not be a fair
+comparison, it would be a rigged one.
+
+CONTROLS: THE NUMBER THAT MAKES THIS HONEST
+----------------------------------------------
+`--control random`: same contract, sizing, costs, and holding-period calendar
+as the real series, but every trade's R is replaced with a genuine
+zero-expectancy coinflip (+-1R, p=0.5) — thin-tailed, easy to beat.
+
+`--control shuffled`: keeps each trade's own REAL |R| magnitude (so the fat
+tails survive exactly as they are in the sealed series) but randomly
+permutes which trade gets which sign, destroying any correlation between
+timing/magnitude and direction that produced the edge's positive mean. This
+is the sharper of the two controls per the task brief: a fat-tailed
+zero-expectancy series is a much harder thing to beat than a coinflip, and if
+the edge's P(pass) sits inside it, sizing is passing the eval, not edge.
+
+Both controls are built ONCE per run (`make_control_trades`, seeded) — fixed
+series, exactly like the edge series is fixed — and then Monte Carlo'd with
+COMMON RANDOM NUMBERS: every sampled path draws ONE set of block-start
+indices and applies it to the edge and to every requested control
+(`simulate_frontier`). This removes pure luck-of-the-draw noise from the
+edge-vs-control comparison, so any interval separation that remains is
+attributable to signal, not to which paths got sampled.
+
+`fmt_control_row` mirrors `carry_buy_gate.fmt_row`'s "takes both or raises"
+discipline: it is structurally impossible to print an edge P(pass) number
+without a control number on the same line.
 
 MONTE CARLO TO CONVERGENCE
 ----------------------------
@@ -58,6 +86,7 @@ discipline, no probability is quoted as a bare point.
 
     python3 scripts/ruin_engine.py --firm cti_1step
     python3 scripts/ruin_engine.py --firm cti_1step --risk 0.01 --max-paths 20000
+    python3 scripts/ruin_engine.py --firm cti_1step --control shuffled
 """
 from __future__ import annotations
 
@@ -136,13 +165,24 @@ def run_single_attempt(vi, vw, vopen, contract: FirmContract, risk: float,
 
 # ------------------------------------------------------------------- sampling
 
-def block_bootstrap_path(vi, vw, vopen, horizon_td: int, rng: np.random.Generator):
-    """Same block convention as carry_buy_gate.bootstrap_pass (BOOT_BLOCK,
-    imported — one resampling convention, not two)."""
-    n = len(vi)
+def _block_starts(n: int, horizon_td: int, rng: np.random.Generator) -> list[int]:
+    """The block-START index sequence only (BOOT_BLOCK-sized draws from a
+    series of length n, imported convention). Factored out of
+    `block_bootstrap_path` so the SAME sequence can be replayed against
+    several equal-length series in one Monte Carlo iteration — that replay
+    is what makes the edge-vs-control comparison common-random-numbers fair
+    rather than independently noisy."""
+    starts = []
+    covered = 0
+    while covered < horizon_td:
+        starts.append(int(rng.integers(0, n - BOOT_BLOCK)))
+        covered += BOOT_BLOCK
+    return starts
+
+
+def _path_from_starts(vi, vw, vopen, starts: list[int], horizon_td: int):
     pi, pw, po = [], [], []
-    while len(pi) < horizon_td:
-        s = rng.integers(0, n - BOOT_BLOCK)
+    for s in starts:
         pi.extend(vi[s:s + BOOT_BLOCK])
         pw.extend(vw[s:s + BOOT_BLOCK])
         po.extend(vopen[s:s + BOOT_BLOCK])
@@ -150,77 +190,164 @@ def block_bootstrap_path(vi, vw, vopen, horizon_td: int, rng: np.random.Generato
             np.array(po[:horizon_td]))
 
 
+def block_bootstrap_path(vi, vw, vopen, horizon_td: int, rng: np.random.Generator):
+    """Same block convention as carry_buy_gate.bootstrap_pass (BOOT_BLOCK,
+    imported — one resampling convention, not two)."""
+    starts = _block_starts(len(vi), horizon_td, rng)
+    return _path_from_starts(vi, vw, vopen, starts, horizon_td)
+
+
+# ------------------------------------------------------------------- controls
+
+CONTROL_KINDS = ("random", "shuffled")
+
+
+def make_control_trades(trades: list[dict], kind: str,
+                        rng: np.random.Generator) -> list[dict]:
+    """Build a control trade list: identical entry/exit/hold (same calendar,
+    same weekend/hold accounting, same swap-haircut day-count) as `trades`,
+    with only the R value replaced.
+
+    "random": a genuine zero-expectancy coinflip, +-1R at p=0.5, independent
+    per trade. Thin-tailed by construction — the EASY control.
+
+    "shuffled": each trade keeps its OWN real |R| magnitude (so the fat-tail
+    empirical distribution survives exactly), but the SIGN sequence is
+    permuted across trades — the pairing between a trade's timing/magnitude
+    and its direction (the thing that makes +0.3556 avg R an edge and not
+    noise) is destroyed. Thick-tailed, zero-expectancy-in-construction — the
+    HARD control (task brief: harder to beat than a coinflip).
+
+    Built ONCE per run (fixed series), exactly like the real series is fixed
+    — only the Monte Carlo block-sampling downstream is randomized per path.
+    """
+    if kind == "random":
+        rs = rng.choice(np.array([-1.0, 1.0]), size=len(trades))
+    elif kind == "shuffled":
+        real_r = np.array([t["R"] for t in trades], dtype=float)
+        mags = np.abs(real_r)
+        signs = np.sign(real_r)
+        rng.shuffle(signs)   # permutes the SIGN LABELS only; each trade keeps
+                              # its own magnitude, dates, and hold days.
+        rs = mags * signs
+    else:
+        raise ValueError(f"unknown control kind {kind!r}; expected one of {CONTROL_KINDS}")
+    return [dict(t, R=float(r)) for t, r in zip(trades, rs)]
+
+
 # --------------------------------------------------------------- Monte Carlo
 
-def simulate_risk(vi, vw, vopen, contract: FirmContract, risk: float,
-                   horizon_td: int, rng: np.random.Generator,
-                   min_paths=MIN_PATHS, max_paths=MAX_PATHS, batch=BATCH,
-                   tol=DEFAULT_TOL) -> dict:
-    """Monte Carlo one (firm, risk) cell to convergence on P(PASS)'s Wilson
-    interval. Returns full outcome counts/intervals, day-to-resolution stats,
-    and the drawdown-path distribution (percentiles across paths — reported
-    as a distribution, not a bare point, matching every other probability
-    here)."""
-    n_i = len(vi)
-    if n_i <= BOOT_BLOCK:
-        raise ValueError("series too short for the block size")
+def _pctl(a, q):
+    return float(np.percentile(a, q)) if len(a) else None
 
-    n_pass = n_ruin = n_open = 0
-    days_pass, days_ruin = [], []
-    floors, ptts = [], []
-    total = 0
 
-    while total < max_paths:
-        for _ in range(batch):
-            pi, pw, po = block_bootstrap_path(vi, vw, vopen, horizon_td, rng)
-            res = run_single_attempt(pi, pw, po, contract, risk, horizon_td)
-            total += 1
-            floors.append(res["worst_floor"])
-            ptts.append(res["worst_ptt"])
-            if res["outcome"] == "PASS":
-                n_pass += 1
-                days_pass.append(res["days"])
-            elif res["outcome"] == "RUIN":
-                n_ruin += 1
-                days_ruin.append(res["days"])
-            else:
-                n_open += 1
-        p_pass = n_pass / total
-        lo, hi = wilson_interval(p_pass, total)
-        if total >= min_paths and (hi - lo) < 2 * tol:
-            break
-
-    p_ruin = n_ruin / total
-    ruin_lo, ruin_hi = wilson_interval(p_ruin, total)
-    p_open = n_open / total
+def _finalize(c: dict, total: int, risk: float) -> dict:
+    """Turn one series' accumulated per-path counts into the reported shape
+    (probabilities with Wilson intervals, resolution-day stats, drawdown-path
+    percentile distribution). One formatter, used identically for the edge
+    and every control — a control that skipped this would not be a fair
+    comparison either."""
+    p_pass = c["pass_"] / total
+    p_ruin = c["ruin_"] / total
+    p_open = c["open_"] / total
     pass_lo, pass_hi = wilson_interval(p_pass, total)
-
-    all_days = days_pass + days_ruin
-    floors_a = np.array(floors)
-    ptts_a = np.array(ptts)
-
-    def pctl(a, q):
-        return float(np.percentile(a, q)) if len(a) else None
-
+    ruin_lo, ruin_hi = wilson_interval(p_ruin, total)
+    all_days = c["days_pass"] + c["days_ruin"]
+    floors_a = np.array(c["floors"])
+    ptts_a = np.array(c["ptts"])
     return dict(
         risk=risk, n_paths=total,
         p_pass=p_pass, p_pass_lo=pass_lo, p_pass_hi=pass_hi,
         p_ruin=p_ruin, p_ruin_lo=ruin_lo, p_ruin_hi=ruin_hi,
         p_open=p_open,
         mean_days_to_resolution=float(np.mean(all_days)) if all_days else None,
-        median_days_to_pass=float(np.median(days_pass)) if days_pass else None,
-        median_days_to_ruin=float(np.median(days_ruin)) if days_ruin else None,
+        median_days_to_pass=float(np.median(c["days_pass"])) if c["days_pass"] else None,
+        median_days_to_ruin=float(np.median(c["days_ruin"])) if c["days_ruin"] else None,
         drawdown_floor_depth={
-            "p50": pctl(floors_a, 50), "p90": pctl(floors_a, 90),
-            "p95": pctl(floors_a, 95), "p99": pctl(floors_a, 99),
-            "max": pctl(floors_a, 100), "mean": float(np.mean(floors_a)),
+            "p50": _pctl(floors_a, 50), "p90": _pctl(floors_a, 90),
+            "p95": _pctl(floors_a, 95), "p99": _pctl(floors_a, 99),
+            "max": _pctl(floors_a, 100),
+            "mean": float(np.mean(floors_a)) if len(floors_a) else None,
         },
         drawdown_peak_to_trough={
-            "p50": pctl(ptts_a, 50), "p90": pctl(ptts_a, 90),
-            "p95": pctl(ptts_a, 95), "p99": pctl(ptts_a, 99),
-            "max": pctl(ptts_a, 100), "mean": float(np.mean(ptts_a)),
+            "p50": _pctl(ptts_a, 50), "p90": _pctl(ptts_a, 90),
+            "p95": _pctl(ptts_a, 95), "p99": _pctl(ptts_a, 99),
+            "max": _pctl(ptts_a, 100),
+            "mean": float(np.mean(ptts_a)) if len(ptts_a) else None,
         },
     )
+
+
+def simulate_frontier(series_map: dict[str, tuple], contract: FirmContract,
+                      risk: float, horizon_td: int, rng: np.random.Generator,
+                      min_paths=MIN_PATHS, max_paths=MAX_PATHS, batch=BATCH,
+                      tol=DEFAULT_TOL, target_key: str = "edge") -> dict[str, dict]:
+    """Monte Carlo one (firm, risk) cell for one or more equal-length series
+    at once, using COMMON RANDOM NUMBERS: every path draws ONE block-start
+    sequence (`_block_starts`) and replays it against every series in
+    `series_map`. All series must share the same business-day length — true
+    by construction, since a control differs from the edge only in its R
+    values, never in its dates.
+
+    Convergence is judged on `target_key`'s (default "edge") P(pass) Wilson
+    interval — the other series ride along on the same paths, so they
+    typically converge at least as tightly.
+
+    Returns {key: result_dict} with the exact per-series shape `_finalize`
+    produces — every probability carries its interval (spec 021 P5
+    discipline, reused here)."""
+    keys = list(series_map)
+    if not keys:
+        raise ValueError("simulate_frontier requires at least one series")
+    n = len(series_map[keys[0]][0])
+    if n <= BOOT_BLOCK:
+        raise ValueError("series too short for the block size")
+    for k in keys[1:]:
+        if len(series_map[k][0]) != n:
+            raise ValueError(
+                f"series length mismatch: {k!r} has {len(series_map[k][0])} days, "
+                f"{keys[0]!r} has {n} — common random numbers require equal-length "
+                f"series (edge and controls must share the same trade calendar)")
+    if target_key not in series_map:
+        raise ValueError(f"target_key {target_key!r} not in series_map keys {keys}")
+
+    counts = {k: dict(pass_=0, ruin_=0, open_=0, days_pass=[], days_ruin=[],
+                      floors=[], ptts=[]) for k in keys}
+    total = 0
+    while total < max_paths:
+        for _ in range(batch):
+            starts = _block_starts(n, horizon_td, rng)
+            total += 1
+            for k in keys:
+                vi, vw, vopen = series_map[k]
+                pi, pw, po = _path_from_starts(vi, vw, vopen, starts, horizon_td)
+                res = run_single_attempt(pi, pw, po, contract, risk, horizon_td)
+                c = counts[k]
+                c["floors"].append(res["worst_floor"])
+                c["ptts"].append(res["worst_ptt"])
+                if res["outcome"] == "PASS":
+                    c["pass_"] += 1
+                    c["days_pass"].append(res["days"])
+                elif res["outcome"] == "RUIN":
+                    c["ruin_"] += 1
+                    c["days_ruin"].append(res["days"])
+                else:
+                    c["open_"] += 1
+        p_pass_target = counts[target_key]["pass_"] / total
+        lo, hi = wilson_interval(p_pass_target, total)
+        if total >= min_paths and (hi - lo) < 2 * tol:
+            break
+
+    return {k: _finalize(counts[k], total, risk) for k in keys}
+
+
+def simulate_risk(vi, vw, vopen, contract: FirmContract, risk: float,
+                   horizon_td: int, rng: np.random.Generator, **kw) -> dict:
+    """Single-series Monte Carlo (the edge alone, no controls) — a thin
+    wrapper over `simulate_frontier` with a one-key series map, kept for
+    call sites and tests that only need the edge."""
+    return simulate_frontier({"edge": (vi, vw, vopen)}, contract, risk,
+                             horizon_td, rng, target_key="edge", **kw)["edge"]
 
 
 def sweep(vi, vw, vopen, contract, risks, horizon_td, seed=RNG_SEED, **kw):
@@ -228,6 +355,18 @@ def sweep(vi, vw, vopen, contract, risks, horizon_td, seed=RNG_SEED, **kw):
     out = []
     for r in risks:
         out.append(simulate_risk(vi, vw, vopen, contract, r, horizon_td, rng, **kw))
+    return out
+
+
+def sweep_frontier(series_map: dict[str, tuple], contract, risks, horizon_td,
+                   seed=RNG_SEED, target_key="edge", **kw) -> list[dict[str, dict]]:
+    """Sweep the full risk grid, returning one {key: result} dict per risk —
+    the multi-series (edge + controls) counterpart of `sweep`."""
+    rng = np.random.default_rng(seed)
+    out = []
+    for r in risks:
+        out.append(simulate_frontier(series_map, contract, r, horizon_td, rng,
+                                     target_key=target_key, **kw))
     return out
 
 
@@ -256,10 +395,79 @@ def print_frontier(rows: list[dict], contract: FirmContract, horizon_days: int):
           f"P(pass)={argmax['p_pass']:.1%} [{argmax['p_pass_lo']:.1%},"
           f"{argmax['p_pass_hi']:.1%}]")
 
+    # The peak is SOFT — every risk whose interval overlaps the argmax's is
+    # statistically indistinguishable from it. Report the plateau, not a
+    # point; treating argmax as a precise optimum repeats the over-fitting
+    # this measurement exists to correct.
+    plateau = [r["risk"] for r in rows if r["p_pass_hi"] >= argmax["p_pass_lo"]]
+    if len(plateau) > 1:
+        print(f"plateau (risks whose P(pass) CI overlaps the argmax's, "
+              f"i.e. statistically indistinguishable from it): "
+              f"{min(plateau):.2%} .. {max(plateau):.2%} "
+              f"({len(plateau)} of {len(rows)} swept risks) — the peak is a "
+              f"plateau, not a point.")
+
     # monotonicity check — reported, not assumed (task brief correction).
     pvals = [r["p_pass"] for r in rows]
     is_monotone = all(pvals[i] <= pvals[i + 1] + 1e-9 for i in range(len(pvals) - 1))
     print(f"monotone non-decreasing over the swept range: {is_monotone}")
+
+
+# ------------------------------------------------------------- control reporting
+
+def fmt_control_row(risk: float, edge: dict | None, control: dict | None,
+                    control_label: str) -> str:
+    """Prints the edge's P(pass) and ONE control's P(pass) on the SAME LINE.
+    Mirrors carry_buy_gate.fmt_row's "takes both or raises" discipline
+    exactly: it is structurally impossible to call this with only one side
+    present. A missing control is not an omission you can print around —
+    it's a bug, and this raises instead of silently formatting half a
+    comparison."""
+    if edge is None or control is None:
+        raise ValueError(
+            f"fmt_control_row: edge and {control_label} control are both "
+            f"mandatory; got edge={edge is not None}, control={control is not None}")
+    ep = f"{edge['p_pass']:6.1%} [{edge['p_pass_lo']:.1%},{edge['p_pass_hi']:.1%}]"
+    cp = f"{control['p_pass']:6.1%} [{control['p_pass_lo']:.1%},{control['p_pass_hi']:.1%}]"
+    separates = edge["p_pass_lo"] > control["p_pass_hi"]
+    flag = "  SEPARATES" if separates else ""
+    return (f"{risk:6.2%} | EDGE {ep} | {control_label.upper():>8} {cp}{flag}")
+
+
+def separation_summary(rows: list[dict], edge_key: str, control_key: str) -> dict:
+    """First risk (in sweep order) where the edge's P(pass) 5-95% lower bound
+    clears the control's upper bound — same interval-separation test as
+    carry_buy_gate's G3. If none separate, says so plainly; that is reported
+    as a finding, not softened into "mostly separates" or omitted."""
+    for row in rows:
+        edge, ctrl = row[edge_key], row[control_key]
+        if edge["p_pass_lo"] > ctrl["p_pass_hi"]:
+            return dict(separates=True, risk=edge["risk"],
+                       edge_lo=edge["p_pass_lo"], control_hi=ctrl["p_pass_hi"])
+    return dict(separates=False, risk=None, edge_lo=None, control_hi=None)
+
+
+def print_frontier_with_controls(rows: list[dict[str, dict]], contract: FirmContract,
+                                 horizon_days: int, control_keys: list[str]):
+    print(f"\nRUIN ENGINE — {contract.display_name} — edge vs control(s) "
+          f"(horizon {horizon_days}d, computational cutoff, common random numbers)")
+    print("=" * 100)
+    for ck in control_keys:
+        print(f"\n-- edge vs {ck} control --")
+        for row in rows:
+            print(fmt_control_row(row["edge"]["risk"], row["edge"], row[ck], ck))
+        summary = separation_summary(rows, "edge", ck)
+        print("-" * 100)
+        if summary["separates"]:
+            print(f"edge separates from {ck} at risk={summary['risk']:.2%}: "
+                  f"edge P(pass) lower bound {summary['edge_lo']:.1%} > "
+                  f"{ck} P(pass) upper bound {summary['control_hi']:.1%}")
+        else:
+            print(f"edge NEVER separates from {ck} over the swept range "
+                  f"(0.10%-3.00%) — the edge's P(pass) interval overlaps the "
+                  f"{ck} control's at every risk tested. Stated plainly, not "
+                  f"softened: at these sample sizes and this horizon, sizing "
+                  f"cannot be shown to beat a {ck} zero-expectancy series.")
 
 
 def make_chart(rows: list[dict], contract: FirmContract, path: Path):
@@ -288,6 +496,35 @@ def make_chart(rows: list[dict], contract: FirmContract, path: Path):
     plt.close(fig)
 
 
+def make_chart_with_controls(rows: list[dict[str, dict]], contract: FirmContract,
+                             control_keys: list[str], path: Path):
+    """Three (or two) curves together: edge P(pass) plus each control's
+    P(pass), so the separation question has a picture, not just a table."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    colors = {"edge": "C0", "random": "C1", "shuffled": "C3"}
+    risks = [r["edge"]["risk"] * 100 for r in rows]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for key in ["edge"] + control_keys:
+        p_pass = [r[key]["p_pass"] * 100 for r in rows]
+        p_lo = [r[key]["p_pass_lo"] * 100 for r in rows]
+        p_hi = [r[key]["p_pass_hi"] * 100 for r in rows]
+        color = colors.get(key, None)
+        ax.fill_between(risks, p_lo, p_hi, alpha=0.15, color=color)
+        ax.plot(risks, p_pass, color=color, label=f"P(pass) — {key}", linewidth=2)
+    ax.set_xlabel("risk per trade (% of account per R)")
+    ax.set_ylabel("P(pass) (%)")
+    ax.set_title(f"Ruin engine — edge vs control(s) — {contract.display_name}")
+    ax.legend()
+    ax.grid(alpha=0.3)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=140, bbox_inches="tight")
+    plt.close(fig)
+
+
 # --------------------------------------------------------------------- main
 
 def main(argv=None) -> int:
@@ -297,6 +534,10 @@ def main(argv=None) -> int:
     ap.add_argument("--series", choices=("sealed", "oos"), default="sealed")
     ap.add_argument("--risk", type=float, default=None,
                     help="single risk fraction; omit for the full 0.10%%-3.00%% sweep")
+    ap.add_argument("--control", choices=("none",) + CONTROL_KINDS + ("both",),
+                    default="both",
+                    help="zero-edge control(s) to compare the edge against, "
+                         "printed on the same line (default: both)")
     ap.add_argument("--horizon-days", type=int, default=DEFAULT_HORIZON_DAYS)
     ap.add_argument("--min-paths", type=int, default=MIN_PATHS)
     ap.add_argument("--max-paths", type=int, default=MAX_PATHS)
@@ -317,23 +558,53 @@ def main(argv=None) -> int:
 
     print(f"RUIN ENGINE — {contract.display_name} | series={a.series} n={len(trades)} trades")
     print(f"horizon={a.horizon_days}d ({horizon_td} trading days, computational cutoff) "
-          f"| risks swept: {len(risks)} | block={BOOT_BLOCK} | tol={a.tol}")
+          f"| risks swept: {len(risks)} | block={BOOT_BLOCK} | tol={a.tol} "
+          f"| control={a.control}")
 
-    rows = sweep(vi, vw, vopen, contract, risks, horizon_td, seed=a.seed,
-                min_paths=a.min_paths, max_paths=a.max_paths, batch=a.batch, tol=a.tol)
+    if a.control == "none":
+        rows = sweep(vi, vw, vopen, contract, risks, horizon_td, seed=a.seed,
+                    min_paths=a.min_paths, max_paths=a.max_paths, batch=a.batch,
+                    tol=a.tol)
+        print_frontier(rows, contract, a.horizon_days)
+        chart_rows = rows
+        write_payload = dict(firm=a.firm, series=a.series, horizon_days=a.horizon_days,
+                             horizon_trading_days=horizon_td, seed=a.seed,
+                             control=a.control, rows=rows)
+    else:
+        control_keys = list(CONTROL_KINDS) if a.control == "both" else [a.control]
+        # Controls are built ONCE, seeded off --seed but from an
+        # independent stream so control construction never consumes the
+        # same draws as the Monte Carlo path sampler.
+        ctrl_build_rng = np.random.default_rng(a.seed + 1_000_003)
+        series_map = {"edge": (vi, vw, vopen)}
+        for ck in control_keys:
+            ctrl_trades = make_control_trades(trades, ck, ctrl_build_rng)
+            _, cvi, cvw, cvopen = build_series(ctrl_trades, haircut, center=False)
+            series_map[ck] = (cvi, cvw, cvopen)
 
-    print_frontier(rows, contract, a.horizon_days)
+        rows = sweep_frontier(series_map, contract, risks, horizon_td, seed=a.seed,
+                              target_key="edge", min_paths=a.min_paths,
+                              max_paths=a.max_paths, batch=a.batch, tol=a.tol)
+        print_frontier([r["edge"] for r in rows], contract, a.horizon_days)
+        print_frontier_with_controls(rows, contract, a.horizon_days, control_keys)
+        chart_rows = rows
+        write_payload = dict(firm=a.firm, series=a.series, horizon_days=a.horizon_days,
+                             horizon_trading_days=horizon_td, seed=a.seed,
+                             control=a.control, control_keys=control_keys,
+                             rows=rows,
+                             separation={ck: separation_summary(rows, "edge", ck)
+                                        for ck in control_keys})
 
     if not a.no_chart:
-        make_chart(rows, contract, OUT_CHART)
+        if a.control == "none":
+            make_chart(chart_rows, contract, OUT_CHART)
+        else:
+            make_chart_with_controls(chart_rows, contract, control_keys, OUT_CHART)
         print(f"\nchart written: {OUT_CHART.relative_to(ROOT)}")
 
     if a.write:
         OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
-        OUT_JSON.write_text(json.dumps(dict(
-            firm=a.firm, series=a.series, horizon_days=a.horizon_days,
-            horizon_trading_days=horizon_td, seed=a.seed, rows=rows,
-        ), indent=1))
+        OUT_JSON.write_text(json.dumps(write_payload, indent=1))
         print(f"state written: {OUT_JSON.relative_to(ROOT)}")
 
     return 0
