@@ -167,6 +167,50 @@ than no execution path.
 - Ratify or reject `specs/036`'s G5 options.
 - Re-derive eval sizing at or below 0.328% and ratify through spec 021.
 
+## 6b. The wiring detector (added 2026-08-26)
+
+Fixing disconnects one at a time is whack-a-mole. `scripts/wiring_audit.py`
+makes the CLASS detectable — static AST analysis, five shapes, allowlist where
+every entry needs a written reason. A new disconnect fails the suite; an empty
+reason fails a different test, so the allowlist cannot be used to silence a
+finding.
+
+```
+ORPHANS              73   daytrade:32  scripts:17  sovereign:10  execution:7  backtester:7
+IMPORTED_NOT_CALLED  25   sovereign:11 daytrade:10  execution:2  scripts:2
+NO_SUPPLIER           5   daytrade:4   sovereign:1
+BROKEN_IMPORT         2   sovereign:1  execution:1
+DEAD_ARTIFACT        24   data:24
+TOTAL               129
+```
+
+The 73 orphans and 24 dead artifacts are mostly research tools and report JSONs
+that SHOULD have no importer — noise you expect in a research repo. **The 5
+NO_SUPPLIER are the ones that look like protection and are not**, and once
+examined they are not five equivalent bugs:
+
+| field | what it actually is |
+|---|---|
+| `ConstitutionViolation.action_kind` | genuinely fixable now |
+| `RiskState.mc_breach_prob` | gate silently inert — `is not None` guard, nothing computes it |
+| `TradeState.thesis_sl` | **not an oversight** — documented inactive layer, blocked on spec 001 |
+| `ExecEvent.intent` | blocked on D1 — zero production constructors of ExecEvent at all |
+| `ExecEvent.fill_id` | blocked on D1 — same root cause |
+
+**Correction worth recording:** `thesis_sl` was first reported here as a missed
+fifth AlphaZero->Stockfish disconnect. It is not. `stockfish_exit.py` documents
+it at the point of use — *"INACTIVE: needs an invalidation level from the
+classifier; daytrade/regime.py is a stub"* — under a comment reading
+`--- inactive layers, awaiting their inputs`. And AlphaZero could not supply it
+even if regime.py existed: `ContextDirective` structurally refuses any
+`stop_price`. That is the boundary working, not failing. When spec 001 lands the
+level must be derived mechanically on the Stockfish side, never handed across
+the envelope.
+
+The detector is a floor, not a ceiling: static analysis cannot see runtime-only
+wiring. `layers/kelly.py` looks clean statically and explodes at runtime through
+its transitive import of the broken `kelly_engine`.
+
 ## 7. What will fail live, ranked
 
 1. **Nothing, because nothing goes live** — the honest #1. No order path exists.
