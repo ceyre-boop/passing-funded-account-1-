@@ -44,8 +44,12 @@ def _read(verdict="TIGHTEN", **kw):
         expected_r_low=None if verdict == "ABSTAIN" else -0.5,
         expected_r_high=None if verdict == "ABSTAIN" else 1.5,
         invalidation_predicates=[] if verdict == "ABSTAIN" else
-            [ao.InvalidationPredicate(kind="close_below", value=99.5)])
+            [ao.InvalidationPredicate(kind="close_below", value=99.5)],
+        recommended_policy=None,
+        recommendation_reason="fixture default — no defensible policy preference")
     base.update(kw)
+    if base.get("recommended_policy") is not None:
+        base["recommendation_reason"] = None
     return ao.OperatorRead(**base)
 
 
@@ -970,3 +974,143 @@ def test_promotion_gate_reachable_with_real_regret_data():
             assert "REGRET_DATA_MISSING" not in d.failed_gates
         finally:
             ao_.PLAN = orig_plan
+
+
+# ------------------------------------------- D3 link 1: recommendation
+# (THE_BIG_PLAN.md — a populated Forecast.recommendation, never an authority
+# change: recorded and graded only, never copied onto the ContextDirective
+# this same read produces.)
+
+def test_recommended_policy_flows_into_forecast_recommendation(sandbox):
+    """A model that names a policy has it recorded on the sealed forecast."""
+    sandbox["read"] = _read(recommended_policy="RIDE")
+    _run(sandbox)
+    rows = ao._read_jsonl(ao.FC_LOG)
+    fc = [r for r in rows if r["kind"] == "forecast"][0]
+    assert fc["recommendation"] == "RIDE"
+    assert fc["recommendation_reason"] is None
+
+
+def test_declined_recommendation_requires_a_reason(sandbox):
+    """A decline (recommended_policy=None) with no recommendation_reason must
+    refuse the whole judgment, not silently seal an unauditable None."""
+    sandbox["read"] = _read(recommended_policy=None, recommendation_reason=None)
+    with pytest.raises(ao.OperatorError, match="recommendation_reason"):
+        _run(sandbox)
+
+
+def test_declined_recommendation_records_its_reason(sandbox):
+    sandbox["read"] = _read(recommended_policy=None,
+                            recommendation_reason="no defensible edge either way")
+    _run(sandbox)
+    rows = ao._read_jsonl(ao.FC_LOG)
+    fc = [r for r in rows if r["kind"] == "forecast"][0]
+    assert fc["recommendation"] is None
+    assert fc["recommendation_reason"] == "no defensible edge either way"
+
+
+def test_unknown_recommended_policy_refused_not_passed_through(sandbox):
+    """Defence in depth: even a read that bypasses pydantic's own Literal
+    enforcement (model_copy(update=...) skips validation, matching what the
+    non-strict-mode JSON-Schema fallback path in news_claude._call() could
+    let through) must still be refused at the call site, never sealed."""
+    sandbox["read"] = _read().model_copy(
+        update={"recommended_policy": "MOON", "recommendation_reason": None})
+    with pytest.raises(ao.OperatorError, match="MOON"):
+        _run(sandbox)
+
+
+def test_recommendation_never_reaches_the_directive(sandbox):
+    """The authority boundary: a granted_level-1 receiver never sees a policy
+    candidate from this call site, however confident the recommendation.
+    ContextDirective.recommendation is None on every directive this path
+    emits, and evaluate() at the production default (level 1) surfaces no
+    policy candidate either."""
+    sandbox["read"] = _read(verdict="TIGHTEN", recommended_policy="RIDE")
+    _run(sandbox)
+    payloads = json.loads((sandbox["tmp"] / "directives.json").read_text())
+    assert payloads
+    for p in payloads:
+        assert p["recommendation"] is None
+    ds = [ContextDirective.from_dict(p) for p in payloads]
+    dec = evaluate(ds, ReceiverContext(symbol="NVDA"))
+    assert dec.policy_candidate is None
+
+
+# ------------------------------------------- D3 link 3: promotion_status()
+# (THE_BIG_PLAN.md — forecast.promotion_decision() made REACHABLE and
+# AUDITABLE, without ever inventing which model_version is the incumbent.)
+
+def test_promotion_status_without_incumbent_is_insufficient_data(sandbox):
+    """The default, and every automated caller's, shape: no --incumbent means
+    an honest refusal, never a guessed pairing."""
+    row = ao.promotion_status(challenger_model="claude-sonnet-5")
+    assert row["verdict"] == "INSUFFICIENT_DATA"
+    assert "incumbent" in row["why"]
+    logged = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "promotion_attempt"]
+    assert len(logged) == 1
+    assert logged[0]["verdict"] == "INSUFFICIENT_DATA"
+
+
+def test_promotion_status_missing_ledger_data_is_insufficient_data(sandbox):
+    """An explicit incumbent with nothing resolved for either model is still
+    an honest refusal, not a crash — ForecastError is caught and recorded."""
+    row = ao.promotion_status(challenger_model="claude-sonnet-5",
+                              incumbent_model="claude-opus-5")
+    assert row["verdict"] == "INSUFFICIENT_DATA"
+    assert row["incumbent_model_version"] == "alpha-operator-v1/claude-opus-5"
+
+
+def _seed_graded_model(sandbox, model: str, n: int, *, hit_rate: float):
+    """Write n resolved forecast/resolution pairs straight to FC_LOG for one
+    model_version — enough for ledger.grade() to produce a real ScoreReport,
+    bypassing the emission gate the way _seed_stuck_forecast already does."""
+    version = f"alpha-operator-v1/{model}"
+    for i in range(n):
+        as_of = (NOW + timedelta(minutes=i)).isoformat()
+        hit = i < round(n * hit_rate)
+        outcome = "bull_continuation" if hit else "bear_continuation"
+        f = ao.Forecast(
+            forecast_id=f"fc-{model}-{i}", model_version=version,
+            prompt_version="op-1", as_of=as_of, symbol="NVDA", horizon_min=60,
+            scenario_probs={"bull_continuation": 0.6, "range_consolidation": 0.4},
+            direction="up", recommendation=None, interrupt=None, confidence=0.6,
+            recommendation_reason="test fixture")
+        ao._append_jsonl(ao.FC_LOG, {"kind": "forecast", **f.to_dict()})
+        r = ao.Resolution(
+            forecast_id=f.forecast_id,
+            resolved_at=(NOW + timedelta(minutes=i, hours=2)).isoformat(),
+            outcome_scenario=outcome, outcome_direction="up" if hit else "down",
+            shock_occurred=False, was_stale=False, policy_regret_r=None)
+        ao._append_jsonl(ao.FC_LOG, {"kind": "resolution", **r.__dict__})
+
+
+def test_promotion_status_real_pair_reaches_promotion_decision(sandbox):
+    """The wire is genuinely live: with two real graded model_versions on
+    disk, promotion_status() calls promotion_decision() for real. Regime data
+    is never fabricated here, so REGIME_DATA_MISSING must always appear —
+    proving an empty regime breakdown is a FAILED gate, not a bypassed one."""
+    _seed_graded_model(sandbox, "claude-sonnet-5", 5, hit_rate=0.8)   # challenger
+    _seed_graded_model(sandbox, "claude-opus-5", 5, hit_rate=0.2)     # incumbent
+    row = ao.promotion_status(challenger_model="claude-sonnet-5",
+                              incumbent_model="claude-opus-5")
+    assert row["verdict"] == "REJECTED"
+    assert "REGIME_DATA_MISSING" in row["failed_gates"]
+    assert "MIN_DECISIONS" in row["failed_gates"]     # n=5 < default min_decisions=50
+    logged = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "promotion_attempt"]
+    assert len(logged) == 1 and logged[0]["verdict"] == "REJECTED"
+
+
+def test_promotion_status_never_calls_grant(sandbox, monkeypatch):
+    """No path through promotion_status() may call AuthorityRegistry.grant()
+    — a verdict is recorded, authority is never touched."""
+    from context_directive import AuthorityRegistry
+    called = []
+    monkeypatch.setattr(AuthorityRegistry, "grant",
+                        lambda self, *a, **kw: called.append((a, kw)) or (_ for _ in ()).throw(
+                            AssertionError("grant() must never be called")))
+    _seed_graded_model(sandbox, "claude-sonnet-5", 60, hit_rate=0.95)
+    _seed_graded_model(sandbox, "claude-opus-5", 60, hit_rate=0.05)
+    ao.promotion_status(challenger_model="claude-sonnet-5",
+                        incumbent_model="claude-opus-5")
+    assert called == []

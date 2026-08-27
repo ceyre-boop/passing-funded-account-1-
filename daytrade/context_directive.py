@@ -374,6 +374,34 @@ class AuthorityRegistry:
     def audit(self) -> tuple:
         return tuple(self._trail)
 
+    def to_rows(self) -> list[dict]:
+        """Append-only audit trail as plain dicts, one per grant/rollback, in
+        the order they were applied — the on-disk shape `from_rows` replays."""
+        return [asdict(g) for g in self._trail]
+
+    @staticmethod
+    def from_rows(rows: list[dict]) -> "AuthorityRegistry":
+        """Rebuild a registry by REPLAYING each row through `grant()`/
+        `rollback()`, in order — never by poking `_trail` directly. A row
+        that would fail validation today (missing `by`/`reason`, a level
+        outside 0..4, an unpromoted grant above `UNPROMOTED_CAP` with no
+        `promotion_ref`) raises exactly as it would have at the moment it was
+        first granted; a corrupted or hand-edited audit file cannot smuggle
+        in authority the live `grant()` path would have refused."""
+        reg = AuthorityRegistry()
+        for row in rows:
+            action = row.get("action")
+            if action == "GRANT":
+                reg.grant(row["model_version"], row["level"], by=row["granted_by"],
+                         reason=row["reason"], ts=row["ts"],
+                         promotion_ref=row.get("promotion_ref"))
+            elif action == "ROLLBACK":
+                reg.rollback(row["model_version"], by=row["granted_by"],
+                            reason=row["reason"], ts=row["ts"])
+            else:
+                raise AuthorityError(f"unknown authority audit action {action!r}")
+        return reg
+
 
 # ------------------------------------------------------------------ tests
 

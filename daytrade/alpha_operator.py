@@ -44,7 +44,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from evidence import Evidence, EvidenceStore, EVIDENCE_TYPES, DIRECTIONS  # noqa: E402
-from forecast import Forecast, Resolution, ForecastLedger, ForecastError  # noqa: E402
+from forecast import (Forecast, Resolution, ForecastLedger, ForecastError,
+                      PromotionThresholds, promotion_decision)  # noqa: E402
 from context_directive import (ContextDirective, Scope, Abstention,       # noqa: E402
                                ABSTENTION_REASONS, DirectiveError)
 from scenarios import ALL_SCENARIOS                                       # noqa: E402
@@ -246,6 +247,18 @@ class OperatorRead(BaseModel):
     expected_r_high: Optional[float] = Field(
         default=None, ge=-5, le=5,
         description="upper bound of the expected R outcome; REQUIRED unless verdict is ABSTAIN")
+    recommended_policy: Optional[Literal[SHADOW_TOURNAMENT_POLICIES]] = Field(
+        default=None,
+        description="the exit policy you would run this cycle, if you have a "
+        "defensible preference: DEFEND (protect capital first), HARVEST "
+        "(take the goal and be done), or RIDE (maximize participation). This "
+        "is RECORDED AND GRADED against the shadow tournament (spec 017) — it "
+        "is never sent to the execution engine. Leave it None if you have no "
+        "defensible preference and say why via recommendation_reason.")
+    recommendation_reason: Optional[str] = Field(
+        default=None,
+        description="required iff recommended_policy is None — why you are "
+        "declining to name a policy this cycle")
     invalidation_predicates: list[InvalidationPredicate] = Field(
         default_factory=list,
         description="machine-checkable invalidations (price levels / R ranges); the scoreable subset of your invalidators")
@@ -273,6 +286,13 @@ Rules:
                       EXIT is recorded but mechanically capped to TIGHTEN until
                       this model earns interrupt authority on its track record.
 - invalidators must be specific and checkable, never vague.
+- recommended_policy: if you have a defensible preference among DEFEND
+  (protect capital first), HARVEST (take the goal, be done), or RIDE
+  (maximize participation), name it. This is RECORDED AND GRADED against a
+  shadow tournament — it is never sent to the execution engine, and it does
+  not steer this cycle's trade in any way. If you have no defensible
+  preference, leave it unset and say why in recommendation_reason. A guessed
+  policy scores worse than an honest decline.
 - PRE-REGISTER your number: unless you ABSTAIN, you MUST give expected_r_low
   and expected_r_high — the R-multiple band you expect the baseline setup to
   realize over your horizon. This band is sealed before the outcome and scored
@@ -750,11 +770,47 @@ def _make_evidence(read: OperatorRead, symbol: str, now: datetime,
     return out
 
 
+def _recommendation_for(read: OperatorRead) -> tuple[Optional[str], Optional[str]]:
+    """Spec 017's `recommendation` (D3 link 1, THE_BIG_PLAN.md): the policy
+    AlphaZero would run, RECORDED for grading only.
+
+    This is NOT an authority change. `context_directive.py:249` only reads a
+    policy candidate off an accepted directive when `ctx.granted_level >= 2`;
+    production runs the receiver at level 1 (`runner.py`'s default), and
+    `_make_directive()` never copies `recommendation` onto the ContextDirective
+    it builds — so a populated value here is graded by `_regret_for()` and
+    never reaches Stockfish through this call site, today or after this
+    change.
+
+    Constrained to SHADOW_TOURNAMENT_POLICIES — the same three policies
+    `_regret_for`'s shadow tournament already runs — so a recorded
+    recommendation is always `_satisfiable()` and can never smuggle in a
+    NOT_AUTO_EMITTABLE policy (SALVAGE, SCRATCH_FAST) or one requiring a plan
+    field the model never sees (EVENT's flatten_at_et). The schema already
+    constrains `read.recommended_policy` to this vocabulary or None, but this
+    re-checks explicitly — defence in depth against the non-strict-mode
+    JSON-Schema fallback path in `news_claude._call()`.
+
+    A decline (None) must carry a reason — never a defaulted policy, and
+    never a silent None with nothing to audit (CLAUDE.md rule 3)."""
+    policy = read.recommended_policy
+    if policy is None:
+        if not read.recommendation_reason:
+            raise OperatorError("recommended_policy is None with no "
+                                "recommendation_reason — a decline must say why")
+        return None, read.recommendation_reason
+    if policy not in SHADOW_TOURNAMENT_POLICIES:
+        raise OperatorError(f"recommended_policy {policy!r} is not a known "
+                            f"policy; known: {SHADOW_TOURNAMENT_POLICIES}")
+    return policy, None
+
+
 def _make_forecast(read: OperatorRead, symbol: str, now: datetime,
                    record_id: str, model: str,
                    evidence_ids: tuple[str, ...], *,
                    horizon_min: Optional[int] = None,
                    horizon_clamped_from: Optional[int] = None) -> Forecast:
+    recommendation, recommendation_reason = _recommendation_for(read)
     return Forecast(
         forecast_id=f"fc-{record_id}",
         model_version=f"{MODEL_VERSION_BASE}/{model}",
@@ -769,11 +825,12 @@ def _make_forecast(read: OperatorRead, symbol: str, now: datetime,
         horizon_min=read.horizon_min if horizon_min is None else horizon_min,
         scenario_probs=_scenario_probs(read),
         direction=read.direction,
-        recommendation=None,
+        recommendation=recommendation,
         interrupt="TIGHTEN" if read.verdict in ("TIGHTEN", "EXIT") else None,
         confidence=read.confidence,
         evidence_ids=evidence_ids,
-        horizon_clamped_from=horizon_clamped_from)
+        horizon_clamped_from=horizon_clamped_from,
+        recommendation_reason=recommendation_reason)
 
 
 def _make_directive(read: OperatorRead, symbol: str, now: datetime,
@@ -1370,6 +1427,79 @@ def grade(model: str) -> int:
     return 0
 
 
+def promotion_status(*, challenger_model: str, incumbent_model: Optional[str] = None,
+                     oos: bool = True) -> dict:
+    """D3 link 3 (THE_BIG_PLAN.md): make `forecast.promotion_decision()`
+    REACHABLE and its verdict AUDITABLE — without ever supplying the
+    incumbent/challenger pairing itself.
+
+    This repo has never run two model_versions in production side by side —
+    there is no existing convention for which one is "the incumbent" when
+    more than one appears in the ledger, and inventing one here is exactly
+    the kind of decision CLAUDE.md's task brief said to stop and ask about
+    rather than guess. So this function never guesses: `incumbent_model` is
+    None unless a HUMAN supplies it on the command line (`--incumbent`), and
+    nothing in this module's own production call path (`run_once`,
+    `resolve_open`, the launchd tick) ever calls `promotion_status` at all —
+    it exists to be run by hand, exactly like `grade` already is.
+
+    Absent an incumbent, INSUFFICIENT_DATA is the correct, complete result —
+    not a failure, and not a reason to fabricate a comparison. Every attempt,
+    successful or not, is appended to FC_LOG as an auditable
+    {"kind": "promotion_attempt", ...} row, so a promotion decision (or a
+    refusal to make one) is never invisible the way a print-only report was.
+
+    Regime data is passed empty on both sides: nothing in production computes
+    a per-regime breakdown today, and an empty dict is a FAILED gate in
+    `promotion_decision()` (REGIME_DATA_MISSING), never a bypassed one — so a
+    real promotion cannot slip through on missing regime data any more than
+    on missing regret data.
+    """
+    ledger = load_ledger()
+    challenger_version = f"{MODEL_VERSION_BASE}/{challenger_model}"
+    row = {"kind": "promotion_attempt", "at": _iso(_utcnow()),
+          "challenger_model_version": challenger_version,
+          "incumbent_model_version": None, "oos": oos,
+          "verdict": None, "failed_gates": [], "why": ""}
+
+    if incumbent_model is None:
+        row["verdict"] = "INSUFFICIENT_DATA"
+        row["why"] = ("no incumbent model_version supplied (--incumbent) — "
+                      "promotion cannot compare a challenger to nothing")
+        _append_jsonl(FC_LOG, row)
+        print(f"  {row['why']}")
+        return row
+
+    incumbent_version = f"{MODEL_VERSION_BASE}/{incumbent_model}"
+    row["incumbent_model_version"] = incumbent_version
+    try:
+        challenger_rep = ledger.grade(challenger_version, oos=oos)
+        incumbent_rep = ledger.grade(incumbent_version, oos=oos)
+    except ForecastError as e:
+        row["verdict"] = "INSUFFICIENT_DATA"
+        row["why"] = str(e)
+        _append_jsonl(FC_LOG, row)
+        print(f"  {row['why']}")
+        return row
+
+    decision = promotion_decision(
+        incumbent_rep, challenger_rep, PromotionThresholds(),
+        per_regime_incumbent={}, per_regime_challenger={},
+        ref=f"promotion-{challenger_version}-{row['at']}")
+    row["verdict"] = "PROMOTED" if decision.promoted else "REJECTED"
+    row["failed_gates"] = list(decision.failed_gates)
+    row["why"] = decision.why
+    _append_jsonl(FC_LOG, row)
+    for k, v in row.items():
+        print(f"  {k:24s} {v}")
+    if decision.promoted:
+        print("  NOTE: this command records a verdict only. It never calls "
+             "AuthorityRegistry.grant() — that remains a separate, deliberate, "
+             "human-run step, same discipline as every other authority change "
+             "in this repo.")
+    return row
+
+
 # --------------------------------------------------------------------- CLI
 
 def main(argv=None) -> int:
@@ -1392,6 +1522,19 @@ def main(argv=None) -> int:
     grd = sub.add_parser("grade", help="score the operator against the 017 gates")
     grd.add_argument("--model", default=DEFAULT_MODEL)
 
+    prm = sub.add_parser("promote", help="D3 link 3: a reachable, auditable "
+                         "promotion_decision() call. Refuses with an honest "
+                         "INSUFFICIENT_DATA verdict unless --incumbent is given "
+                         "explicitly — never guesses the pairing, never grants "
+                         "authority on its own.")
+    prm.add_argument("--model", default=DEFAULT_MODEL, help="the challenger model")
+    prm.add_argument("--incumbent", default=None,
+                     help="the incumbent model to compare against; omitted by "
+                          "default, which is what every automated caller does")
+    prm.add_argument("--oos", dest="oos", action="store_true", default=True)
+    prm.add_argument("--not-oos", dest="oos", action="store_false",
+                     help="label both reports NOT out-of-sample (fails OOS_REQUIRED)")
+
     a = ap.parse_args(argv)
     if a.cmd == "run":
         try:
@@ -1405,6 +1548,10 @@ def main(argv=None) -> int:
         return resolve_open()
     if a.cmd == "grade":
         return grade(a.model)
+    if a.cmd == "promote":
+        promotion_status(challenger_model=a.model, incumbent_model=a.incumbent,
+                         oos=a.oos)
+        return 0
     return 2
 
 

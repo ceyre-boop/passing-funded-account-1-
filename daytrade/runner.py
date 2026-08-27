@@ -52,6 +52,12 @@ ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
 BIAS = ROOT / "data" / "daytrade" / "bias.json"
 DIRECTIVES = ROOT / "data" / "daytrade" / "directives.json"
+AUTHORITY_REGISTRY = ROOT / "data" / "daytrade" / "authority_registry.jsonl"
+# Mirrors alpha_operator.MODEL_VERSION_BASE. Duplicated rather than
+# imported so the runner keeps its existing decoupling from the operator
+# module (it only ever reads the operator's OUTPUT files, never its code) —
+# test_directive_authority.py asserts the two stay in sync.
+OPERATOR_MODEL_VERSION = "alpha-operator-v1"
 LOGDIR = ROOT / "data" / "daytrade"
 EVENTS_DIR = ROOT / "data" / "daytrade"      # spec 012 event logs live beside the session logs
 SOURCE_VERSION = "runner-1"                  # producer identity on every emitted event
@@ -274,16 +280,50 @@ def fetch_quote(symbol: str, max_stale: int, *, source: str,
 
 # ------------------------------------------------------------------- the bias
 
-def read_directive_urgency(symbol: str) -> tuple[str | None, str]:
-    """Spec 016: the runner consumes directive INTERRUPTS only, at the default
-    (unpromoted) authority level — tighten is the ceiling; an EMERGENCY from an
-    unpromoted model is refused by evaluate(), which is the point of the
-    authority table. Recommendations are logged in the note, never in force.
+def _granted_level(model_version: str) -> tuple[int, str]:
+    """D3 link 4 (THE_BIG_PLAN.md): AuthorityRegistry as the SOURCE of the
+    receiver's granted level, not a bare literal. `context_directive.DEFAULT_
+    GRANTED_LEVEL` (1, tighten-only) is what an empty or absent audit trail
+    resolves to — byte-identical to the hardcoded default this replaces,
+    because nothing in this repo's production path ever calls `.grant()`.
+    Authority is only ever raised by a human running a promotion script by
+    hand and committing the resulting row; this function only ever READS.
 
-    Absent file = no directives = behavior identical to before this card.
-    Malformed content prints a loud note and steers NOTHING — same convention
-    as the bias channel's MISSING/UNREADABLE: an advisory input must not kill
-    the cockpit, and it must not steer it while broken either.
+    Fails safe exactly like `read_directive_urgency`'s own directive parsing:
+    absent file -> the default level, no note. Malformed file -> the default
+    level, WITH a note — an advisory/audit input must not kill the cockpit,
+    and it must not silently grant more than the default while broken."""
+    from context_directive import AuthorityError, AuthorityRegistry, DEFAULT_GRANTED_LEVEL
+    if not AUTHORITY_REGISTRY.exists():
+        return DEFAULT_GRANTED_LEVEL, ""
+    try:
+        rows = [json.loads(line) for line in
+               AUTHORITY_REGISTRY.read_text().splitlines() if line.strip()]
+        reg = AuthorityRegistry.from_rows(rows)
+    except (json.JSONDecodeError, AuthorityError, TypeError, KeyError,
+           ValueError, OSError) as e:
+        return DEFAULT_GRANTED_LEVEL, (f"AUTHORITY_REGISTRY UNREADABLE ({e}) — "
+                                       f"using the default level {DEFAULT_GRANTED_LEVEL}")
+    return reg.granted_level(model_version), ""
+
+
+def read_directive_urgency(symbol: str) -> tuple[str | None, str]:
+    """Spec 016: the runner consumes directive INTERRUPTS only, at the
+    receiver's GRANTED authority level — tighten is the ceiling for an
+    unpromoted model; an EMERGENCY from one is refused by evaluate(), which
+    is the point of the authority table. Recommendations are logged in the
+    note, never in force below the level that would let one through (018
+    line 249: `ctx.granted_level >= 2`).
+
+    The granted level itself now comes from `AuthorityRegistry` (D3 link 4)
+    rather than a bare `1` — today that is still exactly `1` for every model,
+    because nothing in this repo ever writes a grant automatically.
+
+    Absent directives file = no directives = behavior identical to before
+    this card. Malformed content prints a loud note and steers NOTHING —
+    same convention as the bias channel's MISSING/UNREADABLE: an advisory
+    input must not kill the cockpit, and it must not steer it while broken
+    either.
     """
     if not DIRECTIVES.exists():
         return None, "no directives"
@@ -297,8 +337,9 @@ def read_directive_urgency(symbol: str) -> tuple[str | None, str]:
         # OSError: the file can vanish between exists() and read (review
         # finding 11) — an advisory input must not kill the cockpit.
         return None, f"DIRECTIVES UNREADABLE ({e}) — steering nothing"
-    dec = evaluate(ds, ReceiverContext(symbol=symbol))
-    note = dec.why
+    granted_level, registry_note = _granted_level(OPERATOR_MODEL_VERSION)
+    dec = evaluate(ds, ReceiverContext(symbol=symbol, granted_level=granted_level))
+    note = dec.why + (f"; {registry_note}" if registry_note else "")
     if dec.policy_candidate is not None:
         note += f" [recommendation {dec.policy_candidate} logged, not in force]"
     return dec.urgent, note

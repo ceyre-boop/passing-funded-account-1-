@@ -62,6 +62,20 @@ class Forecast:
     # grader must be able to see this was not a free `horizon_clamped_from`
     # minute claim. None on every forecast the gate left untouched.
     horizon_clamped_from: Optional[int] = None
+    # Populated only when `recommendation` is None (D3 link 1,
+    # THE_BIG_PLAN.md): why the model declined to name a policy. The call
+    # site is responsible for requiring this pairing before construction —
+    # kept optional here, not enforced in __post_init__, so historical rows
+    # already on disk with `recommendation=None` and no reason recorded
+    # still load through `Forecast(**body)` rather than raising retroactively.
+    recommendation_reason: Optional[str] = None
+    # Populated only when `recommendation` is None (D3 link 1,
+    # THE_BIG_PLAN.md): why the model declined to name a policy. The call
+    # site is responsible for requiring this pairing before construction —
+    # kept optional here, not enforced in __post_init__, so historical rows
+    # already on disk with `recommendation=None` and no reason recorded
+    # still load through `Forecast(**body)` rather than raising retroactively.
+    recommendation_reason: Optional[str] = None
 
     def __post_init__(self):
         if not self.forecast_id or not self.model_version:

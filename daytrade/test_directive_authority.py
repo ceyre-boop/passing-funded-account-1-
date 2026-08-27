@@ -16,8 +16,8 @@ import pytest
 
 from context_directive import (ABSTENTION_REASONS, Abstention, AuthorityError,
                                AuthorityRegistry, ContextDirective,
-                               DirectiveError, ReceiverContext, Scope,
-                               UNPROMOTED_CAP, evaluate)
+                               DEFAULT_GRANTED_LEVEL, DirectiveError,
+                               ReceiverContext, Scope, UNPROMOTED_CAP, evaluate)
 
 NOW = datetime(2026, 8, 7, 14, 30, tzinfo=timezone.utc)
 
@@ -153,14 +153,20 @@ def wall_clock_directive(*, interrupt: str, authority: int = 1) -> dict:
         interrupt=interrupt).to_dict()
 
 
-def _run_replay(tmp_path, monkeypatch, directives_content):
+def _run_replay(tmp_path, monkeypatch, directives_content, *,
+                authority_rows=None):
     import runner
     monkeypatch.setattr(runner, "LOGDIR", tmp_path)
     monkeypatch.setattr(runner, "EVENTS_DIR", tmp_path)   # Gate 2: events too
     monkeypatch.setattr(runner, "read_urgency", lambda require: (None, "test"))
     monkeypatch.setattr(runner, "DIRECTIVES", tmp_path / "directives.json")
+    monkeypatch.setattr(runner, "AUTHORITY_REGISTRY",
+                        tmp_path / "authority_registry.jsonl")
     if directives_content is not None:
         (tmp_path / "directives.json").write_text(json.dumps(directives_content))
+    if authority_rows is not None:
+        (tmp_path / "authority_registry.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in authority_rows) + "\n")
     captured = []
     real = runner.decide_exit
 
@@ -211,3 +217,90 @@ def test_runner_malformed_directives_steer_nothing(tmp_path, monkeypatch):
                                 [{"directive_id": "d1", "surprise": True}])
     assert urgents == [None, None]
     assert [r["urgent"] for r in recs] == [None, None]
+
+# --------------------------------------- D3 link 4: AuthorityRegistry wiring
+# (THE_BIG_PLAN.md — the registry is now the SOURCE of the runner's granted
+# level, not a bare literal `1`. Behaviour-preserving today: nothing in
+# production ever calls `.grant()`, so an absent or empty registry resolves
+# to exactly DEFAULT_GRANTED_LEVEL, same as the literal it replaces.)
+
+def test_granted_level_with_no_registry_file_is_the_default(tmp_path, monkeypatch):
+    import runner
+    monkeypatch.setattr(runner, "AUTHORITY_REGISTRY",
+                        tmp_path / "authority_registry.jsonl")
+    level, note = runner._granted_level("alpha-operator-v1")
+    assert level == DEFAULT_GRANTED_LEVEL == 1
+    assert note == ""
+
+
+def test_granted_level_malformed_registry_fails_safe_to_default(tmp_path, monkeypatch):
+    import runner
+    reg = tmp_path / "authority_registry.jsonl"
+    reg.write_text("{not json\n")
+    monkeypatch.setattr(runner, "AUTHORITY_REGISTRY", reg)
+    level, note = runner._granted_level("alpha-operator-v1")
+    assert level == DEFAULT_GRANTED_LEVEL
+    assert "UNREADABLE" in note
+
+
+def test_production_resolves_to_exactly_default_level_today(tmp_path, monkeypatch):
+    """The specific assertion the coordinator asked for: with the registry
+    wired in as the source, production still resolves to exactly 1 today —
+    the wiring cannot silently become a promotion."""
+    import runner
+    assert runner.OPERATOR_MODEL_VERSION == "alpha-operator-v1"
+    urgents, _ = _run_replay(tmp_path, monkeypatch,
+                             [wall_clock_directive(interrupt="TIGHTEN")],
+                             authority_rows=[])
+    assert urgents == ["tighten", "tighten"]        # unchanged from the
+                                                      # pre-registry-wiring test above
+    level, _ = runner._granted_level(runner.OPERATOR_MODEL_VERSION)
+    assert level == 1
+
+
+def test_a_real_grant_reaches_evaluate_via_the_registry(tmp_path, monkeypatch):
+    """Proves the wire is live, not cosmetic: a hand-written, validly-shaped
+    GRANT row (level 2 — 'recommend', within UNPROMOTED_CAP, no promotion_ref
+    needed) raises what evaluate() sees. This does NOT reach the exit engine
+    — runner.py hardcodes `policy_candidate=None` into resolve_channels()
+    regardless of authority (a second, independent gate this change does not
+    touch) — only evaluate()'s own Decision.policy_candidate, logged in the
+    directive note, is affected."""
+    import runner
+    d = wall_clock_directive(interrupt="TIGHTEN", authority=2)
+    d["recommendation"] = "RIDE"
+    grant_row = {"model_version": "alpha-operator-v1", "level": 2,
+                "action": "GRANT", "granted_by": "test-fixture",
+                "reason": "unit test", "ts": datetime.now(timezone.utc).isoformat(),
+                "promotion_ref": None}
+    urgents, recs = _run_replay(tmp_path, monkeypatch, [d],
+                                authority_rows=[grant_row])
+    assert urgents == ["tighten", "tighten"]
+    level, _ = runner._granted_level(runner.OPERATOR_MODEL_VERSION)
+    assert level == 2
+
+
+def test_authority_registry_from_rows_replays_validation(tmp_path):
+    """`from_rows` must not be a trusting deserializer — a row that `grant()`
+    would refuse live (anonymous, or above UNPROMOTED_CAP with no
+    promotion_ref) must still raise when replayed from disk."""
+    with pytest.raises(AuthorityError):
+        AuthorityRegistry.from_rows([
+            {"model_version": "m", "level": 3, "action": "GRANT",
+             "granted_by": "x", "reason": "y",
+             "ts": NOW.isoformat(), "promotion_ref": None}])
+    reg = AuthorityRegistry.from_rows([
+        {"model_version": "m", "level": 2, "action": "GRANT",
+         "granted_by": "x", "reason": "y",
+         "ts": NOW.isoformat(), "promotion_ref": None}])
+    assert reg.granted_level("m") == 2
+    assert reg.granted_level("other-model") == DEFAULT_GRANTED_LEVEL
+
+
+def test_authority_registry_round_trips_through_rows(tmp_path):
+    reg = AuthorityRegistry()
+    reg.grant("m", 2, by="x", reason="y", ts=NOW.isoformat())
+    rows = reg.to_rows()
+    reg2 = AuthorityRegistry.from_rows(rows)
+    assert reg2.granted_level("m") == 2
+    assert reg2.audit() == reg.audit()
