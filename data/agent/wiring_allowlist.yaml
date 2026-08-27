@@ -8,6 +8,10 @@
 # category keys: ORPHANS | IMPORTED_NOT_CALLED | NO_SUPPLIER | BROKEN_IMPORT | DEAD_ARTIFACT
 
 ORPHANS:
+  - module: "scripts.check_trade_freeze"
+    reason: "standalone CLI + git commit-msg hook target, invoked as `python3 scripts/check_trade_freeze.py --staged` from .githooks/commit-msg \u2014 a shell hook caller is not a Python import, so it correctly shows as an orphan while being genuinely wired. Activated per-checkout by scripts/install_hooks.sh; inert until then."
+  - module: "scripts.ruin_engine"
+    reason: "standalone research CLI (`python3 scripts/ruin_engine.py --firm cti_1step`), same convention as drawdown_margin.py and carry_buy_gate.py. It IMPORTS from carry_buy_gate and drawdown_margin rather than being imported \u2014 a measurement instrument, deliberately not on any live path. Its output (data/agent/ruin_engine_frontier.json) is read by a human deciding eval size, not by code."
   - module: "daytrade.alphazero_bias"
     reason: "standalone CLI/research tool — has `if __name__ == \"__main__\":` and is invoked directly (`python3 daytrade/alphazero_bias.py`), matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way); not designed to be imported as a library module"
   - module: "daytrade.backtest"
