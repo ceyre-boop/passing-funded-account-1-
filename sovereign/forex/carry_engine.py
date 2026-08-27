@@ -48,6 +48,15 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+
+class CarryATRUnavailable(Exception):
+    """Raised when a pair's ATR cannot be computed from available price data.
+
+    Deliberately NOT a silent-fallback path: a pair whose ATR is unknown must
+    produce no sized signal at all, never a signal sized off a magic number.
+    """
+
+
 # ---------------------------------------------------------------------------
 # Carry pair definitions
 # ---------------------------------------------------------------------------
@@ -222,7 +231,16 @@ class CarryEngine:
             spread_bps = (quote_rate - base_rate) * 100.0
 
         prices = self._fetch_prices(cfg.ticker)
-        atr = self._compute_atr(prices)
+        try:
+            atr = self._compute_atr(prices)
+        except CarryATRUnavailable as exc:
+            from sovereign.forex.degraded_sentinel import flag_degraded
+            flag_degraded(
+                cfg.ticker,
+                f"ATR unavailable, refusing to emit a sized signal: {exc}",
+                source="atr",
+            )
+            raise
 
         if spread_bps < MIN_CARRY_SPREAD_BPS:
             return CarrySignal(
@@ -297,23 +315,28 @@ class CarryEngine:
             import yfinance as yf
             df = yf.download(ticker, period='30d', progress=False, auto_adjust=True)
             if df is None or df.empty:
-                # No data → ATR silently falls back to 0.001 (stop/sizing degraded).
-                # Flag it fail-loud (TICK-025).
-                flag_degraded(ticker, "yfinance returned an empty OHLCV frame; ATR falls back to 0.001")
+                # No data → downstream _compute_atr will raise CarryATRUnavailable
+                # and the pair produces no signal. Flag it fail-loud (TICK-025).
+                flag_degraded(ticker, "yfinance returned an empty OHLCV frame; ATR unavailable")
                 return None
             if hasattr(df.columns, 'get_level_values'):
                 df.columns = df.columns.get_level_values(0)
             return df
         except Exception as e:
-            flag_degraded(ticker, f"yfinance download failed: {type(e).__name__}: {e}; ATR falls back to 0.001")
+            flag_degraded(ticker, f"yfinance download failed: {type(e).__name__}: {e}; ATR unavailable")
             return None
 
     @staticmethod
     def _compute_atr(prices, period: int = ATR_PERIOD) -> float:
-        """14-day ATR.  Returns a safe fallback if prices unavailable."""
+        """14-day ATR.  Raises CarryATRUnavailable if it cannot be computed —
+        never silently substitutes a magic number, because a wrong ATR
+        directly mis-sizes the position (units = risk_amount / (ATR × mult))."""
+        if prices is None or len(prices) < period + 1:
+            got = 0 if prices is None else len(prices)
+            raise CarryATRUnavailable(
+                f'insufficient price data: got {got} bars, need >= {period + 1}'
+            )
         try:
-            if prices is None or len(prices) < period + 1:
-                return 0.001   # safe fallback for most G10 pairs
             h = prices['High']
             l = prices['Low']
             c = prices['Close']
@@ -323,9 +346,11 @@ class CarryEngine:
                 .combine((l - c.shift()).abs(), max)
             )
             atr = float(tr.rolling(period).mean().iloc[-1])
-            return atr if not math.isnan(atr) else 0.001
-        except Exception:
-            return 0.001
+        except Exception as exc:
+            raise CarryATRUnavailable(f'ATR computation failed: {exc}') from exc
+        if math.isnan(atr):
+            raise CarryATRUnavailable('ATR computed as NaN')
+        return atr
 
     @staticmethod
     def _print_summary(signals: List[CarrySignal]) -> None:

@@ -22,6 +22,13 @@ from dotenv import load_dotenv
 load_dotenv()
 logger = logging.getLogger(__name__)
 
+
+class FredFetchError(Exception):
+    """Raised when a FRED series is unconfigured, unreachable, or too short
+    to compute the requested value. Callers MUST catch this and record the
+    fallback honestly in source_map — never label a failed FRED call as
+    'fred'."""
+
 CACHE_DIR = Path(__file__).parents[2] / 'data' / 'cache' / 'macro'
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -231,16 +238,32 @@ class ForexDataFetcher:
         }
 
         if self._fred_ok:
+            from sovereign.forex.degraded_sentinel import flag_degraded
+
             try:
                 rate = self._fred_latest(FRED_RATES.get(country, ''), rate)
                 source_map['rate'] = 'fred'
+            except FredFetchError as e:
+                flag_degraded(country, f"FRED rate fetch failed, using fallback_static: {e}", source="fred_rate")
+            except Exception as e:
+                logger.warning(f"FRED rate fetch for {country}: {e}")
+
+            try:
                 cpi = self._fred_yoy(FRED_CPI.get(country, ''), cpi, country)
                 source_map['cpi_yoy'] = 'fred'
+            except FredFetchError as e:
+                flag_degraded(country, f"FRED CPI fetch failed, using fallback_static: {e}", source="fred_cpi")
+            except Exception as e:
+                logger.warning(f"FRED CPI fetch for {country}: {e}")
+
+            try:
                 if country in FRED_GDP:
                     gdp = self._fred_qoq(FRED_GDP[country], gdp)
                     source_map['gdp_growth'] = 'fred'
+            except FredFetchError as e:
+                flag_degraded(country, f"FRED GDP fetch failed, using fallback_static: {e}", source="fred_gdp")
             except Exception as e:
-                logger.warning(f"FRED fetch for {country}: {e}")
+                logger.warning(f"FRED GDP fetch for {country}: {e}")
         else:
             # Try yfinance rate proxy for US only (most reliable)
             if country == 'US':
@@ -280,19 +303,24 @@ class ForexDataFetcher:
         }
 
     def _fred_latest(self, series_id: str, fallback: float) -> float:
+        """Returns the latest value from a FRED series. Raises FredFetchError
+        (never silently returns ``fallback``) so the caller can label the
+        result honestly in source_map instead of defaulting to 'fred'."""
         if not series_id or not self._fred:
-            return fallback
+            raise FredFetchError(f"no FRED series configured or client unavailable (series_id={series_id!r})")
         try:
             s = self._fred.get_series(series_id)
             val = s.dropna().iloc[-1]
             return float(val)
-        except Exception:
-            return fallback
+        except Exception as e:
+            raise FredFetchError(f"FRED get_series({series_id!r}) failed: {e}") from e
 
     def _fred_yoy(self, series_id: str, fallback: float, country: str = '') -> float:
-        """Year-over-year % change. Handles monthly, quarterly, and pre-computed YoY series."""
+        """Year-over-year % change. Handles monthly, quarterly, and pre-computed
+        YoY series. Raises FredFetchError (never silently returns ``fallback``)
+        on missing config, fetch failure, or insufficient history."""
         if not series_id or not self._fred:
-            return fallback
+            raise FredFetchError(f"no FRED CPI series configured for {country!r} (series_id={series_id!r})")
         try:
             s = self._fred.get_series(series_id)
             s = s.dropna()
@@ -302,23 +330,31 @@ class ForexDataFetcher:
             if len(s) >= periods + 1:
                 yoy = (s.iloc[-1] / s.iloc[-(periods + 1)] - 1) * 100
                 return float(yoy)
-        except Exception:
-            pass
-        return fallback
+            raise FredFetchError(
+                f"insufficient FRED CPI history for {country!r}: {len(s)} points, need {periods + 1}"
+            )
+        except FredFetchError:
+            raise
+        except Exception as e:
+            raise FredFetchError(f"FRED CPI fetch failed for {country!r}: {e}") from e
 
     def _fred_qoq(self, series_id: str, fallback: float) -> float:
-        """Quarter-over-quarter annualized GDP growth."""
+        """Quarter-over-quarter annualized GDP growth. Raises FredFetchError
+        (never silently returns ``fallback``) on missing config, fetch
+        failure, or insufficient history."""
         if not series_id or not self._fred:
-            return fallback
+            raise FredFetchError(f"no FRED GDP series configured (series_id={series_id!r})")
         try:
             s = self._fred.get_series(series_id)
             s = s.dropna()
             if len(s) >= 5:
                 qoq = (s.iloc[-1] / s.iloc[-5] - 1) * 100
                 return float(qoq)
-        except Exception:
-            pass
-        return fallback
+            raise FredFetchError(f"insufficient FRED GDP history: {len(s)} points, need 5")
+        except FredFetchError:
+            raise
+        except Exception as e:
+            raise FredFetchError(f"FRED GDP fetch failed: {e}") from e
 
     def _fetch_rate_history(
         self, country: str, start: str

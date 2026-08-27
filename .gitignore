@@ -13,3 +13,4 @@ logs/
 data/agent/*.jsonl
 .env
 data/daytrade/operator/.dashboard_published
+sentinel/
