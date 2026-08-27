@@ -1,0 +1,117 @@
+{
+  "generated_at": "2026-08-27T00:19:30.355034+00:00",
+  "n": 402,
+  "policy_column": "EARLY_BANK",
+  "feature_columns": [
+    "last",
+    "day_open",
+    "prior_close",
+    "gap_pct",
+    "or_high",
+    "or_low",
+    "tr5",
+    "tr20_median",
+    "compression",
+    "trend_pct_vs_ma20",
+    "volume_last",
+    "macro_VIXCLS_value",
+    "macro_VIXCLS_stale_days",
+    "macro_VIXCLS_pctile_2y",
+    "macro_VIXCLS_change_20d",
+    "macro_VXVCLS_value",
+    "macro_VXVCLS_stale_days",
+    "macro_VXVCLS_pctile_2y",
+    "macro_VXVCLS_change_20d",
+    "macro_DTWEXBGS_value",
+    "macro_DTWEXBGS_stale_days",
+    "macro_DTWEXBGS_pctile_2y",
+    "macro_DTWEXBGS_change_20d",
+    "macro_BAMLH0A0HYM2_value",
+    "macro_BAMLH0A0HYM2_stale_days",
+    "macro_BAMLH0A0HYM2_pctile_2y",
+    "macro_BAMLH0A0HYM2_change_20d",
+    "macro_BAMLEMHBHYCRPIOAS_value",
+    "macro_BAMLEMHBHYCRPIOAS_stale_days",
+    "macro_BAMLEMHBHYCRPIOAS_pctile_2y",
+    "macro_BAMLEMHBHYCRPIOAS_change_20d",
+    "macro_STLFSI4_value",
+    "macro_STLFSI4_stale_days",
+    "macro_STLFSI4_pctile_2y",
+    "macro_STLFSI4_change_20d",
+    "macro_NFCI_value",
+    "macro_NFCI_stale_days",
+    "macro_NFCI_pctile_2y",
+    "macro_NFCI_change_20d",
+    "macro_DGS10_value",
+    "macro_DGS10_stale_days",
+    "macro_DGS10_pctile_2y",
+    "macro_DGS10_change_20d",
+    "macro_DGS2_value",
+    "macro_DGS2_stale_days",
+    "macro_DGS2_pctile_2y",
+    "macro_DGS2_change_20d",
+    "macro_T10Y2Y_value",
+    "macro_T10Y2Y_stale_days",
+    "macro_T10Y2Y_pctile_2y",
+    "macro_T10Y2Y_change_20d",
+    "macro_DFII10_value",
+    "macro_DFII10_stale_days",
+    "macro_DFII10_pctile_2y",
+    "macro_DFII10_change_20d",
+    "macro_DCOILWTICO_value",
+    "macro_DCOILWTICO_stale_days",
+    "macro_DCOILWTICO_pctile_2y",
+    "macro_DCOILWTICO_change_20d"
+  ],
+  "rng_seed": 26,
+  "T1_POWER": {
+    "pass": true,
+    "n": 402,
+    "min_n": 129
+  },
+  "T2_NON_DEGENERATE": {
+    "pass": true,
+    "trade_rate": 0.44776119402985076,
+    "min_trade_rate": 0.4
+  },
+  "always_trade": {
+    "mean": -0.0061,
+    "trade_rate": 1.0,
+    "computed_mean": -0.006069673363163929
+  },
+  "model": {
+    "mean": -0.01117601358412049,
+    "trade_rate": 0.44776119402985076,
+    "lo": -0.06321135338590252,
+    "hi": 0.04120585738355946
+  },
+  "rate_matched_random": {
+    "mean": -0.003574627537934474,
+    "lo": -0.040784695612117866,
+    "hi": 0.0338342059770577,
+    "trade_rate": 0.44776119402985076,
+    "draws": 1000
+  },
+  "T3_BEATS_RANDOM": {
+    "pass": false,
+    "model_lo": -0.06321135338590252,
+    "random_hi": 0.0338342059770577
+  },
+  "shuffled_feature": {
+    "mean": -0.009230675622437921,
+    "trade_rate": 0.4925373134328358
+  },
+  "T4_BEATS_NOISE": {
+    "pass": false,
+    "model_mean": -0.01117601358412049,
+    "shuffled_mean": -0.009230675622437921,
+    "margin": 0.05
+  },
+  "T5_BEATS_ALWAYS_TRADE": {
+    "pass": false,
+    "model_mean": -0.01117601358412049,
+    "always_trade_baseline": -0.0061,
+    "margin": 0.05
+  },
+  "verdict": "FAILED"
+}

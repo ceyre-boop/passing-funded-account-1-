@@ -4,8 +4,13 @@ execution/funderpro_executor.py
 FunderPro prop-firm executor for the ICT engine.
 
 FunderPro uses cTrader as its execution platform.
-This module wraps the existing ctrader_bridge.py protocol
-for ICT-format signals (ScanResult → cTrader order).
+
+STATUS: ``sovereign/execution/ctrader_bridge.py`` DOES NOT EXIST ON DISK.
+This module cannot actually place a cTrader order today — there is no
+bridge to wrap. DEMO and LIVE routing modes are refused at construction
+time (see ``_preflight_ctrader_dependencies``) precisely because of this
+absence; only ROUTING_OFF (log-only, simulated fill) is currently usable.
+Fix that check, not this docstring, if a bridge is ever added.
 
 Safety rules (hard-coded, non-negotiable):
   max_risk_per_trade:  1.0%  — ICT paper protocol
@@ -65,6 +70,60 @@ PIP_SIZE = {
 _ROOT                = Path(__file__).resolve().parents[1]
 PIPELINE_VERDICT_FILE = _ROOT / 'data' / 'pipeline_verdict.json'
 CONFIG_FILE           = _ROOT / 'config' / 'parameters.yml'
+
+
+# ── Live-order-path preflight (fail loud, not bypassable via try/except) ───── #
+
+class CTraderBridgeMissing(ModuleNotFoundError):
+    """Raised when a live-order-capable routing mode is requested but
+    ``sovereign.execution.ctrader_bridge`` is absent from disk.
+
+    Intentionally a plain, unguarded exception — this must propagate out of
+    ``FunderProExecutor.__init__`` and abort construction. Do not wrap the
+    call site in a try/except that swallows this; CLAUDE.md rule 5 requires
+    explicit failure over fallback for correctness-critical inputs, and a
+    missing broker bridge on a live-routing request is exactly that.
+    """
+
+
+def _preflight_ctrader_dependencies(routing: str) -> None:
+    """
+    Verify every module the live-order path needs is importable, BEFORE the
+    executor is allowed to construct in DEMO or LIVE mode.
+
+    Without this check, a DEMO/LIVE executor constructs successfully and the
+    missing ``ctrader_bridge`` module only surfaces as a bare
+    ``ModuleNotFoundError`` inside ``_init_ctrader``'s broad
+    ``except Exception`` — which logs a warning and silently leaves
+    ``self._ctrader`` as ``None``. The executor then looks "connected but
+    idle" until the very first order submission, at which point
+    ``_send_ctrader_order`` raises ``RuntimeError('cTrader bridge not
+    connected')``. That is a runtime surprise at the moment real money would
+    move. This function converts it into a startup refusal instead.
+    """
+    if routing == 'OFF':
+        return  # log-only / simulated fill path never touches ctrader_bridge
+
+    import importlib.util
+
+    missing = []
+    if importlib.util.find_spec('sovereign.execution.ctrader_bridge') is None:
+        missing.append('sovereign.execution.ctrader_bridge')
+
+    if missing:
+        raise CTraderBridgeMissing(
+            f"FunderProExecutor preflight FAILED for routing mode {routing!r}: "
+            f"missing required module(s): {', '.join(missing)}. "
+            "sovereign/execution/ctrader_bridge.py does not exist on disk "
+            "(sovereign/execution/ contains only forex_exit_manager.py). "
+            "Consequence if this preflight did not exist: the executor would "
+            "construct successfully, report itself disconnected only in "
+            "logs, and then raise ModuleNotFoundError the moment the first "
+            "real order tried to submit — i.e. at the worst possible time. "
+            "Refusing to construct instead. Use FUNDERPRO_LIVE=off (the "
+            "log-only/simulated-fill path) until ctrader_bridge.py exists, "
+            "or add the missing module."
+        )
 
 
 # ── Public utility: call after a successful pipeline evaluation ────────────── #
@@ -153,6 +212,12 @@ class FunderProExecutor:
     def __init__(self, account_size: float = 10_000.0):
         self.account_size = account_size
         self._routing     = self._detect_routing()
+
+        # Fail loud, at construction time, if this routing mode needs a
+        # broker bridge that isn't on disk. See _preflight_ctrader_dependencies
+        # docstring for why this exists and what it replaces.
+        _preflight_ctrader_dependencies(self._routing)
+
         self._daily_pnl   = 0.0
         self._open        = {}   # pair → position_id (cTrader positionId string)
         self._ctrader     = None
