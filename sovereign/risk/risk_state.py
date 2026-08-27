@@ -85,3 +85,8 @@ class RiskDecision:
     instrument: str
     strategy: str = "forex_macro"
     timestamp: str = field(default_factory=_now)
+    # Gates configured in risk_config.yaml that could not fire THIS decision
+    # because their required state input was None — e.g. mc_breach_halt is
+    # armed in config but nothing supplies state.mc_breach_prob in production.
+    # Populated every decision (halt or not) so the inertness is never invisible.
+    unarmed_gates: list = field(default_factory=list)

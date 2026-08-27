@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from stockfish_constitution import ConstitutionError, idempotency_key
+from stockfish_constitution import ConstitutionError, idempotency_key, _self_test
 from stockfish_exit import Action, Stage, TradeState, apply_action, apply_actions
 
 
@@ -241,6 +241,87 @@ def test_ceiling_simulate_threads_keys_and_batch(monkeypatch):
 
 
 # ------------------------------------------------------------- regression
+
+# ------------------------------------- action_kind wiring (NO_SUPPLIER fix)
+
+def test_action_kind_populated_for_every_action_scoped_violation():
+    """Every violation raised while an Action is in scope must carry that
+    action's kind on ConstitutionViolation.action_kind — the audit trail
+    field spec 011 added but no production call site supplied. Fault
+    injection: strip `action_kind=k` from any call site in
+    stockfish_constitution.py and this test fails."""
+    cases = [
+        # (setup kwargs, action, expected rule, expected action_kind)
+        (dict(), Action("MOVE_SL", sl=198.0, reason="loosen"), "C003", "MOVE_SL"),
+        (dict(), Action("MOVE_SL", sl=None, reason="no price"), "C009", "MOVE_SL"),
+        (dict(), Action("MOVE_SL", sl=float("nan"), reason="nan"), "C009", "MOVE_SL"),
+        (dict(), Action("TAKE_PARTIAL", fraction=1.5, reason="oob"), "C006", "TAKE_PARTIAL"),
+        (dict(), Action("SELL_EVERYTHING", reason="bogus kind"), "C009", "SELL_EVERYTHING"),
+        (dict(stage=Stage.CLOSED), Action("MOVE_SL", sl=200.0, reason="on closed"),
+         "C008", "MOVE_SL"),
+    ]
+    for setup, action, expected_rule, expected_kind in cases:
+        s = make_state(**setup)
+        with pytest.raises(ConstitutionError) as e:
+            apply_action(s, action)
+        matched = [v for v in e.value.violations if v.rule_id == expected_rule]
+        assert matched, f"{expected_rule} did not fire for {action.kind}"
+        assert all(v.action_kind == expected_kind for v in matched), (
+            f"{expected_rule} violation for {action.kind} has action_kind="
+            f"{[v.action_kind for v in matched]!r}, expected {expected_kind!r} "
+            "— the action's kind is not reaching the violation record")
+
+
+def test_action_kind_populated_for_batch_and_duplicate_violations():
+    """C007 (batch ordering) and C005 (duplicate reduction) violations must
+    also carry the offending action's kind — checked through apply_actions,
+    the same funnel the runner/backtest/ceiling all route through."""
+    s = make_state()
+    batch = [Action("EXIT_ALL", reason="emergency"),
+             Action("MOVE_SL", sl=200.0, reason="after the end")]
+    with pytest.raises(ConstitutionError) as e:
+        apply_actions(s, batch, set())
+    c007 = [v for v in e.value.violations if v.rule_id == "C007"]
+    assert c007 and all(v.action_kind == "EXIT_ALL" for v in c007), (
+        "C007 violation missing/incorrect action_kind")
+
+    part = Action("TAKE_PARTIAL", fraction=0.5, reason="bank the goal")
+    keys: set[str] = set()
+    s1 = make_state(stage=Stage.SCALED)
+    apply_actions(s1, [part], keys)
+    s2 = make_state(stage=Stage.SCALED)
+    with pytest.raises(ConstitutionError) as e2:
+        apply_actions(s2, [part], keys)
+    c005 = [v for v in e2.value.violations if v.rule_id == "C005"]
+    assert c005 and all(v.action_kind == "TAKE_PARTIAL" for v in c005), (
+        "C005 violation missing/incorrect action_kind")
+
+
+def test_action_kind_none_for_state_and_clock_violations():
+    """State-level (C002/C009) and clock (C004) violations have no Action in
+    scope at all — action_kind must genuinely stay None there, not be forced
+    to a wrong value. Distinguishes 'no supplier' (the real bug) from
+    'nothing to supply' (correct by design)."""
+    s = make_state(qty=-1)
+    with pytest.raises(ConstitutionError) as e:
+        apply_action(s, Action("HOLD", reason="state itself is broken"))
+    c002 = [v for v in e.value.violations if v.rule_id == "C002"]
+    assert c002 and all(v.action_kind is None for v in c002)
+
+    s2 = make_state(now_et="10:00", last_now_et="11:00")
+    with pytest.raises(ConstitutionError) as e2:
+        apply_action(s2, Action("HOLD", reason="clock check"))
+    c004 = [v for v in e2.value.violations if v.rule_id == "C004"]
+    assert c004 and all(v.action_kind is None for v in c004)
+
+
+def test_self_test_all_rules_still_pass():
+    """Guards against firing-condition drift: this fix must not change WHEN
+    C001-C009 fire, only what the violation record carries. Runs the
+    module's own per-rule fixtures + 2000+-path property test + C007
+    permutation test."""
+    assert _self_test() == 0
+
 
 def test_apply_action_defaults_unchanged():
     """apply_action with no new arguments behaves exactly as before — existing

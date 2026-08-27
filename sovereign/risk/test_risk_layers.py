@@ -35,7 +35,7 @@ import pytest
 from sovereign.risk import risk_engine
 from sovereign.risk.config.loader import load_risk_config
 from sovereign.risk.layers.base_size import base_size
-from sovereign.risk.layers.gates import run_gates
+from sovereign.risk.layers.gates import run_gates, unarmed_gates
 from sovereign.risk.layers.prop import prop_ceiling
 from sovereign.risk.risk_state import Position, RiskState, Signal
 
@@ -273,6 +273,58 @@ class TestGatesHaltOnEveryConfiguredCondition:
         assert decision.final_risk_pct == 0.0
         assert decision.final_size == 0.0
         assert decision.binding_constraint.startswith("halt:")
+
+
+class TestMcBreachGateInertnessIsVisible:
+    """mc_breach_halt is armed in risk_config.yaml, but no production code ever
+    supplies state.mc_breach_prob (only test_mc_breach_prob_halts above sets it
+    by hand) — the gate can never fire on a real decision. Fault injection: if
+    unarmed_gates() stops reporting this, or decide() stops attaching it to
+    RiskDecision, these tests fail. The gate itself must keep working exactly
+    as before (test_mc_breach_prob_halts, unchanged) — this is a visibility
+    fix, not a behavior fix."""
+
+    def test_unarmed_gates_reports_mc_breach_when_input_absent(self):
+        reported = unarmed_gates(_state(), _cfg())
+        assert any("mc_breach_prob" in u for u in reported)
+
+    def test_unarmed_gates_silent_once_mc_breach_prob_is_supplied(self):
+        """The moment a real supplier sets mc_breach_prob (even to a
+        non-halting value), the gate is armed again and must not be reported
+        as unarmed."""
+        reported = unarmed_gates(_state(mc_breach_prob=0.01), _cfg())
+        assert not any("mc_breach_prob" in u for u in reported)
+
+    def test_unarmed_gates_does_not_mask_other_absent_inputs_as_armed(self):
+        """Regression guard: this must not become a hardcoded single-field
+        check that silently stops covering mc_breach_prob if the config key
+        is renamed. Removing 'mc_breach_halt' from gate config must also
+        remove the corresponding unarmed report."""
+        cfg = _cfg()
+        cfg["gates"] = dict(cfg["gates"])
+        del cfg["gates"]["mc_breach_halt"]
+        reported = unarmed_gates(_state(), cfg)
+        assert not any("mc_breach_prob" in u for u in reported)
+
+    def test_decide_surfaces_unarmed_gates_on_a_normal_decision(self, monkeypatch):
+        """The inertness must reach the actual decision object every caller
+        sees — not just the low-level gates.py function — so it shows up in
+        the audit log on every ordinary sizing decision, halt or not."""
+        _install_working_kelly_stand_in(monkeypatch)
+        decision = risk_engine.decide(_signal(), _state(), _cfg())
+        assert decision.halt is False
+        assert any("mc_breach_prob" in u for u in decision.unarmed_gates)
+        assert "UNARMED GATES" in decision.reasoning
+        assert "mc_breach_prob" in decision.reasoning
+
+    def test_decide_surfaces_unarmed_gates_even_when_another_gate_halts(self, monkeypatch):
+        """Inertness reporting must not silently disappear just because a
+        different, working gate happened to halt this particular decision."""
+        _install_working_kelly_stand_in(monkeypatch)
+        state = _state(health_ok=False)
+        decision = risk_engine.decide(_signal(), state, _cfg())
+        assert decision.halt is True
+        assert any("mc_breach_prob" in u for u in decision.unarmed_gates)
 
 
 class TestPropCeilingAppliesOnTopOfWhateverElseBinds:

@@ -19,7 +19,7 @@ from pathlib import Path
 
 from sovereign.risk.config.loader import load_risk_config
 from sovereign.risk.layers.base_size import base_size
-from sovereign.risk.layers.gates import run_gates
+from sovereign.risk.layers.gates import run_gates, unarmed_gates
 from sovereign.risk.layers.prop import prop_ceiling
 from sovereign.risk.risk_state import RiskDecision
 
@@ -102,6 +102,7 @@ def decide(signal, state, cfg=None) -> RiskDecision:
 
     # ── Layer 0: hard gates ──────────────────────────────────────────────────
     halt_reason = run_gates(signal, state, cfg)
+    unarmed = unarmed_gates(state, cfg)
 
     # ── Layer 1: base ────────────────────────────────────────────────────────
     base = base_size(signal, cfg)
@@ -149,12 +150,15 @@ def decide(signal, state, cfg=None) -> RiskDecision:
         reasoning = (f"base {base:.3%} (grade {signal.grade}) × vol {vol_f:.2f} × dd {dd_f:.2f} × "
                      f"regime {regime_f:.2f} = {modulated:.3%}; "
                      f"{binding} cap binding → final {final_risk:.3%}, size {final_size:g}.")
+    if unarmed:
+        reasoning += " UNARMED GATES (configured, cannot fire — see unarmed_gates): " + \
+            "; ".join(u.split(":")[0] for u in unarmed) + "."
 
     decision = RiskDecision(
         final_size=final_size, final_risk_pct=final_risk, base_risk_pct=base,
         binding_constraint=binding, layer_budgets=layer_budgets, modulators=modulators,
         halt=bool(halt_reason), halt_reason=halt_reason, reasoning=reasoning,
-        instrument=signal.instrument, strategy=signal.strategy,
+        instrument=signal.instrument, strategy=signal.strategy, unarmed_gates=unarmed,
     )
 
     if cfg["audit"].get("enabled", True):
@@ -164,6 +168,7 @@ def decide(signal, state, cfg=None) -> RiskDecision:
         "final_risk_pct": decision.final_risk_pct, "base_risk_pct": decision.base_risk_pct,
         "final_size": decision.final_size, "binding_constraint": decision.binding_constraint,
         "halt": decision.halt, "halt_reason": decision.halt_reason,
+        "unarmed_gates": decision.unarmed_gates,
         "layer_budgets": decision.layer_budgets, "modulators": decision.modulators,
         "reasoning": decision.reasoning,
         "notes": signal.notes,

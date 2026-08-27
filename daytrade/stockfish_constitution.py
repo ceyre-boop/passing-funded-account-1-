@@ -125,15 +125,15 @@ def validate_action(state, action, *, applied_keys: frozenset[str] = frozenset()
     # C008 — closed is terminal
     if getattr(state, "stage", None) is Stage.CLOSED:
         v.append(ConstitutionViolation("C008", RULES["C008"],
-                 f"{k} attempted on a CLOSED position", r, k))
+                 f"{k} attempted on a CLOSED position", r, action_kind=k))
 
     if k == "MOVE_SL":
         if action.sl is None:
             v.append(ConstitutionViolation("C009", RULES["C009"],
-                     "MOVE_SL carries no stop price", r, k))
+                     "MOVE_SL carries no stop price", r, action_kind=k))
         elif math.isnan(action.sl):
             v.append(ConstitutionViolation("C009", RULES["C009"],
-                     "MOVE_SL stop price is NaN", r, k))
+                     "MOVE_SL stop price is NaN", r, action_kind=k))
         else:
             # C003 — direction-specific. Long: loosening is lower. Short: higher.
             looser = (action.sl < state.sl if state.direction > 0
@@ -141,32 +141,32 @@ def validate_action(state, action, *, applied_keys: frozenset[str] = frozenset()
             if looser:
                 side = "long" if state.direction > 0 else "short"
                 v.append(ConstitutionViolation("C003", RULES["C003"],
-                         f"{side}: refusing sl {state.sl:g} -> {action.sl:g}", r, k))
+                         f"{side}: refusing sl {state.sl:g} -> {action.sl:g}", r, action_kind=k))
 
     elif k == "TAKE_PARTIAL":
         f = action.fraction
         # C006 — bounded fractions
         if f is None or (isinstance(f, float) and math.isnan(f)) or not (0.0 < f <= 1.0):
             v.append(ConstitutionViolation("C006", RULES["C006"],
-                     f"fraction {f!r} outside (0, 1]", r, k))
+                     f"fraction {f!r} outside (0, 1]", r, action_kind=k))
         else:
             # C001 / C002 — qty may only decrease, and never past zero
             new_qty = state.qty * (1.0 - f)
             if new_qty > state.qty + 1e-12:
                 v.append(ConstitutionViolation("C001", RULES["C001"],
-                         f"qty would rise {state.qty:g} -> {new_qty:g}", r, k))
+                         f"qty would rise {state.qty:g} -> {new_qty:g}", r, action_kind=k))
             if new_qty < -1e-12:
                 v.append(ConstitutionViolation("C002", RULES["C002"],
-                         f"qty would go negative: {state.qty:g} -> {new_qty:g}", r, k))
+                         f"qty would go negative: {state.qty:g} -> {new_qty:g}", r, action_kind=k))
             # C005 — duplicate reduction
             key = idempotency_key(state, action)
             if key in applied_keys:
                 v.append(ConstitutionViolation("C005", RULES["C005"],
-                         f"reduction {key!r} was already applied — refusing a replay", r, k))
+                         f"reduction {key!r} was already applied — refusing a replay", r, action_kind=k))
 
     elif k not in ("HOLD", "EXIT_ALL"):
         v.append(ConstitutionViolation("C009", RULES["C009"],
-                 f"unknown action kind {k!r}", r, k))
+                 f"unknown action kind {k!r}", r, action_kind=k))
 
     return v
 
@@ -184,7 +184,7 @@ def validate_batch(state, actions) -> list[ConstitutionViolation]:
             after = [x.kind for x in actions[i + 1:]]
             v.append(ConstitutionViolation("C007", RULES["C007"],
                      f"EXIT_ALL at index {i} of {len(actions)} is followed by {after}", r,
-                     a.kind))
+                     action_kind=a.kind))
     return v
 
 
