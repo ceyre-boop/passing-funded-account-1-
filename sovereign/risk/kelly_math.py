@@ -25,6 +25,38 @@ import math
 
 # ── Hoeffding Confidence Interval (CS229 Lecture 09) ─────────────────── #
 
+
+class KellyInputError(ValueError):
+    """A sizing input was not a number. Never downgraded to a default.
+
+    Sizing is correctness-critical (CLAUDE.md rule 5: prefer explicit failure
+    over fallback). A NaN here means the edge statistics are corrupt, and a
+    corrupt-stats position is the exact thing Kelly exists to prevent.
+    """
+
+
+def _clamp(value: float, lo: float, hi: float, *, what: str) -> float:
+    """Clamp, refusing NaN.
+
+    THE BUG THIS EXISTS TO KILL, three times over: `max(lo, min(hi, x))` with
+    x=NaN returns HI — the MAXIMUM — because every NaN comparison is False, so
+    `min(hi, nan)` yields hi and `max(lo, hi)` yields hi. A corrupted input
+    therefore asked for the largest allowed value, indistinguishable from the
+    strongest possible evidence.
+
+    It was found and fixed in fractional_kelly, and the same idiom was still
+    live in hoeffding_win_rate (NaN -> 0.95, the max win rate) and in
+    sample_complexity_confidence (NaN -> 1.0, total confidence). Both fed
+    sizing. Fixing one instance of a class is not fixing the class.
+    """
+    if math.isnan(value):
+        raise KellyInputError(
+            f"{what} is NaN — refusing to clamp, because clamping a NaN "
+            f"returns the upper bound ({hi}) and would size at maximum on "
+            f"corrupt input")
+    return float(max(lo, min(hi, value)))
+
+
 def hoeffding_win_rate(
     observed_win_rate: float,
     n_trades: int,
@@ -70,7 +102,7 @@ def hoeffding_win_rate(
     else:
         corrected = observed_win_rate + gamma
 
-    return float(max(0.10, min(0.95, corrected)))
+    return _clamp(corrected, 0.10, 0.95, what="hoeffding win_rate")
 
 
 def sample_complexity_confidence(n_trades: int, n_features: int = 6,
@@ -90,7 +122,7 @@ def sample_complexity_confidence(n_trades: int, n_features: int = 6,
     """
     K = 2 ** n_features  # effective hypothesis class size
     m_needed = math.log(2.0 * K / delta) / (2.0 * gamma ** 2)
-    return float(min(1.0, n_trades / m_needed))
+    return _clamp(n_trades / m_needed, 0.0, 1.0, what="sample_complexity_confidence")
 
 
 # ── Kelly Formula (Lo / AFML) ──────────────────────────────────────────── #
@@ -147,4 +179,4 @@ def fractional_kelly(
         return 0.0
 
     practical = f_star * fraction
-    return float(max(floor, min(ceiling, practical)))
+    return _clamp(practical, floor, ceiling, what="fractional_kelly result")

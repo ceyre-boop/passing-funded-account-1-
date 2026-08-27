@@ -19,6 +19,8 @@ is the fault-injection that must fail if the NaN hazard ever comes back.
 """
 import math
 
+from sovereign.risk import kelly_math as km
+
 import pytest
 
 from sovereign.risk.kelly_math import (
@@ -212,3 +214,60 @@ class TestSampleComplexityConfidence:
         low = sample_complexity_confidence(10)
         high = sample_complexity_confidence(1000)
         assert high >= low
+
+
+# ---------------------------------------------------------------- the class
+
+class TestNoUnguardedClampAnywhere:
+    """The NaN-to-maximum bug was found and fixed in fractional_kelly, and the
+    SAME idiom was still live in two other functions in the same file:
+
+        hoeffding_win_rate(NaN, 200)           -> 0.95   (max win rate)
+        sample_complexity_confidence(NaN)      -> 1.0    (total confidence)
+
+    Both fed sizing. `max(lo, min(hi, x))` with x=NaN returns hi, because every
+    NaN comparison is False. Fixing one instance of a class is not fixing the
+    class — this pins all three, and fails if a fourth clamp is ever added
+    without going through _clamp().
+    """
+
+    def test_hoeffding_refuses_nan_instead_of_returning_max_win_rate(self):
+        with pytest.raises(km.KellyInputError):
+            km.hoeffding_win_rate(float("nan"), 200)
+
+    def test_sample_complexity_refuses_nan_instead_of_total_confidence(self):
+        with pytest.raises(km.KellyInputError):
+            km.sample_complexity_confidence(float("nan"))
+
+    def test_clamp_itself_refuses_nan(self):
+        assert km._clamp(0.5, 0.0, 1.0, what="x") == 0.5
+        with pytest.raises(km.KellyInputError, match="upper bound"):
+            km._clamp(float("nan"), 0.0, 1.0, what="x")
+
+    def test_no_raw_clamp_idiom_survives_in_this_module(self):
+        """Structural guard: a new max(lo, min(hi, x)) added later would
+        reintroduce the bug silently. Every clamp must route through _clamp."""
+        import ast
+        import inspect
+        tree = ast.parse(inspect.getsource(km))
+        offenders = []
+        for fn in tree.body:                       # top-level defs only
+            if not isinstance(fn, ast.FunctionDef):
+                continue
+            if fn.name == "_clamp":                # its body is the one home
+                continue
+            for sub in ast.walk(fn):
+                if not (isinstance(sub, ast.Call)
+                        and getattr(sub.func, "id", None) == "max"):
+                    continue
+                if any(isinstance(a, ast.Call) and getattr(a.func, "id", None) == "min"
+                       for a in sub.args):
+                    offenders.append(fn.name)
+        assert not offenders, (
+            f"raw max(lo, min(hi, x)) reintroduced outside _clamp in: "
+            f"{sorted(set(offenders))} — NaN would return the upper bound")
+
+    def test_clean_inputs_are_completely_unaffected(self):
+        assert km.hoeffding_win_rate(0.55, 200) == pytest.approx(0.4635, abs=1e-3)
+        assert km.sample_complexity_confidence(200) == pytest.approx(0.5097, abs=1e-3)
+        assert km.fractional_kelly(0.55, 1.5, 1.0) == pytest.approx(0.04)
