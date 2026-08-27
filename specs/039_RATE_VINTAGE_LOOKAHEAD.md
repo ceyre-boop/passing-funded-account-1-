@@ -1,4 +1,4 @@
-# 039 — RATE VINTAGE LOOK-AHEAD IN THE SEALED PROOF  `[FINDING]` `[UNQUANTIFIED]`
+# 039 — RATE VINTAGE LOOK-AHEAD IN THE SEALED PROOF  `[FINDING]` `[QUANTIFIED 2026-08-26 — EDGE SURVIVES]`
 
 **Found 2026-08-26 while investigating why AUDUSD/USDJPY carry legs read 81 days
 stale. The staleness was the symptom. This is the disease, and it is upstream of
@@ -101,3 +101,82 @@ Established by direct FRED API query on 2026-08-26 (`frequency_short`,
 `observation_end`, `last_updated`), not from documentation or memory. The
 `rate_weight = 0.50` figure is `SignalConfig`'s default; whether the sealed run
 used the default is **not yet verified** and is step 0 of any quantification.
+
+---
+
+# RESOLVED 2026-08-26 — the edge survives, and the finding was wider than written
+
+Measured with ALFRED realtime vintages (`realtime_start=1776-07-04`), not a lag
+approximation — lags are not constant (JP/AU first-appearance: median 43d, p10
+31d, p90 144d) and only ALFRED handles revisions.
+
+## Two corrections to this document, both WIDENING it
+
+1. **`FEDFUNDS` is monthly too** — 31-day median publication lag. Every sealed
+   pair has a USD leg, so this touched **4 of 4 pairs**, not 2. The claim above
+   that "EUR and GBP legs are clean" is true of the LEGS and false of the PAIRS.
+2. **CPI is contaminated on the same term.** `real_rate_diff =
+   (b_rate − b_cpi) − (q_rate − q_cpi)`, all monthly/quarterly, all read
+   `.asof(nominal)`. Mean |nominal − vintage|: US 0.37pp, EU 0.44pp, UK 0.53pp,
+   AU 0.75pp — larger than the rate errors. With `irp_weight` also using the
+   rates, **100% of the macro score was contaminated, not 50%.**
+
+## The result
+
+| arm | n | avg R | WR | Sharpe |
+|---|---|---|---|---|
+| SEALED 411 (untouched) | 411 | +0.3556 | 48.66% | 1.072 |
+| rig, nominal vintage (look-ahead) | 288 | +0.3226 | 50.00% | 0.913 |
+| **rig, publication vintage (honest)** | 292 | **+0.3049** | 48.97% | **0.874** |
+
+avg R falls 0.018 against a per-arm standard error of ±0.083. The paired test on
+276 matched trades is **positive** (+0.0134, 5–95% [−0.021, +0.058]).
+Direction-permutation null (2000 draws) p(observed) = 0.0000 in both arms.
+
+**Signal level, population-independent — the stronger result:** 480 pair-months,
+**zero sign flips**, 89.6% identical. That is the mechanism and it is hard to
+vary: a rate differential is slow and persistent, so shifting it 30–45 days
+moves which side of the 0.15 threshold a marginal month lands on and **never
+which sign it has.** A 100%-contaminated input costs ~10% of signal months and
+~0% of directional accuracy.
+
+## What this does NOT rescue
+
+- `v015_manifest.json`'s own fresh 2025–26 remeasurement: **Sharpe 0.038, CI
+  [−0.26, 0.34], UNDETERMINED.** Untouched by this.
+- The `PAIR_VIX_GATES` in-sample exposure. Untouched.
+- Measured on 288 trades reproducing 285 of the sealed 411 — if the 126 missing
+  trades are disproportionately macro-driven, this understates the effect. The
+  signal-level table is the hedge against exactly that.
+
+## I56, now enforced
+
+`signal_engine` in a vintage-controlled run EXCLUDES and COUNTS a NaN date;
+never fills from `FALLBACK_*`. 2 dates excluded (EU CPI 2015-01-01, 2015-02-02,
+before ALFRED coverage). Mutation-verified: disabling the guard fails 1 test,
+wiring `publication` at the nominal tree fails 6.
+
+## A SECOND look-ahead this document did not name
+
+`swap_model.ratediff_financing_rate` anchors to `series.dropna().iloc[-1]` — the
+**2026** value — for every 2015 trade. Identical in both arms so it does not
+affect the delta above, but it is a straight look-ahead in the sealed proof's
+cost model and it is still there. **I57**: a cost anchor must be as-of the trade,
+not as-of the series end.
+
+## Live-source ruling (recommendation, not implemented)
+
+**Stay FRED-only.** The honest backtest's information set is a 31–45-day-lagged
+monthly rate; same-day CB targets would give live a set the backtest has never
+been tested against, in the direction with no evidence behind it. The signal is
+threshold-marginal, so fresher inputs move ~10% of months across the line
+unvalidated.
+
+**Do close the cheap gap:** live is ~81 days stale vs the backtest's ~45. That
+difference is `CACHE_DAYS = 30` stacked on the publication lag — a config value,
+not a data-source problem. A daily refresh aligns live to the backtest's own
+information set with no new dependency. Colin's call.
+
+If same-day CB targets are ever wanted the order is: backfill to 2015 → run as a
+THIRD arm against the publication baseline → then decide. Never a live-only
+upgrade.

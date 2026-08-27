@@ -1,0 +1,69 @@
+{
+  "sealed_csv": {
+    "label": "SEALED CSV (411, pinned)",
+    "n": 411,
+    "avg_r": 0.3556,
+    "win_rate": 0.4866,
+    "median_hold_days": 5,
+    "sharpe": 1.072,
+    "worst_r": -3.218,
+    "total_r": 146.13,
+    "control": {
+      "avg_r": -0.0,
+      "win_rate": 0.4112,
+      "sharpe": -0.0,
+      "total_r": -0.0
+    }
+  },
+  "nominal": {
+    "label": "RIG nominal",
+    "n": 288,
+    "avg_r": 0.3226,
+    "win_rate": 0.5,
+    "median_hold_days": 5.0,
+    "sharpe": 0.9126,
+    "worst_r": -2.323,
+    "total_r": 92.92,
+    "control": {
+      "avg_r": -0.0,
+      "win_rate": 0.4062,
+      "sharpe": -0.0,
+      "total_r": -0.0
+    },
+    "vintage_exclusions": 0,
+    "vintage_exclusion_sample": []
+  },
+  "publication": {
+    "label": "RIG publication",
+    "n": 292,
+    "avg_r": 0.3049,
+    "win_rate": 0.4897,
+    "median_hold_days": 5.0,
+    "sharpe": 0.874,
+    "worst_r": -2.323,
+    "total_r": 89.02,
+    "control": {
+      "avg_r": -0.0,
+      "win_rate": 0.387,
+      "sharpe": 0.0,
+      "total_r": -0.0
+    },
+    "vintage_exclusions": 2,
+    "vintage_exclusion_sample": [
+      {
+        "date": "2015-01-01",
+        "pair_leg": "EU/US",
+        "missing": [
+          "EU_cpi"
+        ]
+      },
+      {
+        "date": "2015-02-02",
+        "pair_leg": "EU/US",
+        "missing": [
+          "EU_cpi"
+        ]
+      }
+    ]
+  }
+}

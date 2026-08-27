@@ -19,6 +19,8 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
+from sovereign.forex import rate_vintage
+
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -162,6 +164,12 @@ class ForexDataFetcher:
         Returns historical rate series for backtesting.
         Cached as parquet.
         """
+        if not rate_vintage.is_sealed():
+            path = rate_vintage.require_cache(
+                rate_vintage.macro_cache_dir() / f'{country}_rates.parquet'
+            )
+            return pd.read_parquet(path).squeeze()
+
         cache_path = CACHE_DIR / f'{country}_rates.parquet'
         if cache_path.exists():
             age = (datetime.now() - datetime.fromtimestamp(
@@ -178,6 +186,18 @@ class ForexDataFetcher:
     def get_cpi_history(
         self, country: str, start: str = '2015-01-01'
     ) -> pd.Series:
+        if not rate_vintage.is_sealed():
+            if not FRED_CPI.get(country):
+                # No FRED CPI series configured (JP). The engine's documented
+                # behaviour is FALLBACK_CPI; an empty series routes there. The
+                # sealed tree's JP_cpi.parquet is a flat 3.2 line — the same
+                # constant, laundered through a parquet.
+                return pd.Series(dtype=float)
+            path = rate_vintage.require_cache(
+                rate_vintage.macro_cache_dir() / f'{country}_cpi.parquet'
+            )
+            return pd.read_parquet(path).squeeze()
+
         cache_path = CACHE_DIR / f'{country}_cpi.parquet'
         if cache_path.exists():
             age = (datetime.now() - datetime.fromtimestamp(

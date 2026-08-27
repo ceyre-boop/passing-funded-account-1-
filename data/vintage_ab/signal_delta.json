@@ -1,0 +1,55 @@
+{
+  "per_pair": {
+    "EURUSD=X": {
+      "dates": 120,
+      "identical": 110,
+      "sign_flip": 0,
+      "lost": 7,
+      "gained": 3,
+      "nominal_nonzero": 25,
+      "publication_nonzero": 21,
+      "agreement_pct": 91.7
+    },
+    "GBPUSD=X": {
+      "dates": 120,
+      "identical": 107,
+      "sign_flip": 0,
+      "lost": 8,
+      "gained": 5,
+      "nominal_nonzero": 19,
+      "publication_nonzero": 16,
+      "agreement_pct": 89.2
+    },
+    "USDJPY=X": {
+      "dates": 120,
+      "identical": 111,
+      "sign_flip": 0,
+      "lost": 3,
+      "gained": 6,
+      "nominal_nonzero": 59,
+      "publication_nonzero": 62,
+      "agreement_pct": 92.5
+    },
+    "AUDUSD=X": {
+      "dates": 120,
+      "identical": 102,
+      "sign_flip": 0,
+      "lost": 9,
+      "gained": 9,
+      "nominal_nonzero": 24,
+      "publication_nonzero": 24,
+      "agreement_pct": 85.0
+    }
+  },
+  "publication_exclusions": 2,
+  "total": {
+    "dates": 480,
+    "same": 430,
+    "flip": 0,
+    "lost": 27,
+    "gained": 23,
+    "nom_nonzero": 127,
+    "pub_nonzero": 123,
+    "agreement_pct": 89.6
+  }
+}

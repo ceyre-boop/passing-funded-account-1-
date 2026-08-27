@@ -304,6 +304,21 @@ ORPHANS:
     tracked as a Python module) — has `if __name__ == "__main__":` and is invoked directly (`python3 scripts/paper_carry_daily.py`),
     matching this repo's script convention (daytrade/operator_tick.sh calls its siblings the same way);
     not designed to be imported as a library module
+- module: scripts.build_rate_vintages
+  reason: spec 039 standalone CLI — `python3 scripts/build_rate_vintages.py` rebuilds the nominal/publication
+    macro caches from FRED+ALFRED; run by hand (needs FRED_API_KEY, hits the network), never imported
+    as a library. sovereign/forex/test_rate_vintage.py imports its DAILY_SERIES_LAG_DAYS constant to pin
+    the measured lags.
+- module: scripts.run_vintage_ab
+  reason: spec 039 standalone CLI — `python3 scripts/run_vintage_ab.py` runs the offline rig once per
+    input vintage and writes data/vintage_ab/*_trades.csv; a measurement harness, deliberately not on
+    any production path
+- module: scripts.vintage_ab_stats
+  reason: spec 039 standalone CLI — reads data/vintage_ab/*_trades.csv and prints the before/after table
+    with its controls; a reporting tool, deliberately not on any production path
+- module: scripts.vintage_signal_delta
+  reason: spec 039 standalone CLI — compares the macro layer's monthly sign under both vintages; a measurement
+    harness, deliberately not on any production path
 IMPORTED_NOT_CALLED:
 - module: daytrade.alpha_operator
   target: daytrade.scenarios
@@ -405,6 +420,14 @@ IMPORTED_NOT_CALLED:
 - module: scripts.oos_2025_2026_runner
   target: sovereign.forex.pair_universe
   reason: PAIR_CONFIG is a data constant (dict), subscripted, never called
+- module: scripts.run_vintage_ab
+  reason: imports sovereign.forex.signal_engine to read its module-level _LAST_RUN_EXCLUSIONS accumulator
+    (the per-run record of dates refused for lack of a published vintage). A module-level list read, not
+    a function call — there is no symbol to call.
+- module: scripts.vintage_signal_delta
+  reason: 'imports scripts.oos_campaign_test purely for its import side effect: that module monkeypatches
+    yfinance.download onto the offline spot cache. Calling anything in it would run the full rig, which
+    is exactly what this script avoids.'
 NO_SUPPLIER:
 - field: ExecEvent.intent
   reason: BLOCKED ON D1, the missing order path. There are ZERO production constructors of ExecEvent anywhere
@@ -517,3 +540,13 @@ DEAD_ARTIFACT:
 - module: data/agent/prop_challenge_state.json
   reason: 'CLAUDE.md ''Daily operation'' section, verbatim: ''(data/agent/prop_challenge_state.json and
     sovereign/propfirm/deployment_checklist.py are ICT-lane legacy — never read.)'''
+- module: data/vintage_ab/summary.json
+  reason: spec 039 measurement output — read by a human and by scripts/vintage_ab_stats.py's sibling CSVs;
+    it is evidence for a ruling, not an input to any production path, and nothing should start reading
+    it automatically
+- module: data/vintage_ab/stats.json
+  reason: spec 039 measurement output — the before/after table with controls, quoted in the finding write-up;
+    evidence, not a production input
+- module: data/vintage_ab/signal_delta.json
+  reason: spec 039 measurement output — the macro-signal agreement table between the two vintages; evidence,
+    not a production input

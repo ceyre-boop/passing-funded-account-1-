@@ -21,12 +21,20 @@ from sovereign.forex.data_fetcher import FALLBACK_CPI, FALLBACK_RATES, ForexData
 from sovereign.forex.calendar_signals import CalendarSignalEngine
 from sovereign.forex.cpi_engine import CPISurpriseEngine
 from sovereign.forex.entry_engine import CBEventTrigger
+from sovereign.forex import rate_vintage
 
 HOLD_DAYS = 60
 SIGNAL_THRESHOLD = 0.15
 CB_SURPRISE_THRESHOLD = 20
 DONCHIAN_FAST_ENTRY_DAYS = 20
 DONCHIAN_SLOW_ENTRY_DAYS = 55
+
+# spec 039: process-wide record of macro dates the engine refused to score
+# because their rate/CPI vintage had not been published yet. Module level so a
+# multi-pair run can be audited as a whole; a run that reports zero exclusions
+# in publication mode has either full coverage or a broken guard, and the tests
+# tell those two apart.
+_LAST_RUN_EXCLUSIONS: list = []
 
 
 @dataclass(frozen=True)
@@ -54,6 +62,9 @@ class ForexSignalEngine:
         self._calendar = CalendarSignalEngine()
         self._cpi = CPISurpriseEngine(fetcher=fetcher)
         self.config = config or SignalConfig()
+        # spec 039: dates the macro layer refused to score because the vintage
+        # data for them had not been published yet. Never silently filled.
+        self.vintage_exclusions: list[dict] = []
 
     def build_signal_frame(
         self,
@@ -523,6 +534,26 @@ class ForexSignalEngine:
         q_rate = float(quote_rates.asof(date)) if len(quote_rates) and date >= quote_rates.index[0] else FALLBACK_RATES.get(quote_country, 2.0)
         b_cpi = float(base_cpi_h.asof(date)) if len(base_cpi_h) and date >= base_cpi_h.index[0] else FALLBACK_CPI.get(base_country, 2.0)
         q_cpi = float(quote_cpi_h.asof(date)) if len(quote_cpi_h) and date >= quote_cpi_h.index[0] else FALLBACK_CPI.get(quote_country, 2.0)
+
+        # ── spec 039 / I56: a value that was not knowable is not a number ──
+        # In a vintage-controlled run the series carry NaN wherever nothing had
+        # been published yet. That date is EXCLUDED and counted. It is never
+        # filled from FALLBACK_*, because a static constant standing in for an
+        # unpublished rate is exactly the silent-number failure this repo bans.
+        if not rate_vintage.is_sealed():
+            missing = [
+                name for name, val in (
+                    (f'{base_country}_rate', b_rate), (f'{quote_country}_rate', q_rate),
+                    (f'{base_country}_cpi', b_cpi), (f'{quote_country}_cpi', q_cpi),
+                )
+                if val != val  # NaN
+            ]
+            if missing:
+                record = {'date': str(date)[:10], 'pair_leg': f'{base_country}/{quote_country}',
+                          'missing': missing}
+                self.vintage_exclusions.append(record)
+                _LAST_RUN_EXCLUSIONS.append(record)
+                return 0
 
         real_rate_diff = (b_rate - b_cpi) - (q_rate - q_cpi)
         irp_fv = spot * (1 + q_rate / 100) / (1 + b_rate / 100)

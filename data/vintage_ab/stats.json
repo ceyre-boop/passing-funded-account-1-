@@ -1,0 +1,117 @@
+{
+  "sealed_411": {
+    "label": "SEALED 411 (pinned, untouched)",
+    "n": 411,
+    "avg_r": 0.3556,
+    "win_rate": 0.4866,
+    "median_hold_days": 5.0,
+    "sharpe": 1.072,
+    "total_r": 146.13,
+    "se_avg_r": 0.0836,
+    "control_mean_centered": {
+      "avg_r": -0.0,
+      "win_rate": 0.4112,
+      "sharpe": -0.0
+    },
+    "control_direction_permutation": {
+      "avg_r_5_95": [
+        -0.1438,
+        0.1388
+      ],
+      "sharpe_5_95": [
+        -0.5415,
+        0.5191
+      ],
+      "p_avg_r_ge_observed": 0.0
+    }
+  },
+  "rig_sealed": {
+    "label": "RIG sealed",
+    "n": 296,
+    "avg_r": 0.3219,
+    "win_rate": 0.5,
+    "median_hold_days": 5.0,
+    "sharpe": 0.9074,
+    "total_r": 95.29,
+    "se_avg_r": 0.0867,
+    "control_mean_centered": {
+      "avg_r": -0.0,
+      "win_rate": 0.3986,
+      "sharpe": -0.0
+    },
+    "control_direction_permutation": {
+      "avg_r_5_95": [
+        -0.1425,
+        0.1454
+      ],
+      "sharpe_5_95": [
+        -0.5081,
+        0.5252
+      ],
+      "p_avg_r_ge_observed": 0.0
+    }
+  },
+  "rig_nominal": {
+    "label": "RIG nominal",
+    "n": 288,
+    "avg_r": 0.3226,
+    "win_rate": 0.5,
+    "median_hold_days": 5.0,
+    "sharpe": 0.9126,
+    "total_r": 92.92,
+    "se_avg_r": 0.0832,
+    "control_mean_centered": {
+      "avg_r": 0.0,
+      "win_rate": 0.4062,
+      "sharpe": 0.0
+    },
+    "control_direction_permutation": {
+      "avg_r_5_95": [
+        -0.1365,
+        0.1356
+      ],
+      "sharpe_5_95": [
+        -0.4975,
+        0.501
+      ],
+      "p_avg_r_ge_observed": 0.0
+    }
+  },
+  "rig_publication": {
+    "label": "RIG publication",
+    "n": 292,
+    "avg_r": 0.3049,
+    "win_rate": 0.4897,
+    "median_hold_days": 5.0,
+    "sharpe": 0.874,
+    "total_r": 89.02,
+    "se_avg_r": 0.0835,
+    "control_mean_centered": {
+      "avg_r": 0.0,
+      "win_rate": 0.387,
+      "sharpe": 0.0
+    },
+    "control_direction_permutation": {
+      "avg_r_5_95": [
+        -0.1359,
+        0.1388
+      ],
+      "sharpe_5_95": [
+        -0.5202,
+        0.5249
+      ],
+      "p_avg_r_ge_observed": 0.0
+    }
+  },
+  "paired_nominal_vs_publication": {
+    "n_matched": 276,
+    "n_nominal_only": 12,
+    "n_publication_only": 16,
+    "mean_delta_r_pub_minus_nom": 0.0134,
+    "delta_r_5_95": [
+      -0.0209,
+      0.0584
+    ],
+    "n_trades_with_nonzero_delta": 13
+  }
+}
