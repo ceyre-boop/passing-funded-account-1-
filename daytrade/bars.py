@@ -28,7 +28,27 @@ from datetime import date
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from daytrade import datasource
+# bars is imported BOTH ways and must work BOTH ways:
+#   * live  — operator_tick.sh does `cd daytrade && python3 write_baseline_plan.py`,
+#             so there is no `daytrade` package on sys.path. A bare
+#             `from daytrade import datasource` is a ModuleNotFoundError on
+#             every tick (introduced d3088c6, caught before it reached a live
+#             tick; daytrade/test_live_invocation.py now runs the real
+#             invocation in a subprocess so it cannot recur).
+#   * tests — import the package, `from daytrade import bars`.
+#
+# Prefer the package form so that in a package context there is exactly ONE
+# datasource module object. A bare `import datasource` in both contexts would
+# create `datasource` AND `daytrade.datasource` as separate modules with
+# separate DataSourceError classes, and `fetch`'s except clause would then
+# silently fail to catch the error the caller actually raised. This is not a
+# fallback that hides a failure — if BOTH imports fail, the ImportError
+# propagates.
+try:                                                       # noqa: E402
+    from daytrade import datasource
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import datasource                                      # noqa: E402
 
 ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
