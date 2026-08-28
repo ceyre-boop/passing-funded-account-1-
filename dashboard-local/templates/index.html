@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>passing-funded-account-1- :: local monitor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg: #0a0d0a;
+    --panel: #11150f;
+    --border: #1f271a;
+    --text: #c9d1c0;
+    --muted: #5c6656;
+    --green: #4fd67a;
+    --red: #e05c5c;
+    --amber: #d6b24f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-size: 13px;
+    margin: 0;
+    padding: 16px 20px 40px;
+  }
+  h1 {
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 18px;
+  }
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 12px;
+  }
+  .stat-label {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .stat-sub {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 4px;
+  }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .muted { color: var(--muted); }
+  .amber { color: var(--amber); }
+
+  section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+  }
+  section h2 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin: 0 0 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th, td {
+    text-align: left;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th {
+    color: var(--muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+  tr:hover td { background: #151b10; }
+  .badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-backtest { background: #1c2a1c; color: #7fd07f; border: 1px solid #2a3d2a; }
+  .badge-paper { background: #2a2416; color: var(--amber); border: 1px solid #3d341f; }
+  .badge-replay { background: #2a1620; color: #e07fce; border: 1px solid #3d1f34; }
+  .empty-state {
+    color: var(--muted);
+    padding: 18px 4px;
+    font-size: 12px;
+  }
+  #equityChart { max-height: 320px; }
+  #replayEquityChart { max-height: 260px; }
+  .footer-note {
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 20px;
+    line-height: 1.6;
+  }
+  .stale-tag {
+    color: var(--amber);
+    font-size: 10px;
+  }
+  .replay-banner {
+    background: #241a1e;
+    border: 1px solid #4a2530;
+    color: #e0a8bf;
+    border-radius: 3px;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .replay-progress {
+    display: inline-block;
+    margin-left: 10px;
+    color: #e07fce;
+    font-size: 10px;
+  }
+  .badge-tsmom { background: #16242a; color: #7fc4e0; border: 1px solid #1f343d; }
+  .tsmom-banner {
+    background: #1a2024;
+    border: 1px solid #253038;
+    color: #9fb8c4;
+    border-radius: 3px;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .universe-toggle {
+    margin-bottom: 12px;
+  }
+  .universe-toggle button {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 5px 12px;
+    font-family: inherit;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .universe-toggle button.active {
+    background: #16242a;
+    color: #7fc4e0;
+    border-color: #1f343d;
+  }
+  .badge-control-clears { background: #1c2a1c; color: #7fd07f; border: 1px solid #2a3d2a; }
+  .badge-control-fails { background: #2a1a1a; color: var(--red); border: 1px solid #3d2020; }
+  .stat-tile-control {
+    margin-top: 4px;
+    font-size: 10px;
+  }
+  #tsmomEquityChart { max-height: 280px; }
+</style>
+</head>
+<body>
+
+<h1>passing-funded-account-1- :: local monitor</h1>
+<div class="subtitle" id="lastUpdated">loading…</div>
+
+<div class="stats-row" id="statsRow"></div>
+
+<section>
+  <h2>Open Paper Positions</h2>
+  <div id="openPositionsWrap"></div>
+</section>
+
+<section>
+  <h2>Equity Curve (backtest + paper, compounded)</h2>
+  <canvas id="equityChart"></canvas>
+</section>
+
+<section>
+  <h2>Replay Lane (out-of-sample, CB-surprise layer disabled) <span class="replay-progress" id="replayProgress"></span></h2>
+  <div class="replay-banner" id="replayBanner"></div>
+  <div class="stats-row" id="replayStatsRow"></div>
+  <canvas id="replayEquityChart"></canvas>
+</section>
+
+<section>
+  <h2>TSMOM (Time-Series Momentum)</h2>
+  <div class="tsmom-banner" id="tsmomBanner"></div>
+  <div class="universe-toggle" id="tsmomUniverseToggle">
+    <button id="tsmomBtnPrimary" class="active" onclick="setTsmomUniverse('primary')">Primary (4 FX)</button>
+    <button id="tsmomBtnSecondary" onclick="setTsmomUniverse('secondary')">Secondary (11 instruments)</button>
+  </div>
+  <div class="stats-row" id="tsmomStatsRow"></div>
+  <canvas id="tsmomEquityChart"></canvas>
+  <h2 style="margin-top:16px;">TSMOM Open Paper Positions</h2>
+  <div id="tsmomOpenPositionsWrap"></div>
+  <h2 style="margin-top:16px;">TSMOM Backtest — Last 20 Trades (<span id="tsmomBacktestUniverseLabel">primary</span>)</h2>
+  <div id="tsmomLast20BacktestWrap"></div>
+</section>
+
+<section>
+  <h2>Last 20 Closed Trades</h2>
+  <div id="last20Wrap"></div>
+</section>
+
+<div class="footer-note" id="dataSourcesNote"></div>
+
+<script>
+let equityChart = null;
+
+function fmtNum(v, digits) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  return Number(v).toFixed(digits === undefined ? 2 : digits);
+}
+
+function fmtPct(v, digits) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  return Number(v).toFixed(digits === undefined ? 2 : digits) + "%";
+}
+
+function fmtFracAsPct(v, digits) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  return (Number(v) * 100).toFixed(digits === undefined ? 3 : digits) + "%";
+}
+
+function signClass(v) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "muted";
+  return v > 0 ? "pos" : v < 0 ? "neg" : "muted";
+}
+
+function renderStats(hs) {
+  const cards = [
+    {
+      label: "Current Drawdown",
+      value: fmtPct(hs.current_drawdown_pct),
+      cls: hs.current_drawdown_pct ? "neg" : "muted",
+      sub: null,
+    },
+    {
+      label: "Rolling Sharpe",
+      value: hs.rolling_sharpe === null ? "—" : fmtNum(hs.rolling_sharpe),
+      cls: signClass(hs.rolling_sharpe),
+      sub: hs.rolling_sharpe_meta ? hs.rolling_sharpe_meta.annualization_note : null,
+    },
+    {
+      label: "Win Rate",
+      value: fmtPct(hs.win_rate_pct, 1),
+      cls: "muted",
+      sub: null,
+    },
+    {
+      label: "Total Closed Trades",
+      value: hs.total_trades ?? "—",
+      cls: "muted",
+      sub: `${hs.backtest_trade_count ?? 0} backtest + ${hs.paper_closed_trade_count ?? 0} paper`,
+    },
+  ];
+  const row = document.getElementById("statsRow");
+  row.innerHTML = cards.map(c => `
+    <div class="stat-card">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value ${c.cls}">${c.value}</div>
+      ${c.sub ? `<div class="stat-sub">${c.sub}</div>` : ""}
+    </div>
+  `).join("");
+}
+
+function renderOpenPositions(positions, ledgerInfo) {
+  const wrap = document.getElementById("openPositionsWrap");
+  if (!positions || positions.length === 0) {
+    wrap.innerHTML = `<div class="empty-state">No open paper positions — data/trade_logs/paper_carry_trades.jsonl is empty (0 rows).</div>`;
+    return;
+  }
+  const rows = positions.map(p => `
+    <tr>
+      <td>${p.pair}</td>
+      <td>${p.direction ?? "—"}</td>
+      <td>${fmtNum(p.entry, 5)}</td>
+      <td>${p.qty ?? "—"}</td>
+      <td class="${signClass(p.unrealized_pnl_frac)}">${fmtFracAsPct(p.unrealized_pnl_frac)}</td>
+      <td class="${signClass(p.unrealized_r)}">${p.unrealized_r === null ? "—" : fmtNum(p.unrealized_r) + "R"}</td>
+      <td>${p.days_held ?? "—"}</td>
+      <td class="neg">${p.swap_accrued_r === null ? "—" : fmtNum(p.swap_accrued_r, 4) + "R"}</td>
+      <td class="stale-tag">${p.price_as_of ? p.price_as_of + (p.price_age_days !== null ? ` (${p.price_age_days}d old)` : "") : "no price"}</td>
+    </tr>
+  `).join("");
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Pair</th><th>Dir</th><th>Entry</th><th>Qty</th>
+        <th>Unrealized P/L</th><th>Unrealized R</th><th>Days Held</th>
+        <th>Swap Accrued</th><th>Price As-Of</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function fmtStaleness(key, days) {
+  if (key === null || key === undefined || days === null || days === undefined) return "—";
+  return `${key} ${days > 0 ? "+" : ""}${days}d`;
+}
+
+function renderLast20(trades) {
+  const wrap = document.getElementById("last20Wrap");
+  if (!trades || trades.length === 0) {
+    wrap.innerHTML = `<div class="empty-state">No closed trades found.</div>`;
+    return;
+  }
+  const rows = trades.map(t => `
+    <tr>
+      <td>${t.pair}</td>
+      <td>${t.direction ?? "—"}</td>
+      <td>${fmtNum(t.entry, 5)}</td>
+      <td>${fmtNum(t.exit, 5)}</td>
+      <td>${t.entry_date ?? "—"}</td>
+      <td>${t.exit_date ?? "—"}</td>
+      <td class="${signClass(t.r_multiple)}">${t.r_multiple === null ? "—" : fmtNum(t.r_multiple, 3) + "R"}</td>
+      <td>${t.hold_days ?? "—"}</td>
+      <td>${t.exit_reason ?? "—"}</td>
+      <td class="stale-tag">${t.source === "replay" ? fmtStaleness(t.most_stale_key, t.most_stale_days) : "—"}</td>
+      <td><span class="badge badge-${t.source}">${t.source}</span></td>
+    </tr>
+  `).join("");
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Pair</th><th>Dir</th><th>Entry</th><th>Exit</th>
+        <th>Entry Date</th><th>Exit Date</th><th>R</th><th>Hold(d)</th>
+        <th>Exit Reason</th><th>Rate Staleness</th><th>Source</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderReplayBanner(banner, ledger) {
+  const el = document.getElementById("replayBanner");
+  if (!banner) {
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML = `⚠ ${banner.note}`;
+}
+
+function renderReplayStats(rhs, ledger) {
+  const row = document.getElementById("replayStatsRow");
+  if (!ledger || !ledger.exists || ledger.is_empty || !rhs || rhs.replay_trade_count === 0) {
+    row.innerHTML = `<div class="empty-state">No replay trades found — ${ledger ? ledger.path : "data/trade_logs/carry_replay_2024-12-03_2026-08-26.jsonl"} is missing or empty.</div>`;
+    return;
+  }
+  const cards = [
+    { label: "Replay Trades", value: rhs.replay_trade_count ?? "—", cls: "muted" },
+    { label: "Replay Win Rate", value: fmtPct(rhs.replay_win_rate_pct, 1), cls: "muted" },
+    { label: "Replay Mean R", value: rhs.replay_mean_r === null ? "—" : fmtNum(rhs.replay_mean_r, 3) + "R", cls: signClass(rhs.replay_mean_r) },
+    { label: "Replay Total R", value: rhs.replay_total_r === null ? "—" : fmtNum(rhs.replay_total_r, 2) + "R", cls: signClass(rhs.replay_total_r) },
+    { label: "Replay Max DD", value: rhs.replay_max_drawdown_r === null ? "—" : fmtNum(rhs.replay_max_drawdown_r, 2) + "R", cls: "neg" },
+  ];
+  row.innerHTML = cards.map(c => `
+    <div class="stat-card">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value ${c.cls}">${c.value}</div>
+    </div>
+  `).join("");
+}
+
+let lastReplayRowCount = null;
+function renderReplayProgress(ds) {
+  const el = document.getElementById("replayProgress");
+  if (!ds || !ds.replay_jsonl) {
+    el.textContent = "";
+    return;
+  }
+  const n = ds.replay_jsonl.row_count;
+  if (lastReplayRowCount !== null && n > lastReplayRowCount) {
+    el.textContent = `— replay in progress — ${n} trades`;
+  } else if (lastReplayRowCount === null) {
+    el.textContent = `— ${n} trades so far`;
+  } else {
+    el.textContent = `— ${n} trades`;
+  }
+  lastReplayRowCount = n;
+}
+
+let replayEquityChart = null;
+function renderReplayEquityCurve(points) {
+  const canvas = document.getElementById("replayEquityChart");
+  if (!points || points.length === 0) {
+    if (replayEquityChart) { replayEquityChart.destroy(); replayEquityChart = null; }
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+  const labels = points.map(p => p.exit_date);
+  const data = points.map(p => p.equity);
+
+  const datasets = [
+    {
+      label: "Replay equity (OOS, CB-surprise disabled)",
+      data,
+      borderColor: "#e07fce",
+      backgroundColor: "transparent",
+      pointRadius: 0,
+      borderWidth: 1.5,
+      borderDash: [2, 3],
+      spanGaps: true,
+    },
+  ];
+
+  if (replayEquityChart) replayEquityChart.destroy();
+  replayEquityChart = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      animation: false,
+      scales: {
+        x: {
+          ticks: { color: "#5c6656", maxTicksLimit: 12, font: { size: 9 } },
+          grid: { color: "#1f271a" },
+        },
+        y: {
+          ticks: { color: "#5c6656", font: { size: 9 } },
+          grid: { color: "#1f271a" },
+        },
+      },
+      plugins: {
+        legend: { labels: { color: "#c9d1c0", font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+function renderEquityCurve(points) {
+  const ctx = document.getElementById("equityChart").getContext("2d");
+  const backtestPoints = points.filter(p => p.source === "backtest");
+  const paperPoints = points.filter(p => p.source === "paper");
+
+  const labels = points.map(p => p.exit_date);
+
+  const backtestData = points.map(p => p.source === "backtest" ? p.equity : null);
+  // Bridge the paper series from the last backtest equity value so the line connects.
+  let bridgeValue = backtestPoints.length ? backtestPoints[backtestPoints.length - 1].equity : 1.0;
+  const paperData = points.map((p, i) => {
+    if (p.source === "paper") return p.equity;
+    if (i === points.length - backtestData.filter(v => v === null).length - 1) return bridgeValue;
+    return null;
+  });
+
+  const datasets = [
+    {
+      label: "Backtest equity",
+      data: backtestData,
+      borderColor: "#4fd67a",
+      backgroundColor: "transparent",
+      pointRadius: 0,
+      borderWidth: 1.5,
+      spanGaps: true,
+    },
+  ];
+  if (paperPoints.length > 0) {
+    datasets.push({
+      label: "Paper (live) equity",
+      data: paperData,
+      borderColor: "#d6b24f",
+      backgroundColor: "transparent",
+      pointRadius: 0,
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      spanGaps: true,
+    });
+  }
+
+  if (equityChart) equityChart.destroy();
+  equityChart = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      animation: false,
+      scales: {
+        x: {
+          ticks: { color: "#5c6656", maxTicksLimit: 12, font: { size: 9 } },
+          grid: { color: "#1f271a" },
+        },
+        y: {
+          ticks: { color: "#5c6656", font: { size: 9 } },
+          grid: { color: "#1f271a" },
+        },
+      },
+      plugins: {
+        legend: { labels: { color: "#c9d1c0", font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+function renderDataSourcesNote(state) {
+  const ds = state.data_sources;
+  const ledger = state.paper_ledger;
+  const replay = ds.replay_jsonl;
+  const note = document.getElementById("dataSourcesNote");
+  note.innerHTML = `
+    backtest csv: ${ds.backtest_csv.row_count} rows &middot;
+    paper jsonl: ${ledger.open_count} open / ${ledger.closed_count} closed
+    ${ledger.parse_errors > 0 ? `(<span class="neg">${ledger.parse_errors} parse errors</span>)` : ""}
+    ${ledger.is_empty ? "&mdash; ledger currently empty" : ""} &middot;
+    replay jsonl: ${replay ? `${replay.open_count} open / ${replay.closed_count} closed` : "n/a"}
+    ${replay && replay.parse_errors > 0 ? `(<span class="neg">${replay.parse_errors} parse errors</span>)` : ""}
+    ${replay && replay.is_empty ? "&mdash; replay ledger currently empty" : ""} &middot;
+    fx_state pairs priced: ${ds.fx_state_jsonl.pairs.join(", ") || "none"} &middot;
+    swap fallback source: ${ds.swap_fallback.source} &middot;
+    tsmom paper jsonl: ${ds.tsmom.paper_jsonl.open_count} open / ${ds.tsmom.paper_jsonl.closed_count} closed
+    ${ds.tsmom.paper_jsonl.parse_errors > 0 ? `(<span class="neg">${ds.tsmom.paper_jsonl.parse_errors} parse errors</span>)` : ""}
+    ${ds.tsmom.paper_jsonl.is_empty ? "&mdash; ledger currently empty" : ""}
+  `;
+}
+
+let tsmomUniverse = "primary";
+let tsmomEquityChart = null;
+let lastTsmomState = null;
+
+function setTsmomUniverse(universe) {
+  tsmomUniverse = universe;
+  document.getElementById("tsmomBtnPrimary").classList.toggle("active", universe === "primary");
+  document.getElementById("tsmomBtnSecondary").classList.toggle("active", universe === "secondary");
+  if (lastTsmomState) renderTsmom(lastTsmomState);
+}
+
+function renderTsmomBanner(banner) {
+  document.getElementById("tsmomBanner").innerHTML = banner ? banner : "";
+}
+
+function renderTsmomStats(u) {
+  const row = document.getElementById("tsmomStatsRow");
+  if (!u || !u.windows) {
+    row.innerHTML = `<div class="empty-state">No TSMOM summary data found for this universe.</div>`;
+    return;
+  }
+  const windowOrder = ["Full window", "Sub-window A", "Sub-window B", "Sub-window C"];
+  const placebo = u.placebo || {};
+  const clears = u.clears_zero_edge_control;
+  const controlLabel = (placebo.real_percentile !== undefined && placebo.real_percentile !== null)
+    ? `placebo pctile ${fmtNum(placebo.real_percentile, 1)} / ${placebo.n ?? "?"} runs`
+    : "placebo data unavailable";
+  const controlBadgeCls = clears ? "badge-control-clears" : "badge-control-fails";
+  const controlBadgeText = clears ? "clears control" : "NOT DISTINGUISHABLE FROM ZERO-EDGE";
+
+  const cards = windowOrder.filter(w => u.windows[w]).map(w => {
+    const win = u.windows[w];
+    const isFull = w === "Full window";
+    return {
+      label: w,
+      value: win.sharpe === null || win.sharpe === undefined ? "—" : fmtNum(win.sharpe, 3),
+      cls: signClass(win.sharpe),
+      sub: `${win.trades} trades &middot; win ${fmtPct(win.win_rate * 100, 1)} &middot; meanR ${fmtNum(win.mean_R, 3)} &middot; totRet ${fmtFracAsPct(win.total_return)} &middot; maxDD ${fmtFracAsPct(win.max_drawdown)} &middot; longest DD ${win.longest_drawdown_days}d`,
+      control: isFull ? { text: controlLabel, badgeCls: controlBadgeCls, badgeText: controlBadgeText } : null,
+    };
+  });
+
+  row.innerHTML = cards.map(c => `
+    <div class="stat-card">
+      <div class="stat-label">${c.label} Sharpe</div>
+      <div class="stat-value ${c.cls}">${c.value}</div>
+      <div class="stat-sub">${c.sub}</div>
+      ${c.control ? `
+        <div class="stat-tile-control">
+          <span class="muted">${c.control.text}</span>
+          <span class="badge ${c.control.badgeCls}">${c.control.badgeText}</span>
+        </div>
+      ` : ""}
+    </div>
+  `).join("");
+}
+
+function renderTsmomEquityCurve(points) {
+  const canvas = document.getElementById("tsmomEquityChart");
+  if (!points || points.length === 0) {
+    if (tsmomEquityChart) { tsmomEquityChart.destroy(); tsmomEquityChart = null; }
+    return;
+  }
+  const ctx = canvas.getContext("2d");
+  const labels = points.map(p => p.date);
+  const data = points.map(p => p.equity);
+
+  const datasets = [
+    {
+      label: `TSMOM equity (${tsmomUniverse})`,
+      data,
+      borderColor: "#7fc4e0",
+      backgroundColor: "transparent",
+      pointRadius: 0,
+      borderWidth: 1.5,
+      spanGaps: true,
+    },
+  ];
+
+  if (tsmomEquityChart) tsmomEquityChart.destroy();
+  tsmomEquityChart = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      animation: false,
+      scales: {
+        x: {
+          ticks: { color: "#5c6656", maxTicksLimit: 12, font: { size: 9 } },
+          grid: { color: "#1f271a" },
+        },
+        y: {
+          ticks: { color: "#5c6656", font: { size: 9 } },
+          grid: { color: "#1f271a" },
+        },
+      },
+      plugins: {
+        legend: { labels: { color: "#c9d1c0", font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+function renderTsmomOpenPositions(positions, ledger) {
+  const wrap = document.getElementById("tsmomOpenPositionsWrap");
+  if (!positions || positions.length === 0) {
+    const path = ledger ? ledger.path : "data/trade_logs/paper_tsmom_trades.jsonl";
+    wrap.innerHTML = `<div class="empty-state">No open TSMOM paper positions — ${path} is missing or empty.</div>`;
+    return;
+  }
+  const rows = positions.map(p => `
+    <tr>
+      <td>${p.pair}</td>
+      <td>${p.direction ?? "—"}</td>
+      <td>${fmtNum(p.entry, 5)}</td>
+      <td>${p.notional_frac === null || p.notional_frac === undefined ? "—" : fmtFracAsPct(p.notional_frac)}</td>
+      <td>${p.realized_vol === null || p.realized_vol === undefined ? "—" : fmtFracAsPct(p.realized_vol)}</td>
+      <td class="muted">${p.stop === null || p.stop === undefined ? "— (no stop)" : fmtNum(p.stop, 5)}</td>
+      <td>${p.entry_date ?? "—"}</td>
+      <td><span class="badge badge-tsmom">tsmom</span></td>
+    </tr>
+  `).join("");
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Pair</th><th>Dir</th><th>Entry</th><th>Notional Frac</th>
+        <th>Realized Vol</th><th>Stop</th><th>Entry Date</th><th>Source</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderTsmomLast20Backtest(trades) {
+  const wrap = document.getElementById("tsmomLast20BacktestWrap");
+  document.getElementById("tsmomBacktestUniverseLabel").textContent = tsmomUniverse;
+  if (!trades || trades.length === 0) {
+    wrap.innerHTML = `<div class="empty-state">No TSMOM backtest trades found for this universe.</div>`;
+    return;
+  }
+  const rows = trades.map(t => `
+    <tr>
+      <td>${t.pair}</td>
+      <td>${t.direction ?? "—"}</td>
+      <td>${fmtNum(t.entry, 5)}</td>
+      <td>${fmtNum(t.exit, 5)}</td>
+      <td>${t.entry_date ?? "—"}</td>
+      <td>${t.exit_date ?? "—"}</td>
+      <td>${t.notional_frac === null || t.notional_frac === undefined ? "—" : fmtFracAsPct(t.notional_frac)}</td>
+      <td class="${signClass(t.R)}">${t.R === null || t.R === undefined ? "—" : fmtNum(t.R, 3) + "R"}</td>
+      <td>${t.hold_days ?? "—"}</td>
+      <td>${t.exit_reason ?? "—"}</td>
+    </tr>
+  `).join("");
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Pair</th><th>Dir</th><th>Entry</th><th>Exit</th>
+        <th>Entry Date</th><th>Exit Date</th><th>Notional Frac</th><th>R</th>
+        <th>Hold(d)</th><th>Exit Reason</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderTsmom(tsmom) {
+  lastTsmomState = tsmom;
+  if (!tsmom) return;
+  renderTsmomBanner(tsmom.banner);
+  const u = tsmom.universes ? tsmom.universes[tsmomUniverse] : null;
+  renderTsmomStats(u);
+  renderTsmomEquityCurve(u ? u.equity_curve : []);
+  renderTsmomOpenPositions(tsmom.open_positions, tsmom.paper_ledger);
+  renderTsmomLast20Backtest(u ? u.last_20_backtest_trades : []);
+}
+
+async function refresh() {
+  try {
+    const res = await fetch("/api/state");
+    const state = await res.json();
+    document.getElementById("lastUpdated").textContent =
+      "last polled " + new Date().toLocaleTimeString() + " — polling every 5s";
+    renderStats(state.header_stats);
+    renderOpenPositions(state.open_positions, state.paper_ledger);
+    renderLast20(state.last_20_closed);
+    renderEquityCurve(state.equity_curve);
+    renderReplayBanner(state.replay_banner, state.replay_ledger);
+    renderReplayStats(state.replay_header_stats, state.replay_ledger);
+    renderReplayEquityCurve(state.replay_equity_curve);
+    renderReplayProgress(state.data_sources);
+    renderTsmom(state.tsmom);
+    renderDataSourcesNote(state);
+  } catch (e) {
+    document.getElementById("lastUpdated").textContent = "fetch failed: " + e;
+  }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
