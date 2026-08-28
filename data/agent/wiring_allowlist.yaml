@@ -376,6 +376,14 @@ ORPHANS:
     a pre-registered single-bar (08:30-08:35) primary plus two exploratory analyses (1-minute decay curve,
     breath-holding expansion); a one-shot research artifact builder over its own data/daytrade/bars_premarket
     and data/daytrade/bars_premarket_1m caches, not a consumer of its own output.
+- module: scripts.build_spy_whipsaw_event_study
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_spy_whipsaw_event_study.py`), same convention as its siblings scripts.build_macro_event_study
+    / scripts.build_spy_premarket_event_study / scripts.build_spy_macro_decay_study / scripts.build_fomc_splash_event_study.
+    Measures the range/endpoint whipsaw (path) ratio on the same 08:30-08:45 ET SPY splash window every
+    prior `|return|`-only study in this family already covers, plus an FOMC arm and an asymmetry check;
+    a one-shot research artifact builder over its own data/daytrade/bars_premarket_1m cache, not a consumer
+    of its own output.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
@@ -495,6 +503,11 @@ IMPORTED_NOT_CALLED:
     2026-08-27 work as scripts.tsmom_backtest / paper_tsmom_daily, untracked in git, NOT reviewed here.
     Listed so the audit is not red on another session's in-flight files. If the import is genuinely unused
     it should be deleted by its owner, not allowlisted forever.
+- module: scripts.build_spy_whipsaw_event_study
+  target: daytrade.bars
+  reason: BarDataError is imported only to be CAUGHT (`except BarDataError as e:`) around `_day_window_stats`'s
+    call into `build_spy_macro_decay_study._load_raw_bars_1m`, which is what raises it — this module never
+    raises it itself, so the AST-level "used as a call" check can't see the except clause as a use
 NO_SUPPLIER:
 - field: ExecEvent.intent
   reason: BLOCKED ON D1, the missing order path. There are ZERO production constructors of ExecEvent anywhere
@@ -662,3 +675,11 @@ DEAD_ARTIFACT:
   reason: written by scripts/build_spy_macro_decay_study.py (see ORPHANS) — one row per complete SPY day
     across the 08:25-08:40 1-minute decay window, kept for provenance/audit; a one-shot research dataset,
     not a machine input anything reads.
+- module: data/daytrade/event_study/spy_whipsaw_event_study_summary.json
+  reason: written by scripts/build_spy_whipsaw_event_study.py (see ORPHANS) — the pre-registered whipsaw
+    (range/endpoint) primary result plus the labelled impulse-vs-tail, FOMC-arm, and asymmetry exploratory
+    families; a research finding artifact for a human to read, not a machine input.
+- module: data/daytrade/event_study/spy_whipsaw_primary_days.csv
+  reason: written by scripts/build_spy_whipsaw_event_study.py (see ORPHANS) — one row per complete SPY
+    day across the 08:30-08:45 1-minute primary window (up_exc/down_exc/range/endpoint/ratio), kept for
+    provenance/audit; a one-shot research dataset, not a machine input anything reads.
