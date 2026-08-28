@@ -356,6 +356,12 @@ ORPHANS:
     calls its siblings the same way); not designed to be imported as a library module. Builds the labeled
     macro-splash-vs-ripple dataset for NVDA over data/daytrade/bars_extended; a one-shot research artifact
     builder, not a consumer of its own output.
+- module: scripts.build_spy_premarket_event_study
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_spy_premarket_event_study.py --refresh`), same convention as its sibling scripts.build_macro_event_study.
+    Reruns the macro-splash study on SPY/QQQ's 08:30-09:00 ET pre-market window (the NVDA/full-session
+    study came back null on 0/72 BH-corrected comparisons); a one-shot research artifact builder over
+    its own data/daytrade/bars_premarket cache, not a consumer of its own output.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
@@ -611,3 +617,16 @@ DEAD_ARTIFACT:
     vs matched-weekday control, Welch p-values, BH-adjusted p-values) for the labeled splash/ripple dataset;
     a research finding artifact for a human to read, not a machine input. Fitting anything on this dataset
     is explicitly out of scope per this study's own docstring.
+- module: data/daytrade/event_study/spy_premarket_event_study_summary.json
+  reason: written by scripts/build_spy_premarket_event_study.py (see ORPHANS) — the pre-registered primary
+    result plus the labelled secondary/exploratory family for the SPY/QQQ 08:30-09:00 ET pre-market reaction
+    study; a research finding artifact for a human to read, not a machine input. Fitting anything on this
+    dataset is explicitly out of scope per this study's own docstring.
+- module: data/daytrade/event_study/spy_premarket_days.csv
+  reason: written by scripts/build_spy_premarket_event_study.py (see ORPHANS) — one row per complete SPY
+    pre-market day (ret/abs_ret/range_pct/sub-window metrics), kept for provenance/audit; a one-shot research
+    dataset, not a machine input anything reads.
+- module: data/daytrade/event_study/qqq_premarket_days.csv
+  reason: written by scripts/build_spy_premarket_event_study.py (see ORPHANS) — same as spy_premarket_days.csv,
+    for the secondary/exploratory QQQ cross-instrument test; a one-shot research dataset, not a machine
+    input anything reads.

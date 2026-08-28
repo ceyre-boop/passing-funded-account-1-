@@ -1,0 +1,17 @@
+{
+ "cache": "QQQ_5m.parquet",
+ "fetches": [
+  {
+   "fetched_utc": "2026-08-28T00:55:03+00:00",
+   "symbol": "QQQ",
+   "tf": "5m",
+   "added_bars": 476272,
+   "span": [
+    "2015-12-31 19:00:00-05:00",
+    "2026-08-26 19:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip"
+  }
+ ]
+}

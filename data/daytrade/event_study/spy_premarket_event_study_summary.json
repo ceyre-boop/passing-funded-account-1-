@@ -1,0 +1,481 @@
+{
+ "generated_at": "2026-08-28T00:55:12.114858+00:00",
+ "rerun_of": "data/daytrade/event_study/nvda_macro_event_study_summary.json (0/72 survived BH correction \u2014 wrong instrument, wrong resolution)",
+ "primary_symbol": "SPY",
+ "secondary_symbol": "QQQ",
+ "bar_source": "data/daytrade/bars_premarket (Alpaca SIP, extended hours)",
+ "fetch_start": "2016-01-01",
+ "release_time_et_convention": "08:30",
+ "release_time_convention_note": "fixed publicly documented BLS/BEA/Census convention for CPI/PPI/Employment Situation/GDP/Personal Income and Outlays/Initial Claims. FRED's release-dates endpoint exposes only a date, never a time -- this is not fetched, not guessed. FOMC excluded (FRED release id 101 is a known non-schedule; no verified historical FOMC dates exist in this repo).",
+ "spy_complete_premarket_days": 2675,
+ "spy_excluded_days": 3,
+ "spy_excluded_reasons_sample": [
+  {
+   "date": "2015-12-31",
+   "reason": "6 missing 5m bar(s) in 08:30-09:00 window (first at 2015-12-31 08:30:00-05:00)"
+  },
+  {
+   "date": "2018-08-23",
+   "reason": "1 missing 5m bar(s) in 08:30-09:00 window (first at 2018-08-23 08:40:00-04:00)"
+  },
+  {
+   "date": "2019-07-02",
+   "reason": "1 missing 5m bar(s) in 08:30-09:00 window (first at 2019-07-02 08:30:00-04:00)"
+  }
+ ],
+ "qqq_complete_premarket_days": 2579,
+ "qqq_excluded_days": 99,
+ "events_found_in_window": 1221,
+ "PRIMARY": {
+  "event_n": 1008,
+  "event_mean": 0.001783018770160166,
+  "event_ci95": [
+   0.001606359612063057,
+   0.001959677928257275
+  ],
+  "control_n": 1667,
+  "control_mean": 0.0008902517460892946,
+  "control_ci95": [
+   0.0008378360938216929,
+   0.0009426673983568963
+  ],
+  "diff_event_minus_control": 0.0008927670240708714,
+  "welch_t": 9.49591574771197,
+  "welch_p_two_sided": 1.1566405556298352e-20,
+  "cohens_d": 0.4563001363729383,
+  "control_reliable": true,
+  "hypothesis": "SPY absolute return over 08:30-09:00 ET is larger on scheduled-release days than on matched non-event days",
+  "instrument": "SPY",
+  "window_et": "08:30-09:00",
+  "metric": "abs_ret",
+  "event_dates_matched": 1008,
+  "event_dates_dropped_no_premarket_window": [
+   "2016-03-25",
+   "2017-04-14",
+   "2018-08-23",
+   "2020-04-10",
+   "2021-04-02",
+   "2023-04-07",
+   "2024-03-29",
+   "2026-04-03"
+  ],
+  "control_weekdays_matched_against": [
+   "Friday",
+   "Monday",
+   "Thursday",
+   "Tuesday",
+   "Wednesday"
+  ],
+  "welch_p_one_sided_event_gt_control": 5.783202778149176e-21
+ },
+ "SECONDARY_EXPLORATORY_NO_INFERENTIAL_WEIGHT": {
+  "tests": [
+   {
+    "event_n": 132,
+    "event_mean": 0.0036492975401845487,
+    "event_ci95": [
+     0.002700228875662005,
+     0.004598366204707093
+    ],
+    "control_n": 1667,
+    "control_mean": 0.0008902517460892946,
+    "control_ci95": [
+     0.0008378360938216929,
+     0.0009426673983568963
+    ],
+    "diff_event_minus_control": 0.002759045794095254,
+    "welch_t": 5.689263041725793,
+    "welch_p_two_sided": 7.876964592039211e-08,
+    "cohens_d": 1.50484834254256,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Consumer Price Index",
+    "window_et": "08:30-09:00",
+    "metric": "abs_ret",
+    "welch_p_bh": 2.5206286694525474e-07
+   },
+   {
+    "event_n": 132,
+    "event_mean": -1.564575192378686e-05,
+    "event_ci95": [
+     -0.001151981372505629,
+     0.0011206898686580554
+    ],
+    "control_n": 1667,
+    "control_mean": 1.6211799995316504e-06,
+    "control_ci95": [
+     -6.60169555793204e-05,
+     6.92593155783837e-05
+    ],
+    "diff_event_minus_control": -1.726693192331851e-05,
+    "welch_t": -0.029730118242165936,
+    "welch_p_two_sided": 0.9763272188985157,
+    "cohens_d": -0.007664792263371539,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Consumer Price Index",
+    "window_et": "08:30-09:00",
+    "metric": "ret",
+    "welch_p_bh": 0.9763272188985157
+   },
+   {
+    "event_n": 127,
+    "event_mean": 0.0026795714889950237,
+    "event_ci95": [
+     0.0022110811954706745,
+     0.003148061782519373
+    ],
+    "control_n": 1667,
+    "control_mean": 0.0008902517460892946,
+    "control_ci95": [
+     0.0008378360938216929,
+     0.0009426673983568963
+    ],
+    "diff_event_minus_control": 0.001789319742905729,
+    "welch_t": 7.439472436940788,
+    "welch_p_two_sided": 1.2506905635007925e-11,
+    "cohens_d": 1.4064535475256397,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Employment Situation",
+    "window_et": "08:30-09:00",
+    "metric": "abs_ret",
+    "welch_p_bh": 6.670349672004227e-11
+   },
+   {
+    "event_n": 127,
+    "event_mean": 0.0003547102200681033,
+    "event_ci95": [
+     -0.0003045017617234603,
+     0.0010139222018596668
+    ],
+    "control_n": 1667,
+    "control_mean": 1.6211799995316504e-06,
+    "control_ci95": [
+     -6.60169555793204e-05,
+     6.92593155783837e-05
+    ],
+    "diff_event_minus_control": 0.0003530890400685716,
+    "welch_t": 1.0443380629793022,
+    "welch_p_two_sided": 0.2982871264194363,
+    "cohens_d": 0.20894126091939996,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Employment Situation",
+    "window_et": "08:30-09:00",
+    "metric": "ret",
+    "welch_p_bh": 0.4338721838828164
+   },
+   {
+    "event_n": 142,
+    "event_mean": 0.0014448374178000888,
+    "event_ci95": [
+     0.0010803313478878738,
+     0.0018093434877123039
+    ],
+    "control_n": 1182,
+    "control_mean": 0.000881387852592995,
+    "control_ci95": [
+     0.0008200632628500491,
+     0.0009427124423359408
+    ],
+    "diff_event_minus_control": 0.0005634495652070938,
+    "welch_t": 2.9877580659615712,
+    "welch_p_two_sided": 0.0032872344427830862,
+    "cohens_d": 0.4514817188249221,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Gross Domestic Product",
+    "window_et": "08:30-09:00",
+    "metric": "abs_ret",
+    "welch_p_bh": 0.005843972342725486
+   },
+   {
+    "event_n": 142,
+    "event_mean": 0.0002564978925925893,
+    "event_ci95": [
+     -0.0001770322951419826,
+     0.0006900280803271612
+    ],
+    "control_n": 1182,
+    "control_mean": -1.533689445973051e-05,
+    "control_ci95": [
+     -9.462679628632718e-05,
+     6.395300736686618e-05
+    ],
+    "diff_event_minus_control": 0.00027183478705231984,
+    "welch_t": 1.2089184636149926,
+    "welch_p_two_sided": 0.22858912981439777,
+    "cohens_d": 0.1729980905783797,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Gross Domestic Product",
+    "window_et": "08:30-09:00",
+    "metric": "ret",
+    "welch_p_bh": 0.36574260770303646
+   },
+   {
+    "event_n": 126,
+    "event_mean": 0.0013817466619309134,
+    "event_ci95": [
+     0.0010776813339783112,
+     0.0016858119898835156
+    ],
+    "control_n": 1667,
+    "control_mean": 0.0008902517460892946,
+    "control_ci95": [
+     0.0008378360938216929,
+     0.0009426673983568963
+    ],
+    "diff_event_minus_control": 0.0004914949158416188,
+    "welch_t": 3.1221193483395866,
+    "welch_p_two_sided": 0.002204918175913629,
+    "cohens_d": 0.4276898100172953,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Personal Income and Outlays",
+    "window_et": "08:30-09:00",
+    "metric": "abs_ret",
+    "welch_p_bh": 0.004409836351827258
+   },
+   {
+    "event_n": 126,
+    "event_mean": -1.841393933163207e-05,
+    "event_ci95": [
+     -0.0004071569101443331,
+     0.00037032903148106897
+    ],
+    "control_n": 1667,
+    "control_mean": 1.6211799995316504e-06,
+    "control_ci95": [
+     -6.60169555793204e-05,
+     6.92593155783837e-05
+    ],
+    "diff_event_minus_control": -2.0035119331163722e-05,
+    "welch_t": -0.09951974548484312,
+    "welch_p_two_sided": 0.9208758276926814,
+    "cohens_d": -0.01353046736515786,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Personal Income and Outlays",
+    "window_et": "08:30-09:00",
+    "metric": "ret",
+    "welch_p_bh": 0.9763272188985157
+   },
+   {
+    "event_n": 134,
+    "event_mean": 0.001677568778748037,
+    "event_ci95": [
+     0.0012811845967570993,
+     0.0020739529607389745
+    ],
+    "control_n": 1182,
+    "control_mean": 0.000881387852592995,
+    "control_ci95": [
+     0.0008200632628500491,
+     0.0009427124423359408
+    ],
+    "diff_event_minus_control": 0.0007961809261550419,
+    "welch_t": 3.8905884500434755,
+    "welch_p_two_sided": 0.00015429265366177135,
+    "cohens_d": 0.6304774567773503,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Producer Price Index",
+    "window_et": "08:30-09:00",
+    "metric": "abs_ret",
+    "welch_p_bh": 0.00035266892265547735
+   },
+   {
+    "event_n": 134,
+    "event_mean": -0.00015292639921326293,
+    "event_ci95": [
+     -0.0006405040174558334,
+     0.00033465121902930754
+    ],
+    "control_n": 1182,
+    "control_mean": -1.533689445973051e-05,
+    "control_ci95": [
+     -9.462679628632718e-05,
+     6.395300736686618e-05
+    ],
+    "diff_event_minus_control": -0.00013758950475353243,
+    "welch_t": -0.5459208927619696,
+    "welch_p_two_sided": 0.5859884473349535,
+    "cohens_d": -0.0856940184714744,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Producer Price Index",
+    "window_et": "08:30-09:00",
+    "metric": "ret",
+    "welch_p_bh": 0.7212165505660966
+   },
+   {
+    "event_n": 552,
+    "event_mean": 0.0014161742699463171,
+    "event_ci95": [
+     0.0012012384530045211,
+     0.001631110086888113
+    ],
+    "control_n": 1182,
+    "control_mean": 0.000881387852592995,
+    "control_ci95": [
+     0.0008200632628500491,
+     0.0009427124423359408
+    ],
+    "diff_event_minus_control": 0.0005347864173533221,
+    "welch_t": 4.689574468961016,
+    "welch_p_two_sided": 3.345845298292547e-06,
+    "cohens_d": 0.3139953245218991,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Unemployment Insurance Weekly Claims Report",
+    "window_et": "08:30-09:00",
+    "metric": "abs_ret",
+    "welch_p_bh": 8.922254128780125e-06
+   },
+   {
+    "event_n": 552,
+    "event_mean": 6.393230489364157e-05,
+    "event_ci95": [
+     -0.0001813261337636822,
+     0.00030919074355096536
+    ],
+    "control_n": 1182,
+    "control_mean": -1.533689445973051e-05,
+    "control_ci95": [
+     -9.462679628632718e-05,
+     6.395300736686618e-05
+    ],
+    "diff_event_minus_control": 7.926919935337208e-05,
+    "welch_t": 0.6027682087807191,
+    "welch_p_two_sided": 0.546867230024201,
+    "cohens_d": 0.039298791197884216,
+    "control_reliable": true,
+    "family": "per_release_breakdown",
+    "instrument": "SPY",
+    "release_name": "Unemployment Insurance Weekly Claims Report",
+    "window_et": "08:30-09:00",
+    "metric": "ret",
+    "welch_p_bh": 0.7212165505660966
+   },
+   {
+    "event_n": 1008,
+    "event_mean": 5.4118788655069316e-05,
+    "event_ci95": [
+     -0.000154028835179424,
+     0.0002622664124895626
+    ],
+    "control_n": 1667,
+    "control_mean": 1.6211799995316504e-06,
+    "control_ci95": [
+     -6.60169555793204e-05,
+     6.92593155783837e-05
+    ],
+    "diff_event_minus_control": 5.249760865553767e-05,
+    "welch_t": 0.4701389639617806,
+    "welch_p_two_sided": 0.6383395833192784,
+    "cohens_d": 0.02234433840680809,
+    "control_reliable": true,
+    "family": "pooled_signed_return",
+    "instrument": "SPY",
+    "release_name": "ALL_SIX_POOLED",
+    "window_et": "08:30-09:00",
+    "metric": "ret",
+    "welch_p_bh": 0.7295309523648896
+   },
+   {
+    "event_n": 1008,
+    "event_mean": 0.0015006085169689434,
+    "event_ci95": [
+     0.001346095741551515,
+     0.001655121292386372
+    ],
+    "control_n": 1667,
+    "control_mean": 0.0006660041325783544,
+    "control_ci95": [
+     0.000628044934221419,
+     0.0007039633309352899
+    ],
+    "diff_event_minus_control": 0.000834604384390589,
+    "welch_t": 10.281273738188334,
+    "welch_p_two_sided": 9.182758643421894e-24,
+    "cohens_d": 0.5033147212493395,
+    "control_reliable": true,
+    "family": "subwindow_decay",
+    "instrument": "SPY",
+    "release_name": "ALL_SIX_POOLED",
+    "window_et": "08:30-08:45",
+    "metric": "abs_ret",
+    "welch_p_bh": 1.469241382947503e-22
+   },
+   {
+    "event_n": 1008,
+    "event_mean": 0.0008091185451555542,
+    "event_ci95": [
+     0.0007439463780209582,
+     0.0008742907122901503
+    ],
+    "control_n": 1667,
+    "control_mean": 0.0005795686360524423,
+    "control_ci95": [
+     0.000541955189069181,
+     0.0006171820830357036
+    ],
+    "diff_event_minus_control": 0.00022954990910311192,
+    "welch_t": 5.979174864677803,
+    "welch_p_two_sided": 2.734547396595175e-09,
+    "cohens_d": 0.2562453749272533,
+    "control_reliable": true,
+    "family": "subwindow_decay",
+    "instrument": "SPY",
+    "release_name": "ALL_SIX_POOLED",
+    "window_et": "08:45-09:00",
+    "metric": "abs_ret",
+    "welch_p_bh": 1.09381895863807e-08
+   },
+   {
+    "event_n": 979,
+    "event_mean": 0.0022903453883081236,
+    "event_ci95": [
+     0.002067505112171045,
+     0.0025131856644452022
+    ],
+    "control_n": 1600,
+    "control_mean": 0.001125391645879923,
+    "control_ci95": [
+     0.0010608026961827519,
+     0.0011899805955770941
+    ],
+    "diff_event_minus_control": 0.0011649537424282006,
+    "welch_t": 9.841345848812939,
+    "welch_p_two_sided": 5.416320764479526e-22,
+    "cohens_d": 0.4803876200014939,
+    "control_reliable": true,
+    "family": "cross_instrument",
+    "instrument": "QQQ",
+    "release_name": "ALL_SIX_POOLED",
+    "window_et": "08:30-09:00",
+    "metric": "abs_ret",
+    "welch_p_bh": 4.333056611583621e-21
+   }
+  ],
+  "multiple_testing": {
+   "tests_run": 16,
+   "significant_raw_p_lt_0.05": 9,
+   "expected_by_chance_at_alpha_0.05": 0.8,
+   "significant_after_bh_correction": 9
+  }
+ }
+}

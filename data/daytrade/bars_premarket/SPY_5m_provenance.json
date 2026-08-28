@@ -1,0 +1,17 @@
+{
+ "cache": "SPY_5m.parquet",
+ "fetches": [
+  {
+   "fetched_utc": "2026-08-28T00:53:18+00:00",
+   "symbol": "SPY",
+   "tf": "5m",
+   "added_bars": 491644,
+   "span": [
+    "2015-12-31 19:00:00-05:00",
+    "2026-08-26 19:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip"
+  }
+ ]
+}
