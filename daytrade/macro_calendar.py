@@ -243,3 +243,63 @@ def assert_fresh(**kwargs) -> None:
     f = freshness(**kwargs)
     if f["stale"]:
         raise MacroCalendarError("macro calendar stale: " + "; ".join(f["reasons"]))
+
+
+# ------------------------------------------------------- fabrication guard
+
+FOMC_MIN_GAP_DAYS = 20          # default floor between consecutive meetings
+FOMC_ABSOLUTE_FLOOR_DAYS = 2    # never violable, any flag — the release-101 signature
+FOMC_MAX_PER_YEAR = 12          # double the normal ~8/year cadence
+
+def validate_fomc_events(events: list[dict]) -> list[str]:
+    """Returns a list of violation messages (empty = clean). Catches FRED
+    release id 101's known failure mode (a date for every calendar day)
+    while still allowing a genuine, individually-sourced emergency meeting
+    through — see `daytrade/test_macro_calendar.py`'s
+    `test_real_fomc_calendar_has_no_fabricated_looking_pattern` docstring
+    for the full reasoning (March 2020 COVID emergency actions are the case
+    that forced this design: real, sourced, 12 days apart).
+
+    Rules:
+      1. Consecutive dates must be >=FOMC_MIN_GAP_DAYS apart UNLESS the
+         later event is `unscheduled: true` AND carries its own
+         `source_url`.
+      2. No pair may EVER be <FOMC_ABSOLUTE_FLOOR_DAYS apart, flagged or
+         not — that density is the actual release-101 signature and no
+         legitimate FOMC action, scheduled or emergency, has ever landed
+         on back-to-back days.
+      3. No calendar year may hold more than FOMC_MAX_PER_YEAR events —
+         a backstop against a dense fabrication being smuggled in one
+         `unscheduled: true` flag at a time.
+    """
+    violations: list[str] = []
+    ordered = sorted(events, key=lambda e: e["date"])
+    dates = [_as_date(e["date"]) for e in ordered]
+
+    for prev, cur, a, b in zip(ordered, ordered[1:], dates, dates[1:]):
+        gap = (b - a).days
+        if gap < FOMC_ABSOLUTE_FLOOR_DAYS:
+            violations.append(
+                f"{a} -> {b} is {gap}d apart — below the {FOMC_ABSOLUTE_FLOOR_DAYS}d "
+                "absolute floor (the release-101 signature); no flag can excuse it")
+            continue
+        if gap < FOMC_MIN_GAP_DAYS:
+            if cur.get("unscheduled") is not True:
+                violations.append(
+                    f"{a} -> {b} is {gap}d apart (<{FOMC_MIN_GAP_DAYS}d) but "
+                    f"{cur['date']} is not marked unscheduled: true")
+            elif not cur.get("source_url"):
+                violations.append(
+                    f"{cur['date']} is marked unscheduled but carries no "
+                    "per-meeting source_url documenting it")
+
+    per_year: dict[str, int] = {}
+    for e in ordered:
+        year = e["date"][:4]
+        per_year[year] = per_year.get(year, 0) + 1
+    for year, n in per_year.items():
+        if n > FOMC_MAX_PER_YEAR:
+            violations.append(
+                f"{year} has {n} FOMC events — cap is {FOMC_MAX_PER_YEAR}")
+
+    return violations

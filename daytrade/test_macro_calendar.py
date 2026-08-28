@@ -218,12 +218,89 @@ def test_real_repo_calendars_are_currently_fresh():
 
 def test_real_fomc_calendar_has_no_fabricated_looking_pattern():
     """The FRED FOMC release (id 101) is known-bad: it returns a date for
-    every single day. If fomc_calendar.json ever regresses to consecutive
-    daily dates, that is this exact bug coming back."""
+    every single day (verified live: 30 consecutive daily rows). This test
+    catches that exact signature regressing into fomc_calendar.json.
+
+    Originally this was a flat >=20-day floor on every consecutive pair —
+    correct in spirit (FOMC meets roughly every 6-8 weeks) but it produced a
+    false positive on verified, sourced data: the March 2020 COVID emergency
+    actions (2020-03-03, 2020-03-15) are real FOMC decisions, cited from
+    federalreserve.gov/monetarypolicy/fomchistorical2020.htm, only 12 days
+    apart. Dropping them to satisfy the heuristic would have meant deleting
+    real data to please a test — the wrong fix.
+
+    The corrected, STRICTER discipline: an unflagged pair must still be
+    >=20 days apart. A pair narrower than that is allowed ONLY if the later
+    event carries `unscheduled: true` AND its own `source_url` pointing at
+    the specific Fed page documenting that meeting — so a dense calendar can
+    never slip through by accident, only by someone deliberately marking and
+    sourcing every single dense entry. On top of that, NO pair may ever be
+    <2 days apart under any flag — that is the actual release-101 signature
+    (a date for every calendar day) and no legitimate FOMC action, scheduled
+    or emergency, has ever landed on back-to-back days. Finally, meetings per
+    calendar year are capped at 12 (double the normal 8) as a sanity backstop
+    against a dense fabrication being smuggled in one `unscheduled: true` flag
+    at a time.
+    """
     doc = json.loads(mc.FOMC_CALENDAR_JSON.read_text())
-    dates = sorted(date.fromisoformat(e["date"]) for e in doc["events"])
-    for a, b in zip(dates, dates[1:]):
-        assert (b - a).days >= 20, (
-            f"{a} -> {b} is {  (b-a).days }d apart — FOMC meets roughly "
-            "every 6-8 weeks, never on consecutive or near-consecutive days"
-        )
+    violations = mc.validate_fomc_events(doc["events"])
+    assert violations == []
+
+
+# ------------------------------------- fabrication guard, deliberate violations
+
+def test_fabrication_guard_catches_release_101_daily_signature():
+    """The exact bug this guard exists for: a date for every calendar day."""
+    events = [{"date": f"2026-01-{d:02d}"} for d in range(1, 15)]
+    violations = mc.validate_fomc_events(events)
+    assert any("absolute floor" in v for v in violations)
+
+
+def test_fabrication_guard_rejects_unflagged_close_pair():
+    events = [{"date": "2026-01-27"}, {"date": "2026-02-10"}]  # 14d, unflagged
+    violations = mc.validate_fomc_events(events)
+    assert any("not marked unscheduled" in v for v in violations)
+
+
+def test_fabrication_guard_rejects_flagged_but_unsourced_pair():
+    events = [{"date": "2026-01-27"},
+              {"date": "2026-02-10", "unscheduled": True}]  # no source_url
+    violations = mc.validate_fomc_events(events)
+    assert any("no per-meeting source_url" in v for v in violations)
+
+
+def test_fabrication_guard_accepts_flagged_and_sourced_pair():
+    """The March 2020 shape: 12d apart, flagged, sourced — must pass clean."""
+    events = [{"date": "2026-01-27"},
+              {"date": "2026-02-10", "unscheduled": True, "source_url": "https://x"}]
+    assert mc.validate_fomc_events(events) == []
+
+
+def test_fabrication_guard_absolute_floor_cannot_be_flagged_away():
+    """Even `unscheduled: true` + a source_url cannot excuse a <2-day gap —
+    that density is never legitimate."""
+    events = [{"date": "2026-01-27"},
+              {"date": "2026-01-28", "unscheduled": True, "source_url": "https://x"}]
+    violations = mc.validate_fomc_events(events)
+    assert any("absolute floor" in v for v in violations)
+
+
+def test_fabrication_guard_caps_meetings_per_year():
+    # 13 events, all flagged/sourced and 25d apart pairwise (>=20d, so the
+    # gap rule alone would pass) -- only the per-year cap catches this.
+    base = date(2026, 1, 1)
+    events = [{"date": (base + timedelta(days=25 * i)).isoformat(),
+               "unscheduled": True, "source_url": "https://x"} for i in range(13)]
+    violations = mc.validate_fomc_events(events)
+    assert any("cap is" in v for v in violations)
+
+
+def test_fabrication_guard_allows_real_march_2020_shape():
+    """Positive control: the actual production case that forced this design."""
+    events = [{"date": "2020-01-29"},
+              {"date": "2020-03-03", "unscheduled": True,
+               "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20200303a.htm"},
+              {"date": "2020-03-15", "unscheduled": True,
+               "source_url": "https://www.federalreserve.gov/monetarypolicy/fomchistorical2020.htm"},
+              {"date": "2020-04-29"}]
+    assert mc.validate_fomc_events(events) == []

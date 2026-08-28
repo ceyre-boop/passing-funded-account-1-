@@ -1,0 +1,144 @@
+{
+ "generated_at": "2026-08-28T23:25:08.249785+00:00",
+ "primary_symbol": "SPY",
+ "bar_source": "data/daytrade/bars_premarket (Alpaca SIP, RTH bars read raw)",
+ "fomc_calendar_total_meetings": 89,
+ "fomc_calendar_scheduled_meetings": 87,
+ "fomc_calendar_unscheduled_meetings": 2,
+ "fomc_meetings_in_bar_coverage": 85,
+ "fomc_meetings_dropped_not_in_bar_coverage": [
+  "2020-03-15",
+  "2026-09-16",
+  "2026-10-28",
+  "2026-12-09"
+ ],
+ "scheduled_meetings_in_bar_coverage": 84,
+ "stmt_window_excluded_days_count": 1,
+ "presser_window_excluded_days_count": 2,
+ "PRIMARY": {
+  "event_n": 84,
+  "event_mean": 0.0024849230734894407,
+  "event_ci95": [
+   0.0018722829022200175,
+   0.0030975632447588636
+  ],
+  "control_n": 363,
+  "control_mean": 0.000662607888815741,
+  "control_ci95": [
+   0.0005898140798534765,
+   0.0007354016977780055
+  ],
+  "diff_event_minus_control": 0.0018223151846736996,
+  "welch_t": 5.789350134764936,
+  "welch_p_two_sided": 1.1454181125064984e-07,
+  "cohens_d": 1.3090081908054076,
+  "control_reliable": true,
+  "hypothesis": "SPY absolute return over 14:00-14:05 ET is larger on SCHEDULED FOMC decision days than on matched non-event days",
+  "instrument": "SPY",
+  "window_et": "14:00-14:05",
+  "metric": "abs_ret",
+  "scheduled_meetings_in_bar_coverage": 84,
+  "control_weekdays_matched_against": [
+   "Thursday",
+   "Wednesday"
+  ],
+  "welch_p_one_sided_event_gt_control": 5.727090562532492e-08
+ },
+ "SECONDARY_EXPLORATORY_NO_INFERENTIAL_WEIGHT": {
+  "tests": [
+   {
+    "event_n": 72,
+    "event_mean": 0.001485349807789357,
+    "event_ci95": [
+     0.0010432265147895794,
+     0.0019274731007891347
+    ],
+    "control_n": 363,
+    "control_mean": 0.0005494878234126021,
+    "control_ci95": [
+     0.0004771099069422227,
+     0.0006218657398829815
+    ],
+    "diff_event_minus_control": 0.000935861984376755,
+    "welch_t": 4.094318979323111,
+    "welch_p_two_sided": 0.00010595612613120798,
+    "cohens_d": 0.9291211779063865,
+    "control_reliable": true,
+    "family": "presser_window",
+    "instrument": "SPY",
+    "window_et": "14:30-14:35",
+    "metric": "abs_ret",
+    "scheduled_meetings_with_presser_in_coverage": 72,
+    "welch_p_bh": 0.00031786837839362396
+   },
+   {
+    "event_n": 84,
+    "event_mean": 0.00010250709342063666,
+    "event_ci95": [
+     -0.0007102906299160333,
+     0.0009153048167573066
+    ],
+    "control_n": 363,
+    "control_mean": 3.378544677343886e-05,
+    "control_ci95": [
+     -6.594460633384751e-05,
+     0.00013351549988072523
+    ],
+    "diff_event_minus_control": 6.87216466471978e-05,
+    "welch_t": 0.1644834911431263,
+    "welch_p_two_sided": 0.8697387188143768,
+    "cohens_d": 0.036951088245471234,
+    "control_reliable": true,
+    "family": "signed_return_directionality",
+    "instrument": "SPY",
+    "window_et": "14:00-14:05",
+    "metric": "stmt_signed_return",
+    "welch_p_bh": 0.8697387188143768
+   },
+   {
+    "event_n": 72,
+    "event_mean": -0.00024271640002320984,
+    "event_ci95": [
+     -0.0008009814938016728,
+     0.0003155486937552531
+    ],
+    "control_n": 363,
+    "control_mean": 1.7010208223030074e-05,
+    "control_ci95": [
+     -7.485759325297718e-05,
+     0.00010887800969903733
+    ],
+    "diff_event_minus_control": -0.0002597266082462399,
+    "welch_t": -0.8997667587492368,
+    "welch_p_two_sided": 0.3711286685684527,
+    "cohens_d": -0.20377700048090208,
+    "control_reliable": true,
+    "family": "signed_return_directionality",
+    "instrument": "SPY",
+    "window_et": "14:30-14:35",
+    "metric": "presser_signed_return",
+    "welch_p_bh": 0.5566930028526791
+   }
+  ],
+  "multiple_testing": {
+   "tests_run": 3,
+   "significant_raw_p_lt_0.05": 1,
+   "expected_by_chance_at_alpha_0.05": 0.2,
+   "significant_after_bh_correction": 1
+  },
+  "SCHEDULED_VS_UNSCHEDULED_NATURAL_EXPERIMENT": {
+   "note": "DESCRIPTIVE ONLY -- no significance test run against n=1 unscheduled observations. Same event type/instrument/mechanics; the only difference is whether the market could anticipate it.",
+   "scheduled_n": 84,
+   "scheduled_stmt_abs_ret_mean": 0.0024849230734894407,
+   "unscheduled_n": 1,
+   "unscheduled_dates": [
+    "2020-03-03"
+   ],
+   "unscheduled_stmt_abs_ret_values": [
+    0.0025317299043938757
+   ],
+   "unscheduled_stmt_abs_ret_mean": 0.0025317299043938757,
+   "unscheduled_minus_scheduled": 4.680683090443503e-05
+  }
+ }
+}

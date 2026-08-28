@@ -1,15 +1,464 @@
 {
-  "_comment": "Hand-transcribed from the Federal Reserve's own published FOMC calendar. FRED has NO reliable API for this — its 'FOMC Press Release' release (id 101) returns a release date for every single calendar day once no-data dates are included (verified live 2026-08-27), which is not a real schedule and must never be used as one. This file is therefore the manual half of daytrade/macro_calendar.py's three-source merge. `date` is the SECOND day of each two-day meeting -- the day the statement/decision is actually released. Re-verify against source_url periodically; the Fed typically publishes a year of meetings at once and they rarely move.",
-  "verified_as_of": "2026-08-27",
+  "_comment": "Hand-transcribed from the Federal Reserve's own published FOMC calendars (current + historical archive pages). FRED has NO reliable API for this -- its 'FOMC Press Release' release (id 101) returns a release date for every single calendar day once no-data dates are included (verified live 2026-08-27), which is not a real schedule and must never be used as one. This file is therefore the manual half of daytrade/macro_calendar.py's three-source merge. `date` is the day the statement/decision was actually released -- the second day of a two-day meeting for regular meetings, or the release date itself for the 2020 unscheduled emergency actions. `press_conference` is true iff a Chair press conference followed same-day (verified against each year's fomcpresconf<date>.htm page existing on federalreserve.gov: quarterly only in 2016-2018 (Mar/Jun/Sep/Dec, aligned with the SEP), then every meeting from 2019 onward). The Mar 17-18, 2020 regular meeting was folded into the Mar 15, 2020 unscheduled emergency decision and formally cancelled -- no separate statement exists for it, so it is not listed here (verified against federalreserve.gov/monetarypolicy/fomchistorical2020.htm, which labels it '(cancelled)'). Coverage starts 2016 to match this repo's SPY/QQQ bar history depth (data/daytrade/bars_premarket, 2016-01-01 forward) -- years before 2016 were not transcribed because they fall outside any bar coverage this repo holds, not because they could not be sourced. Re-verify against source_url periodically; the Fed typically publishes a year of meetings at once and they rarely move. Two entries carry unscheduled: true (2020-03-03, 2020-03-15) -- the COVID emergency actions, each 12 days apart, which is real and sourced, not the FRED release-101 daily-fabrication signature. Each unscheduled entry carries its own source_url pointing at the specific Fed page for that meeting, on top of the file-level source_url/source_urls_historical. See daytrade/test_macro_calendar.py::test_real_fomc_calendar_has_no_fabricated_looking_pattern for the enforced discipline: unflagged dates must be >=20 days apart, any narrower gap requires unscheduled: true + its own source_url, and no gap may ever be <2 days under any flag -- that 2-day floor is the actual release-101 signature (a date for every calendar day) and nothing legitimate, scheduled or not, looks like it.",
+  "coverage": "2016-2026, hand-verified against federalreserve.gov current + historical calendar archive pages",
+  "verified_as_of": "2026-08-28",
   "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+  "source_urls_historical": [
+    "https://www.federalreserve.gov/monetarypolicy/fomchistorical2016.htm",
+    "https://www.federalreserve.gov/monetarypolicy/fomchistorical2017.htm",
+    "https://www.federalreserve.gov/monetarypolicy/fomchistorical2018.htm",
+    "https://www.federalreserve.gov/monetarypolicy/fomchistorical2019.htm",
+    "https://www.federalreserve.gov/monetarypolicy/fomchistorical2020.htm"
+  ],
   "events": [
-    { "date": "2026-01-28", "label": "FOMC decision (Jan 27-28 meeting)" },
-    { "date": "2026-03-18", "label": "FOMC decision (Mar 17-18 meeting, SEP)" },
-    { "date": "2026-04-29", "label": "FOMC decision (Apr 28-29 meeting)" },
-    { "date": "2026-06-17", "label": "FOMC decision (Jun 16-17 meeting, SEP)" },
-    { "date": "2026-07-29", "label": "FOMC decision (Jul 28-29 meeting)" },
-    { "date": "2026-09-16", "label": "FOMC decision (Sep 15-16 meeting, SEP)" },
-    { "date": "2026-10-28", "label": "FOMC decision (Oct 27-28 meeting)" },
-    { "date": "2026-12-09", "label": "FOMC decision (Dec 8-9 meeting, SEP)" }
+    {
+      "date": "2016-01-27",
+      "label": "FOMC decision (Jan 26-27 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2016-03-16",
+      "label": "FOMC decision (Mar 15-16 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2016-04-27",
+      "label": "FOMC decision (Apr 26-27 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2016-06-15",
+      "label": "FOMC decision (Jun 14-15 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2016-07-27",
+      "label": "FOMC decision (Jul 26-27 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2016-09-21",
+      "label": "FOMC decision (Sep 20-21 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2016-11-02",
+      "label": "FOMC decision (Nov 1-2 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2016-12-14",
+      "label": "FOMC decision (Dec 13-14 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2017-02-01",
+      "label": "FOMC decision (Jan 31-Feb 1 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2017-03-15",
+      "label": "FOMC decision (Mar 14-15 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2017-05-03",
+      "label": "FOMC decision (May 2-3 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2017-06-14",
+      "label": "FOMC decision (Jun 13-14 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2017-07-26",
+      "label": "FOMC decision (Jul 25-26 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2017-09-20",
+      "label": "FOMC decision (Sep 19-20 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2017-11-01",
+      "label": "FOMC decision (Oct 31-Nov 1 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2017-12-13",
+      "label": "FOMC decision (Dec 12-13 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2018-01-31",
+      "label": "FOMC decision (Jan 30-31 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2018-03-21",
+      "label": "FOMC decision (Mar 20-21 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2018-05-02",
+      "label": "FOMC decision (May 1-2 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2018-06-13",
+      "label": "FOMC decision (Jun 12-13 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2018-08-01",
+      "label": "FOMC decision (Jul 31-Aug 1 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2018-09-26",
+      "label": "FOMC decision (Sep 25-26 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2018-11-08",
+      "label": "FOMC decision (Nov 7-8 meeting)",
+      "press_conference": false
+    },
+    {
+      "date": "2018-12-19",
+      "label": "FOMC decision (Dec 18-19 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2019-01-30",
+      "label": "FOMC decision (Jan 29-30 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2019-03-20",
+      "label": "FOMC decision (Mar 19-20 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2019-05-01",
+      "label": "FOMC decision (Apr 30-May 1 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2019-06-19",
+      "label": "FOMC decision (Jun 18-19 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2019-07-31",
+      "label": "FOMC decision (Jul 30-31 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2019-09-18",
+      "label": "FOMC decision (Sep 17-18 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2019-10-30",
+      "label": "FOMC decision (Oct 29-30 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2019-12-11",
+      "label": "FOMC decision (Dec 10-11 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2020-01-29",
+      "label": "FOMC decision (Jan 28-29 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2020-03-03",
+      "label": "FOMC decision (Mar 2 unscheduled meeting, statement released Mar 3)",
+      "press_conference": true,
+      "unscheduled": true,
+      "source_url": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20200303a.htm"
+    },
+    {
+      "date": "2020-03-15",
+      "label": "FOMC decision (Mar 15 unscheduled meeting)",
+      "press_conference": true,
+      "unscheduled": true,
+      "source_url": "https://www.federalreserve.gov/monetarypolicy/fomchistorical2020.htm"
+    },
+    {
+      "date": "2020-04-29",
+      "label": "FOMC decision (Apr 28-29 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2020-06-10",
+      "label": "FOMC decision (Jun 9-10 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2020-07-29",
+      "label": "FOMC decision (Jul 28-29 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2020-09-16",
+      "label": "FOMC decision (Sep 15-16 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2020-11-05",
+      "label": "FOMC decision (Nov 4-5 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2020-12-16",
+      "label": "FOMC decision (Dec 15-16 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2021-01-27",
+      "label": "FOMC decision (Jan 26-27 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2021-03-17",
+      "label": "FOMC decision (Mar 16-17 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2021-04-28",
+      "label": "FOMC decision (Apr 27-28 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2021-06-16",
+      "label": "FOMC decision (Jun 15-16 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2021-07-28",
+      "label": "FOMC decision (Jul 27-28 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2021-09-22",
+      "label": "FOMC decision (Sep 21-22 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2021-11-03",
+      "label": "FOMC decision (Nov 2-3 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2021-12-15",
+      "label": "FOMC decision (Dec 14-15 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2022-01-26",
+      "label": "FOMC decision (Jan 25-26 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2022-03-16",
+      "label": "FOMC decision (Mar 15-16 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2022-05-04",
+      "label": "FOMC decision (May 3-4 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2022-06-15",
+      "label": "FOMC decision (Jun 14-15 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2022-07-27",
+      "label": "FOMC decision (Jul 26-27 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2022-09-21",
+      "label": "FOMC decision (Sep 20-21 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2022-11-02",
+      "label": "FOMC decision (Nov 1-2 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2022-12-14",
+      "label": "FOMC decision (Dec 13-14 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2023-02-01",
+      "label": "FOMC decision (Jan 31-Feb 1 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2023-03-22",
+      "label": "FOMC decision (Mar 21-22 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2023-05-03",
+      "label": "FOMC decision (May 2-3 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2023-06-14",
+      "label": "FOMC decision (Jun 13-14 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2023-07-26",
+      "label": "FOMC decision (Jul 25-26 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2023-09-20",
+      "label": "FOMC decision (Sep 19-20 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2023-11-01",
+      "label": "FOMC decision (Oct 31-Nov 1 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2023-12-13",
+      "label": "FOMC decision (Dec 12-13 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2024-01-31",
+      "label": "FOMC decision (Jan 30-31 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2024-03-20",
+      "label": "FOMC decision (Mar 19-20 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2024-05-01",
+      "label": "FOMC decision (Apr 30-May 1 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2024-06-12",
+      "label": "FOMC decision (Jun 11-12 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2024-07-31",
+      "label": "FOMC decision (Jul 30-31 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2024-09-18",
+      "label": "FOMC decision (Sep 17-18 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2024-11-07",
+      "label": "FOMC decision (Nov 6-7 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2024-12-18",
+      "label": "FOMC decision (Dec 17-18 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2025-01-29",
+      "label": "FOMC decision (Jan 28-29 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2025-03-19",
+      "label": "FOMC decision (Mar 18-19 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2025-05-07",
+      "label": "FOMC decision (May 6-7 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2025-06-18",
+      "label": "FOMC decision (Jun 17-18 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2025-07-30",
+      "label": "FOMC decision (Jul 29-30 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2025-09-17",
+      "label": "FOMC decision (Sep 16-17 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2025-10-29",
+      "label": "FOMC decision (Oct 28-29 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2025-12-10",
+      "label": "FOMC decision (Dec 9-10 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2026-01-28",
+      "label": "FOMC decision (Jan 27-28 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2026-03-18",
+      "label": "FOMC decision (Mar 17-18 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2026-04-29",
+      "label": "FOMC decision (Apr 28-29 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2026-06-17",
+      "label": "FOMC decision (Jun 16-17 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2026-07-29",
+      "label": "FOMC decision (Jul 28-29 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2026-09-16",
+      "label": "FOMC decision (Sep 15-16 meeting, SEP)",
+      "press_conference": true
+    },
+    {
+      "date": "2026-10-28",
+      "label": "FOMC decision (Oct 27-28 meeting)",
+      "press_conference": true
+    },
+    {
+      "date": "2026-12-09",
+      "label": "FOMC decision (Dec 8-9 meeting, SEP)",
+      "press_conference": true
+    }
   ]
 }
