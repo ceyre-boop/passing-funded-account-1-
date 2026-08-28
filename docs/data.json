@@ -1,7 +1,7 @@
 {
  "alphazero": {
   "abstain_rate": 0.615,
-  "age_hours": 119.7,
+  "age_hours": 146.0,
   "chance_scenario": 0.2,
   "decisive_accuracy_quotable": false,
   "direction_accuracy": 0.308,
@@ -523,7 +523,7 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-08-27T20:41:16.850101+00:00",
+ "generated_at": "2026-08-28T22:55:37.435920+00:00",
  "latest_judgment": {
   "abstention": {
    "detail": "newest bar 28 min old (> 15)",
@@ -548,7 +548,7 @@
   "verdict": "ABSTAIN"
  },
  "learning_loop": {
-  "age_hours": 119.7,
+  "age_hours": 146.0,
   "alphazero": {
    "by_verdict": {
     "ABSTAIN": {
@@ -715,7 +715,7 @@
   }
  },
  "ontology": {
-  "age_hours": 91.6,
+  "age_hours": 117.9,
   "available": true,
   "generated_at": "2026-08-21T22:53:03.808786+00:00",
   "k_subsamples": 8,
@@ -961,7 +961,7 @@
    }
   },
   "compared_against": "SF-FROZEN-002",
-  "generated_at": "2026-08-27T20:41:16.751496+00:00",
+  "generated_at": "2026-08-28T22:55:37.280034+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.1843,
   "mean_mfe_r": 3.4223,
