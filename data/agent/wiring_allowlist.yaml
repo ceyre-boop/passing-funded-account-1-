@@ -350,6 +350,12 @@ ORPHANS:
 - module: scripts.check_macro_calendar_freshness
   reason: standalone preflight CLI, exit 1 on a stale calendar — mirrors carry_scan.py's staleness discipline.
     Invoked by a shell caller, not imported.
+- module: scripts.build_macro_event_study
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_macro_event_study.py`), matching this repo's script convention (daytrade/operator_tick.sh
+    calls its siblings the same way); not designed to be imported as a library module. Builds the labeled
+    macro-splash-vs-ripple dataset for NVDA over data/daytrade/bars_extended; a one-shot research artifact
+    builder, not a consumer of its own output.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
@@ -596,3 +602,12 @@ DEAD_ARTIFACT:
     and UNTRACKED in git. Allowlisted so the audit is not red on someone else's in-flight files; NOT reviewed
     and NOT vouched for here. Whoever owns it should confirm this reason or replace it — and if the files
     are abandoned, delete them and drop these entries.
+- module: data/daytrade/event_study/fred_historical_release_dates.json
+  reason: written by scripts/build_macro_event_study.py (see ORPHANS) — the raw fetched FRED event calendar
+    plus dropped-event reasons, kept for provenance/audit; a one-shot research dataset, not a machine
+    input anything reads
+- module: data/daytrade/event_study/nvda_macro_event_study_summary.json
+  reason: written by scripts/build_macro_event_study.py (see ORPHANS) — descriptive statistics (event
+    vs matched-weekday control, Welch p-values, BH-adjusted p-values) for the labeled splash/ripple dataset;
+    a research finding artifact for a human to read, not a machine input. Fitting anything on this dataset
+    is explicitly out of scope per this study's own docstring.

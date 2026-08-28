@@ -1,0 +1,1607 @@
+{
+ "generated_at": "2026-08-28T00:32:30.909182+00:00",
+ "symbol": "NVDA",
+ "bar_source": "data/daytrade/bars_extended (Alpaca SIP)",
+ "sessions_in_cache": 664,
+ "session_span": [
+  "2024-01-02",
+  "2026-08-25"
+ ],
+ "events_found_in_window": 290,
+ "events_landing_on_a_cached_session": 229,
+ "ripple_rows": 3456,
+ "dropped_rows": 2,
+ "control_pool_n": 435,
+ "by_release_horizon_metric": [
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 0,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": 0.00804245601662245,
+   "event_ci95": [
+    -0.0002446390583820471,
+    0.016329551091626947
+   ],
+   "control_n": 308,
+   "control_mean": -0.0009534917440211668,
+   "control_ci95": [
+    -0.0036670662751311462,
+    0.0017600827870888124
+   ],
+   "diff_event_minus_control": 0.008995947760643616,
+   "welch_t": 2.0220112403693467,
+   "welch_p": 0.050264474031696184,
+   "control_reliable": true,
+   "welch_p_bh": 0.3539449947585192
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 0,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.019298673123522993,
+   "event_ci95": [
+    0.013772569778894454,
+    0.02482477646815153
+   ],
+   "control_n": 308,
+   "control_mean": 0.017580246023178536,
+   "control_ci95": [
+    0.015707434633284095,
+    0.019453057413072978
+   ],
+   "diff_event_minus_control": 0.0017184271003444565,
+   "welch_t": 0.5772434053772253,
+   "welch_p": 0.5671373861048726,
+   "control_reliable": true,
+   "welch_p_bh": 0.8228458093996703
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 0,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.03695238271625257,
+   "event_ci95": [
+    0.031048180107518118,
+    0.042856585324987026
+   ],
+   "control_n": 308,
+   "control_mean": 0.03437454061219752,
+   "control_ci95": [
+    0.032340546361090086,
+    0.03640853486330495
+   ],
+   "diff_event_minus_control": 0.002577842104055053,
+   "welch_t": 0.8090925956172615,
+   "welch_p": 0.42340343357606297,
+   "control_reliable": true,
+   "welch_p_bh": 0.8094238340656603
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 0,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.021268429135076254,
+   "event_ci95": [
+    0.01806113053895454,
+    0.02447572773119797
+   ],
+   "control_n": 308,
+   "control_mean": 0.019698080986424383,
+   "control_ci95": [
+    0.018805895134318136,
+    0.02059026683853063
+   ],
+   "diff_event_minus_control": 0.0015703481486518713,
+   "welch_t": 0.9245450043350094,
+   "welch_p": 0.36136530915188414,
+   "control_reliable": true,
+   "welch_p_bh": 0.7652441840863429
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 1,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": 0.006599237625188183,
+   "event_ci95": [
+    0.0014571585042949938,
+    0.011741316746081372
+   ],
+   "control_n": 435,
+   "control_mean": 0.00046792629451331615,
+   "control_ci95": [
+    -0.0018634515747761502,
+    0.0027993041638027824
+   ],
+   "diff_event_minus_control": 0.006131311330674867,
+   "welch_t": 2.128508968636349,
+   "welch_p": 0.03881440903540698,
+   "control_reliable": true,
+   "welch_p_bh": 0.3471067304030474
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 1,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.011752523562074544,
+   "event_ci95": [
+    0.007915677572681266,
+    0.015589369551467822
+   ],
+   "control_n": 435,
+   "control_mean": 0.017897734527739448,
+   "control_ci95": [
+    0.016284714552939374,
+    0.019510754502539522
+   ],
+   "diff_event_minus_control": -0.006145210965664904,
+   "welch_t": -2.893866887132582,
+   "welch_p": 0.005962859320623714,
+   "control_reliable": true,
+   "welch_p_bh": 0.21466293554245372
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 1,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.028430612638951375,
+   "event_ci95": [
+    0.024636061856289176,
+    0.03222516342161357
+   ],
+   "control_n": 435,
+   "control_mean": 0.03468524806729565,
+   "control_ci95": [
+    0.03288306112911699,
+    0.03648743500547431
+   ],
+   "diff_event_minus_control": -0.006254635428344275,
+   "welch_t": -2.918292794403075,
+   "welch_p": 0.005412143807706508,
+   "control_reliable": true,
+   "welch_p_bh": 0.21466293554245372
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 1,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.018133106081579437,
+   "event_ci95": [
+    0.015859156744059487,
+    0.020407055419099387
+   ],
+   "control_n": 435,
+   "control_mean": 0.020029559021812342,
+   "control_ci95": [
+    0.019149061933580683,
+    0.020910056110044
+   ],
+   "diff_event_minus_control": -0.0018964529402329053,
+   "welch_t": -1.524338016384137,
+   "welch_p": 0.13511514533166918,
+   "control_reliable": true,
+   "welch_p_bh": 0.627527460813788
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 2,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": 0.0017895076704860895,
+   "event_ci95": [
+    -0.004867921704633937,
+    0.008446937045606116
+   ],
+   "control_n": 435,
+   "control_mean": 0.00046792629451331615,
+   "control_ci95": [
+    -0.0018634515747761502,
+    0.0027993041638027824
+   ],
+   "diff_event_minus_control": 0.0013215813759727734,
+   "welch_t": 0.36721824118462837,
+   "welch_p": 0.7154400232285825,
+   "control_reliable": true,
+   "welch_p_bh": 0.8640972099598303
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 2,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.015999078833412023,
+   "event_ci95": [
+    0.012393849299315744,
+    0.019604308367508302
+   ],
+   "control_n": 435,
+   "control_mean": 0.017897734527739448,
+   "control_ci95": [
+    0.016284714552939374,
+    0.019510754502539522
+   ],
+   "diff_event_minus_control": -0.0018986556943274245,
+   "welch_t": -0.9422079433790513,
+   "welch_p": 0.35117051067379884,
+   "control_reliable": true,
+   "welch_p_bh": 0.7652441840863429
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 2,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.029309808529390715,
+   "event_ci95": [
+    0.02529115651340801,
+    0.03332846054537342
+   ],
+   "control_n": 435,
+   "control_mean": 0.03468524806729565,
+   "control_ci95": [
+    0.03288306112911699,
+    0.03648743500547431
+   ],
+   "diff_event_minus_control": -0.005375439537904935,
+   "welch_t": -2.392201862195938,
+   "welch_p": 0.021025276370148394,
+   "control_reliable": true,
+   "welch_p_bh": 0.2945885512812946
+  },
+  {
+   "release_name": "Consumer Price Index",
+   "horizon_sessions": 2,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.01760745615303259,
+   "event_ci95": [
+    0.015745118800782377,
+    0.019469793505282804
+   ],
+   "control_n": 435,
+   "control_mean": 0.020029559021812342,
+   "control_ci95": [
+    0.019149061933580683,
+    0.020910056110044
+   ],
+   "diff_event_minus_control": -0.002422102868779752,
+   "welch_t": -2.3045317023497063,
+   "welch_p": 0.02573352654196981,
+   "control_reliable": true,
+   "welch_p_bh": 0.2945885512812946
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 0,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": -0.005993050799903418,
+   "event_ci95": [
+    -0.01529209197368999,
+    0.0033059903738831553
+   ],
+   "control_n": 308,
+   "control_mean": -0.0009534917440211668,
+   "control_ci95": [
+    -0.0036670662751311462,
+    0.0017600827870888124
+   ],
+   "diff_event_minus_control": -0.005039559055882251,
+   "welch_t": -1.0196818023189194,
+   "welch_p": 0.3145948984591489,
+   "control_reliable": true,
+   "welch_p_bh": 0.7652441840863429
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 0,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.01826132384450031,
+   "event_ci95": [
+    0.011218749630634024,
+    0.025303898058366595
+   ],
+   "control_n": 308,
+   "control_mean": 0.017580246023178536,
+   "control_ci95": [
+    0.015707434633284095,
+    0.019453057413072978
+   ],
+   "diff_event_minus_control": 0.0006810778213217732,
+   "welch_t": 0.18318250018918092,
+   "welch_p": 0.8556964208645738,
+   "control_reliable": true,
+   "welch_p_bh": 0.9195543627201389
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 0,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.03702213617206144,
+   "event_ci95": [
+    0.028932601298003388,
+    0.04511167104611949
+   ],
+   "control_n": 308,
+   "control_mean": 0.03437454061219752,
+   "control_ci95": [
+    0.032340546361090086,
+    0.03640853486330495
+   ],
+   "diff_event_minus_control": 0.0026475955598639217,
+   "welch_t": 0.6221178452606754,
+   "welch_p": 0.5378929956039861,
+   "control_reliable": true,
+   "welch_p_bh": 0.81298610599779
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 0,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.022762583086363843,
+   "event_ci95": [
+    0.018196249881891825,
+    0.02732891629083586
+   ],
+   "control_n": 308,
+   "control_mean": 0.019698080986424383,
+   "control_ci95": [
+    0.018805895134318136,
+    0.02059026683853063
+   ],
+   "diff_event_minus_control": 0.0030645020999394597,
+   "welch_t": 1.2909611666668377,
+   "welch_p": 0.20557963790215816,
+   "control_reliable": true,
+   "welch_p_bh": 0.6773924585289823
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 1,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": 0.009675068805703489,
+   "event_ci95": [
+    -0.0019132452343914984,
+    0.021263382845798477
+   ],
+   "control_n": 311,
+   "control_mean": 0.0011112918681602968,
+   "control_ci95": [
+    -0.0017020981567365241,
+    0.003924681893057118
+   ],
+   "diff_event_minus_control": 0.008563776937543191,
+   "welch_t": 1.4075545274207595,
+   "welch_p": 0.16814575493046016,
+   "control_reliable": true,
+   "welch_p_bh": 0.627527460813788
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 1,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.02362476559561757,
+   "event_ci95": [
+    0.014865531394342886,
+    0.03238399979689226
+   ],
+   "control_n": 311,
+   "control_mean": 0.017985267952957913,
+   "control_ci95": [
+    0.016004877720762263,
+    0.019965658185153563
+   ],
+   "diff_event_minus_control": 0.005639497642659658,
+   "welch_t": 1.230848857919614,
+   "welch_p": 0.22676750972095622,
+   "control_reliable": true,
+   "welch_p_bh": 0.6773924585289823
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 1,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.04205512315094535,
+   "event_ci95": [
+    0.030637956294930734,
+    0.05347229000695997
+   ],
+   "control_n": 311,
+   "control_mean": 0.03471157874198941,
+   "control_ci95": [
+    0.032543982757190185,
+    0.03687917472678863
+   ],
+   "diff_event_minus_control": 0.007343544408955946,
+   "welch_t": 1.2385519490786425,
+   "welch_p": 0.22417923687900027,
+   "control_reliable": true,
+   "welch_p_bh": 0.6773924585289823
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 1,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.025178352280459972,
+   "event_ci95": [
+    0.018356443627229463,
+    0.03200026093369048
+   ],
+   "control_n": 311,
+   "control_mean": 0.020194944195673994,
+   "control_ci95": [
+    0.01909911557771662,
+    0.021290772813631367
+   ],
+   "diff_event_minus_control": 0.0049834080847859785,
+   "welch_t": 1.4136587979589186,
+   "welch_p": 0.1669355292197455,
+   "control_reliable": true,
+   "welch_p_bh": 0.627527460813788
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 2,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": 0.00034421591787892405,
+   "event_ci95": [
+    -0.00710748250006324,
+    0.007795914335821088
+   ],
+   "control_n": 336,
+   "control_mean": 0.0005923380843913885,
+   "control_ci95": [
+    -0.0020048205274423507,
+    0.0031894966962251275
+   ],
+   "diff_event_minus_control": -0.00024812216651246444,
+   "welch_t": -0.061627080592804945,
+   "welch_p": 0.9511750792221725,
+   "control_reliable": true,
+   "welch_p_bh": 0.9645719113238933
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 2,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.016137100466109427,
+   "event_ci95": [
+    0.011312962483596888,
+    0.020961238448621966
+   ],
+   "control_n": 336,
+   "control_mean": 0.017941708729815275,
+   "control_ci95": [
+    0.016193045294257424,
+    0.019690372165373126
+   ],
+   "diff_event_minus_control": -0.001804608263705848,
+   "welch_t": -0.6893067042497681,
+   "welch_p": 0.49464789859568137,
+   "control_reliable": true,
+   "welch_p_bh": 0.8094238340656603
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 2,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.039552968647688744,
+   "event_ci95": [
+    0.032598643943899906,
+    0.04650729335147758
+   ],
+   "control_n": 336,
+   "control_mean": 0.03442383981240655,
+   "control_ci95": [
+    0.0323914798700619,
+    0.0364561997547512
+   ],
+   "diff_event_minus_control": 0.005129128835282194,
+   "welch_t": 1.3875495156413633,
+   "welch_p": 0.17368873821223854,
+   "control_reliable": true,
+   "welch_p_bh": 0.627527460813788
+  },
+  {
+   "release_name": "Employment Situation",
+   "horizon_sessions": 2,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.02213212051501671,
+   "event_ci95": [
+    0.01862877374145374,
+    0.025635467288579683
+   ],
+   "control_n": 336,
+   "control_mean": 0.019809178896730444,
+   "control_ci95": [
+    0.018793121658222178,
+    0.02082523613523871
+   ],
+   "diff_event_minus_control": 0.002322941618286268,
+   "welch_t": 1.2481698629843143,
+   "welch_p": 0.21993593948702245,
+   "control_reliable": true,
+   "welch_p_bh": 0.6773924585289823
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 0,
+   "metric": "ret",
+   "event_n": 31,
+   "event_mean": -0.0033228037516541183,
+   "event_ci95": [
+    -0.013684249769294003,
+    0.007038642265985766
+   ],
+   "control_n": 308,
+   "control_mean": -0.0009534917440211668,
+   "control_ci95": [
+    -0.0036670662751311462,
+    0.0017600827870888124
+   ],
+   "diff_event_minus_control": -0.0023693120076329517,
+   "welch_t": -0.43356376994942153,
+   "welch_p": 0.6673246529375362,
+   "control_reliable": true,
+   "welch_p_bh": 0.8640972099598303
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 0,
+   "metric": "abs_ret",
+   "event_n": 31,
+   "event_mean": 0.01956268158263464,
+   "event_ci95": [
+    0.011831731858011892,
+    0.02729363130725739
+   ],
+   "control_n": 308,
+   "control_mean": 0.017580246023178536,
+   "control_ci95": [
+    0.015707434633284095,
+    0.019453057413072978
+   ],
+   "diff_event_minus_control": 0.001982435559456104,
+   "welch_t": 0.48847130062049604,
+   "welch_p": 0.6283878061753777,
+   "control_reliable": true,
+   "welch_p_bh": 0.8587545380348369
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 0,
+   "metric": "range_pct",
+   "event_n": 31,
+   "event_mean": 0.04009647674959239,
+   "event_ci95": [
+    0.03259138387887615,
+    0.04760156962030863
+   ],
+   "control_n": 308,
+   "control_mean": 0.03437454061219752,
+   "control_ci95": [
+    0.032340546361090086,
+    0.03640853486330495
+   ],
+   "diff_event_minus_control": 0.00572193613739487,
+   "welch_t": 1.4422888653682968,
+   "welch_p": 0.15822533609009815,
+   "control_reliable": true,
+   "welch_p_bh": 0.627527460813788
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 0,
+   "metric": "realized_vol",
+   "event_n": 31,
+   "event_mean": 0.022265301454459804,
+   "event_ci95": [
+    0.018910787571131044,
+    0.025619815337788565
+   ],
+   "control_n": 308,
+   "control_mean": 0.019698080986424383,
+   "control_ci95": [
+    0.018805895134318136,
+    0.02059026683853063
+   ],
+   "diff_event_minus_control": 0.0025672204680354214,
+   "welch_t": 1.4495996630717116,
+   "welch_p": 0.15623238093458086,
+   "control_reliable": true,
+   "welch_p_bh": 0.627527460813788
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 1,
+   "metric": "ret",
+   "event_n": 31,
+   "event_mean": -0.002171807028581344,
+   "event_ci95": [
+    -0.010152370871775326,
+    0.0058087568146126395
+   ],
+   "control_n": 311,
+   "control_mean": 0.0011112918681602968,
+   "control_ci95": [
+    -0.0017020981567365241,
+    0.003924681893057118
+   ],
+   "diff_event_minus_control": -0.003283098896741641,
+   "welch_t": -0.7604482909318429,
+   "welch_p": 0.4516963613794416,
+   "control_reliable": true,
+   "welch_p_bh": 0.8094238340656603
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 1,
+   "metric": "abs_ret",
+   "event_n": 31,
+   "event_mean": 0.01682353038952571,
+   "event_ci95": [
+    0.011527276155885608,
+    0.022119784623165814
+   ],
+   "control_n": 311,
+   "control_mean": 0.017985267952957913,
+   "control_ci95": [
+    0.016004877720762263,
+    0.019965658185153563
+   ],
+   "diff_event_minus_control": -0.0011617375634322032,
+   "welch_t": -0.40269614627717465,
+   "welch_p": 0.6893762383230868,
+   "control_reliable": true,
+   "welch_p_bh": 0.8640972099598303
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 1,
+   "metric": "range_pct",
+   "event_n": 31,
+   "event_mean": 0.03575501659610647,
+   "event_ci95": [
+    0.030623567739947934,
+    0.04088646545226501
+   ],
+   "control_n": 311,
+   "control_mean": 0.03471157874198941,
+   "control_ci95": [
+    0.032543982757190185,
+    0.03687917472678863
+   ],
+   "diff_event_minus_control": 0.001043437854117063,
+   "welch_t": 0.36713863944700226,
+   "welch_p": 0.715379696840636,
+   "control_reliable": true,
+   "welch_p_bh": 0.8640972099598303
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 1,
+   "metric": "realized_vol",
+   "event_n": 31,
+   "event_mean": 0.021638674184127456,
+   "event_ci95": [
+    0.019104751789494556,
+    0.024172596578760357
+   ],
+   "control_n": 311,
+   "control_mean": 0.020194944195673994,
+   "control_ci95": [
+    0.01909911557771662,
+    0.021290772813631367
+   ],
+   "diff_event_minus_control": 0.0014437299884534627,
+   "welch_t": 1.024988246857453,
+   "welch_p": 0.3112184703882116,
+   "control_reliable": true,
+   "welch_p_bh": 0.7652441840863429
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 2,
+   "metric": "ret",
+   "event_n": 31,
+   "event_mean": 0.0043338526619928356,
+   "event_ci95": [
+    -0.0046331827850277065,
+    0.013300888109013378
+   ],
+   "control_n": 329,
+   "control_mean": 0.0008179831875267849,
+   "control_ci95": [
+    -0.0018168896226860298,
+    0.0034528559977395996
+   ],
+   "diff_event_minus_control": 0.0035158694744660507,
+   "welch_t": 0.7373211057090268,
+   "welch_p": 0.46578911244504306,
+   "control_reliable": true,
+   "welch_p_bh": 0.8094238340656603
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 2,
+   "metric": "abs_ret",
+   "event_n": 31,
+   "event_mean": 0.01713298160883208,
+   "event_ci95": [
+    0.010408087320862451,
+    0.02385787589680171
+   ],
+   "control_n": 329,
+   "control_mean": 0.018041846101985174,
+   "control_ci95": [
+    0.01627041288664913,
+    0.019813279317321218
+   ],
+   "diff_event_minus_control": -0.0009088644931530936,
+   "welch_t": -0.2561546706871196,
+   "welch_p": 0.7993618422295485,
+   "control_reliable": true,
+   "welch_p_bh": 0.9195543627201389
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 2,
+   "metric": "range_pct",
+   "event_n": 31,
+   "event_mean": 0.03418605033876997,
+   "event_ci95": [
+    0.028025042513630166,
+    0.04034705816390978
+   ],
+   "control_n": 329,
+   "control_mean": 0.034563201289523185,
+   "control_ci95": [
+    0.032502009329254865,
+    0.036624393249791505
+   ],
+   "diff_event_minus_control": -0.000377150950753212,
+   "welch_t": -0.11378406773457402,
+   "welch_p": 0.9100233402096657,
+   "control_reliable": true,
+   "welch_p_bh": 0.9388960068700152
+  },
+  {
+   "release_name": "Gross Domestic Product",
+   "horizon_sessions": 2,
+   "metric": "realized_vol",
+   "event_n": 31,
+   "event_mean": 0.0192597417343901,
+   "event_ci95": [
+    0.016571773288843107,
+    0.021947710179937095
+   ],
+   "control_n": 329,
+   "control_mean": 0.019859840331415073,
+   "control_ci95": [
+    0.018826362175263588,
+    0.020893318487566558
+   ],
+   "diff_event_minus_control": -0.0006000985970249714,
+   "welch_t": -0.40842871289654725,
+   "welch_p": 0.6851677165193218,
+   "control_reliable": true,
+   "welch_p_bh": 0.8640972099598303
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 0,
+   "metric": "ret",
+   "event_n": 30,
+   "event_mean": -0.001899705005419002,
+   "event_ci95": [
+    -0.011507850481926993,
+    0.007708440471088989
+   ],
+   "control_n": 308,
+   "control_mean": -0.0009534917440211668,
+   "control_ci95": [
+    -0.0036670662751311462,
+    0.0017600827870888124
+   ],
+   "diff_event_minus_control": -0.0009462132613978352,
+   "welch_t": -0.18575529587237782,
+   "welch_p": 0.85374726806694,
+   "control_reliable": true,
+   "welch_p_bh": 0.9195543627201389
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 0,
+   "metric": "abs_ret",
+   "event_n": 30,
+   "event_mean": 0.021290043110432,
+   "event_ci95": [
+    0.015567206892189229,
+    0.027012879328674768
+   ],
+   "control_n": 308,
+   "control_mean": 0.017580246023178536,
+   "control_ci95": [
+    0.015707434633284095,
+    0.019453057413072978
+   ],
+   "diff_event_minus_control": 0.003709797087253462,
+   "welch_t": 1.2075431167755477,
+   "welch_p": 0.23520571476700775,
+   "control_reliable": true,
+   "welch_p_bh": 0.6773924585289823
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 0,
+   "metric": "range_pct",
+   "event_n": 30,
+   "event_mean": 0.03744448822906427,
+   "event_ci95": [
+    0.03198233500669767,
+    0.042906641451430874
+   ],
+   "control_n": 308,
+   "control_mean": 0.03437454061219752,
+   "control_ci95": [
+    0.032340546361090086,
+    0.03640853486330495
+   ],
+   "diff_event_minus_control": 0.0030699476168667555,
+   "welch_t": 1.0323450458082541,
+   "welch_p": 0.30851716383978817,
+   "control_reliable": true,
+   "welch_p_bh": 0.7652441840863429
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 0,
+   "metric": "realized_vol",
+   "event_n": 30,
+   "event_mean": 0.020659770390841575,
+   "event_ci95": [
+    0.01809456253905599,
+    0.02322497824262716
+   ],
+   "control_n": 308,
+   "control_mean": 0.019698080986424383,
+   "control_ci95": [
+    0.018805895134318136,
+    0.02059026683853063
+   ],
+   "diff_event_minus_control": 0.0009616894044171924,
+   "welch_t": 0.6940200254427223,
+   "welch_p": 0.4920766258511774,
+   "control_reliable": true,
+   "welch_p_bh": 0.8094238340656603
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 1,
+   "metric": "ret",
+   "event_n": 30,
+   "event_mean": 0.001496502997263216,
+   "event_ci95": [
+    -0.007227410226340487,
+    0.01022041622086692
+   ],
+   "control_n": 435,
+   "control_mean": 0.00046792629451331615,
+   "control_ci95": [
+    -0.0018634515747761502,
+    0.0027993041638027824
+   ],
+   "diff_event_minus_control": 0.0010285767027499,
+   "welch_t": 0.22325547380714078,
+   "welch_p": 0.824701458839016,
+   "control_reliable": true,
+   "welch_p_bh": 0.9195543627201389
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 1,
+   "metric": "abs_ret",
+   "event_n": 30,
+   "event_mean": 0.01635152149025555,
+   "event_ci95": [
+    0.009949584052389628,
+    0.02275345892812147
+   ],
+   "control_n": 435,
+   "control_mean": 0.017897734527739448,
+   "control_ci95": [
+    0.016284714552939374,
+    0.019510754502539522
+   ],
+   "diff_event_minus_control": -0.001546213037483899,
+   "welch_t": -0.4590380906033941,
+   "welch_p": 0.649235391496948,
+   "control_reliable": true,
+   "welch_p_bh": 0.8640972099598303
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 1,
+   "metric": "range_pct",
+   "event_n": 30,
+   "event_mean": 0.033675096236140574,
+   "event_ci95": [
+    0.02759142668056196,
+    0.039758765791719185
+   ],
+   "control_n": 435,
+   "control_mean": 0.03468524806729565,
+   "control_ci95": [
+    0.03288306112911699,
+    0.03648743500547431
+   ],
+   "diff_event_minus_control": -0.0010101518311550761,
+   "welch_t": -0.31204103113644616,
+   "welch_p": 0.7568986427164784,
+   "control_reliable": true,
+   "welch_p_bh": 0.8933885618948598
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 1,
+   "metric": "realized_vol",
+   "event_n": 30,
+   "event_mean": 0.02076928147093962,
+   "event_ci95": [
+    0.017930961240100247,
+    0.023607601701778995
+   ],
+   "control_n": 435,
+   "control_mean": 0.020029559021812342,
+   "control_ci95": [
+    0.019149061933580683,
+    0.020910056110044
+   ],
+   "diff_event_minus_control": 0.0007397224491272787,
+   "welch_t": 0.48787846082451014,
+   "welch_p": 0.628693247937596,
+   "control_reliable": true,
+   "welch_p_bh": 0.8587545380348369
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 2,
+   "metric": "ret",
+   "event_n": 30,
+   "event_mean": 0.004093500195367994,
+   "event_ci95": [
+    -0.004256396631238,
+    0.012443397021973989
+   ],
+   "control_n": 428,
+   "control_mean": 0.0006393430150796687,
+   "control_ci95": [
+    -0.001718667883969287,
+    0.0029973539141286247
+   ],
+   "diff_event_minus_control": 0.0034541571802883253,
+   "welch_t": 0.7802890270666476,
+   "welch_p": 0.44065195893725395,
+   "control_reliable": true,
+   "welch_p_bh": 0.8094238340656603
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 2,
+   "metric": "abs_ret",
+   "event_n": 30,
+   "event_mean": 0.01643847739299289,
+   "event_ci95": [
+    0.010426465012066451,
+    0.022450489773919332
+   ],
+   "control_n": 428,
+   "control_mean": 0.01797399007920993,
+   "control_ci95": [
+    0.016343844917506293,
+    0.019604135240913565
+   ],
+   "diff_event_minus_control": -0.0015355126862170373,
+   "welch_t": -0.4831525689928269,
+   "welch_p": 0.6321387571645327,
+   "control_reliable": true,
+   "welch_p_bh": 0.8587545380348369
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 2,
+   "metric": "range_pct",
+   "event_n": 30,
+   "event_mean": 0.03411512797257683,
+   "event_ci95": [
+    0.027631688646018986,
+    0.04059856729913467
+   ],
+   "control_n": 428,
+   "control_mean": 0.034796649431210594,
+   "control_ci95": [
+    0.03297476544805565,
+    0.03661853341436554
+   ],
+   "diff_event_minus_control": -0.0006815214586337673,
+   "welch_t": -0.19834745246042781,
+   "welch_p": 0.8439633138873271,
+   "control_reliable": true,
+   "welch_p_bh": 0.9195543627201389
+  },
+  {
+   "release_name": "Personal Income and Outlays",
+   "horizon_sessions": 2,
+   "metric": "realized_vol",
+   "event_n": 30,
+   "event_mean": 0.01906015525966396,
+   "event_ci95": [
+    0.016038131810493076,
+    0.022082178708834842
+   ],
+   "control_n": 428,
+   "control_mean": 0.020072106388370325,
+   "control_ci95": [
+    0.019180176726088106,
+    0.020964036050652543
+   ],
+   "diff_event_minus_control": -0.0010119511287063655,
+   "welch_t": -0.6294788370163794,
+   "welch_p": 0.533211831984915,
+   "control_reliable": true,
+   "welch_p_bh": 0.81298610599779
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 0,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": 0.005264365345659126,
+   "event_ci95": [
+    -0.00038271084254065495,
+    0.010911441533858908
+   ],
+   "control_n": 308,
+   "control_mean": -0.0009534917440211668,
+   "control_ci95": [
+    -0.0036670662751311462,
+    0.0017600827870888124
+   ],
+   "diff_event_minus_control": 0.006217857089680293,
+   "welch_t": 1.9451837037736446,
+   "welch_p": 0.05778517998742884,
+   "control_reliable": true,
+   "welch_p_bh": 0.3539449947585192
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 0,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.013176223708436165,
+   "event_ci95": [
+    0.009460144034144467,
+    0.01689230338272786
+   ],
+   "control_n": 308,
+   "control_mean": 0.017580246023178536,
+   "control_ci95": [
+    0.015707434633284095,
+    0.019453057413072978
+   ],
+   "diff_event_minus_control": -0.0044040223147423715,
+   "welch_t": -2.074308675272988,
+   "welch_p": 0.043388341300380925,
+   "control_reliable": true,
+   "welch_p_bh": 0.3471067304030474
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 0,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.02949390773008631,
+   "event_ci95": [
+    0.025829211530398653,
+    0.03315860392977397
+   ],
+   "control_n": 308,
+   "control_mean": 0.03437454061219752,
+   "control_ci95": [
+    0.032340546361090086,
+    0.03640853486330495
+   ],
+   "diff_event_minus_control": -0.004880632882111206,
+   "welch_t": -2.2823476364955084,
+   "welch_p": 0.02654609558338406,
+   "control_reliable": true,
+   "welch_p_bh": 0.2945885512812946
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 0,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.018971023127183597,
+   "event_ci95": [
+    0.016638333803274837,
+    0.021303712451092357
+   ],
+   "control_n": 308,
+   "control_mean": 0.019698080986424383,
+   "control_ci95": [
+    0.018805895134318136,
+    0.02059026683853063
+   ],
+   "diff_event_minus_control": -0.0007270578592407859,
+   "welch_t": -0.5705872009586775,
+   "welch_p": 0.5714207009719933,
+   "control_reliable": true,
+   "welch_p_bh": 0.8228458093996703
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 1,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": -7.285360616481398e-05,
+   "event_ci95": [
+    -0.006524323131662795,
+    0.006378615919333167
+   ],
+   "control_n": 435,
+   "control_mean": 0.00046792629451331615,
+   "control_ci95": [
+    -0.0018634515747761502,
+    0.0027993041638027824
+   ],
+   "diff_event_minus_control": -0.0005407799006781301,
+   "welch_t": -0.15451316967673231,
+   "welch_p": 0.8779904103191405,
+   "control_reliable": true,
+   "welch_p_bh": 0.9296369050437958
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 1,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.015074031451030413,
+   "event_ci95": [
+    0.011404749246037769,
+    0.018743313656023056
+   ],
+   "control_n": 435,
+   "control_mean": 0.017897734527739448,
+   "control_ci95": [
+    0.016284714552939374,
+    0.019510754502539522
+   ],
+   "diff_event_minus_control": -0.0028237030767090353,
+   "welch_t": -1.3807925769910758,
+   "welch_p": 0.17431318355938555,
+   "control_reliable": true,
+   "welch_p_bh": 0.627527460813788
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 1,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.02988841715510668,
+   "event_ci95": [
+    0.026135274310342422,
+    0.03364155999987094
+   ],
+   "control_n": 435,
+   "control_mean": 0.03468524806729565,
+   "control_ci95": [
+    0.03288306112911699,
+    0.03648743500547431
+   ],
+   "diff_event_minus_control": -0.004796830912188969,
+   "welch_t": -2.258195819579009,
+   "welch_p": 0.02864055359679253,
+   "control_reliable": true,
+   "welch_p_bh": 0.2945885512812946
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 1,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.01792112250217751,
+   "event_ci95": [
+    0.015978401821597762,
+    0.019863843182757256
+   ],
+   "control_n": 435,
+   "control_mean": 0.020029559021812342,
+   "control_ci95": [
+    0.019149061933580683,
+    0.020910056110044
+   ],
+   "diff_event_minus_control": -0.0021084365196348334,
+   "welch_t": -1.9374820575690317,
+   "welch_p": 0.05899083245975321,
+   "control_reliable": true,
+   "welch_p_bh": 0.3539449947585192
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 2,
+   "metric": "ret",
+   "event_n": 32,
+   "event_mean": -0.008193713062320421,
+   "event_ci95": [
+    -0.014471280957796914,
+    -0.0019161451668439286
+   ],
+   "control_n": 435,
+   "control_mean": 0.00046792629451331615,
+   "control_ci95": [
+    -0.0018634515747761502,
+    0.0027993041638027824
+   ],
+   "diff_event_minus_control": -0.008661639356833738,
+   "welch_t": -2.535175097458484,
+   "welch_p": 0.015243386785420174,
+   "control_reliable": true,
+   "welch_p_bh": 0.2945885512812946
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 2,
+   "metric": "abs_ret",
+   "event_n": 32,
+   "event_mean": 0.015750832949292002,
+   "event_ci95": [
+    0.011629686985722337,
+    0.019871978912861667
+   ],
+   "control_n": 435,
+   "control_mean": 0.017897734527739448,
+   "control_ci95": [
+    0.016284714552939374,
+    0.019510754502539522
+   ],
+   "diff_event_minus_control": -0.002146901578447446,
+   "welch_t": -0.9508213111787691,
+   "welch_p": 0.3472456908154111,
+   "control_reliable": true,
+   "welch_p_bh": 0.7652441840863429
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 2,
+   "metric": "range_pct",
+   "event_n": 32,
+   "event_mean": 0.032120462243140455,
+   "event_ci95": [
+    0.0272954033734985,
+    0.03694552111278241
+   ],
+   "control_n": 435,
+   "control_mean": 0.03468524806729565,
+   "control_ci95": [
+    0.03288306112911699,
+    0.03648743500547431
+   ],
+   "diff_event_minus_control": -0.0025647858241551955,
+   "welch_t": -0.9759917714045404,
+   "welch_p": 0.33490589658898756,
+   "control_reliable": true,
+   "welch_p_bh": 0.7652441840863429
+  },
+  {
+   "release_name": "Producer Price Index",
+   "horizon_sessions": 2,
+   "metric": "realized_vol",
+   "event_n": 32,
+   "event_mean": 0.01875871548500961,
+   "event_ci95": [
+    0.016712516474341417,
+    0.020804914495677805
+   ],
+   "control_n": 435,
+   "control_mean": 0.020029559021812342,
+   "control_ci95": [
+    0.019149061933580683,
+    0.020910056110044
+   ],
+   "diff_event_minus_control": -0.0012708435368027314,
+   "welch_t": -1.1181775857578995,
+   "welch_p": 0.26963735631679064,
+   "control_reliable": true,
+   "welch_p_bh": 0.7466880636464972
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 0,
+   "metric": "ret",
+   "event_n": 131,
+   "event_mean": -0.003918151880293676,
+   "event_ci95": [
+    -0.008081957987163345,
+    0.000245654226575992
+   ],
+   "control_n": 106,
+   "control_mean": -0.0006185710432360349,
+   "control_ci95": [
+    -0.005601146632576328,
+    0.0043640045461042585
+   ],
+   "diff_event_minus_control": -0.0032995808370576414,
+   "welch_t": -0.995972475862423,
+   "welch_p": 0.32037141035952577,
+   "control_reliable": true,
+   "welch_p_bh": 0.7652441840863429
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 0,
+   "metric": "abs_ret",
+   "event_n": 131,
+   "event_mean": 0.017440793478162728,
+   "event_ci95": [
+    0.014473951479877055,
+    0.020407635476448402
+   ],
+   "control_n": 106,
+   "control_mean": 0.017450444830316384,
+   "control_ci95": [
+    0.013749261344153229,
+    0.02115162831647954
+   ],
+   "diff_event_minus_control": -9.65135215365634e-06,
+   "welch_t": -0.0039878993264622475,
+   "welch_p": 0.9968218673390473,
+   "control_reliable": true,
+   "welch_p_bh": 0.9968218673390472
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 0,
+   "metric": "range_pct",
+   "event_n": 131,
+   "event_mean": 0.035582560558232675,
+   "event_ci95": [
+    0.0323735503489118,
+    0.038791570767553546
+   ],
+   "control_n": 106,
+   "control_mean": 0.03506405363226867,
+   "control_ci95": [
+    0.031336781985503846,
+    0.0387913252790335
+   ],
+   "diff_event_minus_control": 0.0005185069259640018,
+   "welch_t": 0.20662839484443205,
+   "welch_p": 0.8364907579725276,
+   "control_reliable": true,
+   "welch_p_bh": 0.9195543627201389
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 0,
+   "metric": "realized_vol",
+   "event_n": 131,
+   "event_mean": 0.02140796316785971,
+   "event_ci95": [
+    0.019851918792140943,
+    0.02296400754357848
+   ],
+   "control_n": 106,
+   "control_mean": 0.020556327409932174,
+   "control_ci95": [
+    0.01888858864352003,
+    0.02222406617634432
+   ],
+   "diff_event_minus_control": 0.0008516357579275366,
+   "welch_t": 0.731810484078899,
+   "welch_p": 0.46503612109645903,
+   "control_reliable": true,
+   "welch_p_bh": 0.8094238340656603
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 1,
+   "metric": "ret",
+   "event_n": 131,
+   "event_mean": -0.001922274027998073,
+   "event_ci95": [
+    -0.005856713968882035,
+    0.0020121659128858895
+   ],
+   "control_n": 205,
+   "control_mean": 0.0020057575686871806,
+   "control_ci95": [
+    -0.0013995096931279532,
+    0.005411024830502315
+   ],
+   "diff_event_minus_control": -0.0039280315966852535,
+   "welch_t": -1.4795903690534253,
+   "welch_p": 0.14005711564090523,
+   "control_reliable": true,
+   "welch_p_bh": 0.627527460813788
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 1,
+   "metric": "abs_ret",
+   "event_n": 131,
+   "event_mean": 0.01711864257294804,
+   "event_ci95": [
+    0.014486301364051764,
+    0.019750983781844315
+   ],
+   "control_n": 205,
+   "control_mean": 0.018261810640762804,
+   "control_ci95": [
+    0.01593985881135939,
+    0.020583762470166217
+   ],
+   "diff_event_minus_control": -0.0011431680678147642,
+   "welch_t": -0.6383352207007705,
+   "welch_p": 0.5237480752368753,
+   "control_reliable": true,
+   "welch_p_bh": 0.81298610599779
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 1,
+   "metric": "range_pct",
+   "event_n": 131,
+   "event_mean": 0.03379869313867683,
+   "event_ci95": [
+    0.030831020913397372,
+    0.03676636536395629
+   ],
+   "control_n": 205,
+   "control_mean": 0.034529323432869394,
+   "control_ci95": [
+    0.03185865968451296,
+    0.03719998718122583
+   ],
+   "diff_event_minus_control": -0.0007306302941925621,
+   "welch_t": -0.358687368140859,
+   "welch_p": 0.7200810082998585,
+   "control_reliable": true,
+   "welch_p_bh": 0.8640972099598303
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 1,
+   "metric": "realized_vol",
+   "event_n": 131,
+   "event_mean": 0.01989044892364628,
+   "event_ci95": [
+    0.018340960932712515,
+    0.021439936914580043
+   ],
+   "control_n": 205,
+   "control_mean": 0.0200080826312283,
+   "control_ci95": [
+    0.018584634415058348,
+    0.02143153084739825
+   ],
+   "diff_event_minus_control": -0.00011763370758201969,
+   "welch_t": -0.10957899544496202,
+   "welch_p": 0.912815562234737,
+   "control_reliable": true,
+   "welch_p_bh": 0.9388960068700152
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 2,
+   "metric": "ret",
+   "event_n": 131,
+   "event_mean": 0.0037781530225394306,
+   "event_ci95": [
+    -0.0007918305557422338,
+    0.008348136600821095
+   ],
+   "control_n": 251,
+   "control_mean": 0.0014149783362041916,
+   "control_ci95": [
+    -0.001649160610707451,
+    0.004479117283115834
+   ],
+   "diff_event_minus_control": 0.002363174686335239,
+   "welch_t": 0.8418198546761431,
+   "welch_p": 0.40070250539675734,
+   "control_reliable": true,
+   "welch_p_bh": 0.8014050107935147
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 2,
+   "metric": "abs_ret",
+   "event_n": 131,
+   "event_mean": 0.0198230749464313,
+   "event_ci95": [
+    0.01670948076149128,
+    0.022936669131371323
+   ],
+   "control_n": 251,
+   "control_mean": 0.018178864265435926,
+   "control_ci95": [
+    0.01609522266209149,
+    0.020262505868780364
+   ],
+   "diff_event_minus_control": 0.0016442106809953748,
+   "welch_t": 0.8601840311841262,
+   "welch_p": 0.39052250751448786,
+   "control_reliable": true,
+   "welch_p_bh": 0.8014050107935147
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 2,
+   "metric": "range_pct",
+   "event_n": 131,
+   "event_mean": 0.036405729899764525,
+   "event_ci95": [
+    0.03275857141073039,
+    0.04005288838879866
+   ],
+   "control_n": 251,
+   "control_mean": 0.0350338897260226,
+   "control_ci95": [
+    0.03256679635258819,
+    0.037500983099457014
+   ],
+   "diff_event_minus_control": 0.0013718401737419228,
+   "welch_t": 0.6106460573103955,
+   "welch_p": 0.54199073733186,
+   "control_reliable": true,
+   "welch_p_bh": 0.81298610599779
+  },
+  {
+   "release_name": "Unemployment Insurance Weekly Claims Report",
+   "horizon_sessions": 2,
+   "metric": "realized_vol",
+   "event_n": 131,
+   "event_mean": 0.021106375441733723,
+   "event_ci95": [
+    0.019067715691402042,
+    0.023145035192065403
+   ],
+   "control_n": 251,
+   "control_mean": 0.02023139346734429,
+   "control_ci95": [
+    0.018959651967559103,
+    0.021503134967129474
+   ],
+   "diff_event_minus_control": 0.0008749819743894341,
+   "welch_t": 0.7137351676489283,
+   "welch_p": 0.4761066538052536,
+   "control_reliable": true,
+   "welch_p_bh": 0.8094238340656603
+  }
+ ],
+ "multiple_testing": {
+  "tests_run": 72,
+  "significant_raw_p_lt_0.05": 9,
+  "expected_by_chance_at_alpha_0.05": 3.6,
+  "significant_after_bh_correction": 0
+ }
+}
