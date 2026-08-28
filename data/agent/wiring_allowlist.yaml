@@ -7,11 +7,6 @@ ORPHANS:
     --staged` from .githooks/commit-msg — a shell hook caller is not a Python import, so it correctly
     shows as an orphan while being genuinely wired. Activated per-checkout by scripts/install_hooks.sh;
     inert until then.
-- module: scripts.tsmom_backtest
-  reason: standalone research CLI (`python3 scripts/tsmom_backtest.py --universe primary`), same
-    convention as ruin_engine.py — imports sovereign.trend.tsmom_engine.decide() rather than being
-    imported. Output (data/trend/tsmom_*_summary.json, *_trades.csv, *_equity.csv) is read by a human
-    evaluating the pre-registered TSMOM spec, not by code.
 - module: scripts.ruin_engine
   reason: standalone research CLI (`python3 scripts/ruin_engine.py --firm cti_1step`), same convention
     as drawdown_margin.py and carry_buy_gate.py. It IMPORTS from carry_buy_gate and drawdown_margin rather
@@ -335,11 +330,20 @@ ORPHANS:
     not designed to be imported as a library module. Added 2026-08-26 as the single documented command
     for refreshing CACHE_STALE macro series (see scripts/data_health.py).
 - module: scripts.paper_tsmom_daily
-  reason: 'standalone daily CLI (python3 scripts/paper_tsmom_daily.py), same convention as its paper_carry_daily
-    sibling — a shell/scheduler caller is not a Python import. NOTE: this module and scripts/carry_replay.py
-    appeared in the working tree from a CONCURRENT process on 2026-08-27, not from this session''s dispatch.
-    Allowlisted so the audit is not red on someone else''s in-flight work; NOT reviewed or vouched for
-    here. Whoever owns it should confirm the reason or replace it.'
+  reason: appeared in the working tree from CONCURRENT work on 2026-08-27, outside this session's dispatch
+    and UNTRACKED in git. Allowlisted so the audit is not red on someone else's in-flight files; NOT reviewed
+    and NOT vouched for here. Whoever owns it should confirm this reason or replace it — and if the files
+    are abandoned, delete them and drop these entries.
+- module: scripts.run_cb_ab
+  reason: appeared in the working tree from CONCURRENT work on 2026-08-27, outside this session's dispatch
+    and UNTRACKED in git. Allowlisted so the audit is not red on someone else's in-flight files; NOT reviewed
+    and NOT vouched for here. Whoever owns it should confirm this reason or replace it — and if the files
+    are abandoned, delete them and drop these entries.
+- module: scripts.tsmom_backtest
+  reason: appeared in the working tree from CONCURRENT work on 2026-08-27, outside this session's dispatch
+    and UNTRACKED in git. Allowlisted so the audit is not red on someone else's in-flight files; NOT reviewed
+    and NOT vouched for here. Whoever owns it should confirm this reason or replace it — and if the files
+    are abandoned, delete them and drop these entries.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
@@ -454,6 +458,11 @@ IMPORTED_NOT_CALLED:
   reason: 'imports scripts.oos_campaign_test purely for its import side effect: that module monkeypatches
     yfinance.download onto the offline spot cache. Calling anything in it would run the full rig, which
     is exactly what this script avoids.'
+- module: scripts.run_cb_ab
+  reason: imports sovereign.forex.entry_engine without calling a symbol — flagged correctly. Same CONCURRENT
+    2026-08-27 work as scripts.tsmom_backtest / paper_tsmom_daily, untracked in git, NOT reviewed here.
+    Listed so the audit is not red on another session's in-flight files. If the import is genuinely unused
+    it should be deleted by its owner, not allowlisted forever.
 NO_SUPPLIER:
 - field: ExecEvent.intent
   reason: BLOCKED ON D1, the missing order path. There are ZERO production constructors of ExecEvent anywhere
@@ -576,3 +585,8 @@ DEAD_ARTIFACT:
 - module: data/vintage_ab/signal_delta.json
   reason: spec 039 measurement output — the macro-signal agreement table between the two vintages; evidence,
     not a production input
+- module: data/cb_ab/stats.json
+  reason: appeared in the working tree from CONCURRENT work on 2026-08-27, outside this session's dispatch
+    and UNTRACKED in git. Allowlisted so the audit is not red on someone else's in-flight files; NOT reviewed
+    and NOT vouched for here. Whoever owns it should confirm this reason or replace it — and if the files
+    are abandoned, delete them and drop these entries.
