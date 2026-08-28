@@ -558,6 +558,81 @@ def test_end_to_end_replay_produces_one_closed_correlated_record(tmp_path, monke
         assert _lines(isolated_ledger, mode) == []
 
 
+def test_evidence_ids_carried_from_symbol_scoped_directive(tmp_path, monkeypatch,
+                                                            isolated_ledger):
+    """The join `execution_ledger.evidence_ids` <-> `operator/evidence.jsonl`
+    (the fields the observed-predicted roadmap names as unpopulated on both
+    sides) is closed at the runner's entry boundary: it carries the ids the
+    active, THIS-symbol-scoped directive already cited, and only those —
+    another symbol's citations must never leak into this trade's row."""
+    import runner
+
+    monkeypatch.setattr(runner, "EVENTS_DIR", tmp_path)
+    monkeypatch.setattr(runner, "LOGDIR", tmp_path)
+    monkeypatch.setattr(runner, "BIAS", tmp_path / "no_bias.json")
+
+    directives_path = tmp_path / "directives.json"
+    directives_path.write_text(json.dumps([
+        {
+            "directive_id": "dir-nvda-1",
+            "scope": {"symbols": ["NVDA"]},
+            "model_version": "alphazero/test",
+            "evidence_ids": ["op-nvda-ev0", "op-nvda-ev1"],
+        },
+        {
+            "directive_id": "dir-amd-1",
+            "scope": {"symbols": ["AMD"]},
+            "model_version": "alphazero/test",
+            "evidence_ids": ["op-amd-ev0"],
+        },
+    ]))
+    monkeypatch.setattr(runner, "DIRECTIVES", directives_path)
+
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps({
+        "symbol": "NVDA", "direction": 1, "entry": 204.0, "qty": 100, "sl": 202.0,
+        "tp1_r": 0.45, "tp2_r": 0.9, "trail_r": 0.4, "exit_policy": "DEFAULT",
+        "_session": "2026-08-12"}))
+    plan = runner.load_plan(plan_path)
+
+    assert runner.run(plan, interval=0, once=False, replay=[204.2, 200.0],
+                      max_stale=180, require_bias=False, broker=None,
+                      ledger_mode="sim") == 0
+
+    rows = _lines(isolated_ledger, "sim")
+    assert len(rows) == 1
+    rec = json.loads(rows[0])
+    assert rec["evidence_ids"] == ["op-nvda-ev0", "op-nvda-ev1"]
+    assert "op-amd-ev0" not in rec["evidence_ids"]
+
+
+def test_missing_directives_yields_empty_evidence_ids_not_fabricated(
+        tmp_path, monkeypatch, isolated_ledger):
+    """No directive scoped to this symbol at entry time means an honest empty
+    list — never a defaulted/fabricated id (CLAUDE.md rule 3)."""
+    import runner
+
+    monkeypatch.setattr(runner, "EVENTS_DIR", tmp_path)
+    monkeypatch.setattr(runner, "LOGDIR", tmp_path)
+    monkeypatch.setattr(runner, "BIAS", tmp_path / "no_bias.json")
+    monkeypatch.setattr(runner, "DIRECTIVES", tmp_path / "no_dir.json")
+
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps({
+        "symbol": "NVDA", "direction": 1, "entry": 204.0, "qty": 100, "sl": 202.0,
+        "tp1_r": 0.45, "tp2_r": 0.9, "trail_r": 0.4, "exit_policy": "DEFAULT",
+        "_session": "2026-08-12"}))
+    plan = runner.load_plan(plan_path)
+
+    assert runner.run(plan, interval=0, once=False, replay=[204.2, 200.0],
+                      max_stale=180, require_bias=False, broker=None,
+                      ledger_mode="sim") == 0
+
+    rows = _lines(isolated_ledger, "sim")
+    rec = json.loads(rows[0])
+    assert rec["evidence_ids"] == []
+
+
 def test_second_same_day_trade_is_refused_loudly(tmp_path, monkeypatch, isolated_ledger):
     """The session-level trade_id limitation, asserted rather than left to
     surface as a traceback mid-session.

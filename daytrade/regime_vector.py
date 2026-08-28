@@ -348,7 +348,10 @@ def compute(symbol: str, session, history: list, *, ts: str,
 
     # --- the two that arithmetic cannot reach ------------------------------
     for k, why in (("market_breadth", "needs advance/decline data this repo does not hold"),
-                   ("event_risk", "calendar-driven — supply via `judged` from macro_calendar.md")):
+                   ("event_risk", "calendar-driven — supply via `judged`, e.g. "
+                    "judged={'event_risk': macro_calendar.event_risk(day)} "
+                    "(daytrade/macro_calendar.py merges FRED + FOMC + "
+                    "macro_calendar.md)")):
         if k in judged:
             v, detail = judged[k]
             put(k, v, "judged", detail)

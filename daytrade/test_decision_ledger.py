@@ -25,6 +25,10 @@ def test_i36_real_ledger_chain_intact():
 def sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(dl, "LEDGER", tmp_path / "decision_ledger.jsonl")
     monkeypatch.setattr(dl, "CALENDAR", tmp_path / "macro_calendar.md")
+    # isolate from the real repo's machine-maintained calendars too, so a
+    # snapshot test's outcome never depends on today's actual macro schedule
+    monkeypatch.setattr(dl, "MACRO_CALENDAR_JSON", tmp_path / "macro_calendar.json")
+    monkeypatch.setattr(dl, "FOMC_CALENDAR_JSON", tmp_path / "fomc_calendar.json")
     return tmp_path
 
 
@@ -156,3 +160,58 @@ def test_regime_vocabulary_is_closed(sandbox, monkeypatch):
     assert snap["regimes"]
     for g in snap["regimes"]:
         assert g in dl.REGIMES
+
+
+def test_event_day_absent_calendar_is_false(sandbox):
+    """No sources present at all -> False, absence stated, never a guess."""
+    assert dl._event_day("2026-05-05") is False
+
+
+def test_event_day_fires_from_fred_json(sandbox):
+    import json
+    dl.MACRO_CALENDAR_JSON.write_text(json.dumps({
+        "generated_at": datetime.now(UTC).isoformat(),
+        "events": [{"date": "2026-05-05", "release_id": 10,
+                    "release_name": "Consumer Price Index"}],
+    }))
+    assert dl._event_day("2026-05-05") is True
+    assert dl._event_day("2026-05-06") is False
+
+
+def test_event_day_fires_from_fomc_json(sandbox):
+    import json
+    from datetime import date as _date
+    dl.FOMC_CALENDAR_JSON.write_text(json.dumps({
+        "verified_as_of": _date.today().isoformat(), "source_url": "x",
+        "events": [{"date": "2026-05-05", "label": "FOMC decision"}],
+    }))
+    assert dl._event_day("2026-05-05") is True
+
+
+def test_event_day_still_fires_from_legacy_md(sandbox):
+    """Backward compatibility: the pre-existing substring-match behavior over
+    macro_calendar.md keeps working exactly as before this change."""
+    dl.CALENDAR.write_text("2026-05-05 (Tue)\n  some manual note\n")
+    assert dl._event_day("2026-05-05") is True
+
+
+def test_event_day_raises_loud_on_corrupt_json(sandbox):
+    dl.MACRO_CALENDAR_JSON.write_text("{not valid json")
+    with pytest.raises(dl.LedgerError):
+        dl._event_day("2026-05-05")
+
+
+def test_event_day_regime_label_reachable_end_to_end(sandbox, monkeypatch):
+    """EVENT_DAY was permanently dead before this change — this is the
+    regression guard that it is reachable now."""
+    import json
+    _bars(sandbox, monkeypatch, days=3)
+    day = "2026-05-05"
+    dl.MACRO_CALENDAR_JSON.write_text(json.dumps({
+        "generated_at": datetime.now(UTC).isoformat(),
+        "events": [{"date": day, "release_id": 50,
+                    "release_name": "Employment Situation"}],
+    }))
+    snap = dl.snapshot("NVDA", datetime(2026, 5, 5, 14, 30, tzinfo=UTC),
+                       source="backfill")
+    assert "EVENT_DAY" in snap["regimes"]

@@ -1,0 +1,15 @@
+{
+  "_comment": "Hand-transcribed from the Federal Reserve's own published FOMC calendar. FRED has NO reliable API for this — its 'FOMC Press Release' release (id 101) returns a release date for every single calendar day once no-data dates are included (verified live 2026-08-27), which is not a real schedule and must never be used as one. This file is therefore the manual half of daytrade/macro_calendar.py's three-source merge. `date` is the SECOND day of each two-day meeting -- the day the statement/decision is actually released. Re-verify against source_url periodically; the Fed typically publishes a year of meetings at once and they rarely move.",
+  "verified_as_of": "2026-08-27",
+  "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+  "events": [
+    { "date": "2026-01-28", "label": "FOMC decision (Jan 27-28 meeting)" },
+    { "date": "2026-03-18", "label": "FOMC decision (Mar 17-18 meeting, SEP)" },
+    { "date": "2026-04-29", "label": "FOMC decision (Apr 28-29 meeting)" },
+    { "date": "2026-06-17", "label": "FOMC decision (Jun 16-17 meeting, SEP)" },
+    { "date": "2026-07-29", "label": "FOMC decision (Jul 28-29 meeting)" },
+    { "date": "2026-09-16", "label": "FOMC decision (Sep 15-16 meeting, SEP)" },
+    { "date": "2026-10-28", "label": "FOMC decision (Oct 27-28 meeting)" },
+    { "date": "2026-12-09", "label": "FOMC decision (Dec 8-9 meeting, SEP)" }
+  ]
+}

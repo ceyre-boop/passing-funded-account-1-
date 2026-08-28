@@ -449,6 +449,51 @@ def test_fresh_bars_pass_the_stale_gate(sandbox):
     assert sandbox["calls"] == 1
 
 
+# --------------------------------------------------------- trade_id join key
+
+def test_sealed_record_carries_the_derivable_trade_id(sandbox):
+    """The join the observed-predicted roadmap names as missing: records.jsonl
+    rows must not seal `trade_id: None` — they carry the SAME
+    `{symbol}-{ET session date}` key runner.py mints for the execution
+    ledger, stamped at seal time from the record's own decision clock."""
+    _run(sandbox)
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["trade_id"] == ao._session_trade_id("NVDA", NOW)
+    assert rec["trade_id"] == "NVDA-2026-08-14"
+
+
+def test_stale_gate_abstention_also_carries_trade_id(sandbox, monkeypatch):
+    """The mechanical stale-gate ABSTAIN path seals its own RECORDS row
+    without ever calling the model — it must not skip the join key either."""
+    monkeypatch.setattr(ao, "build_packet",
+                        lambda s, as_of=None: ("PACKET", [], {"bar_age_min": None}))
+    assert _run(sandbox) == 0
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["verdict"] == "ABSTAIN"
+    assert rec["trade_id"] == "NVDA-2026-08-14"
+
+
+def test_trade_id_never_backfilled_on_historical_rows(sandbox):
+    """A record made before trade_id existed has no trade_id — that is a fact
+    about that row, never silently repaired by a later reader (CLAUDE.md
+    rule 3: never fabricate a historical id)."""
+    ao.RECORDS.parent.mkdir(parents=True, exist_ok=True)
+    ao._append_jsonl(ao.RECORDS, {
+        "record_id": "op-legacy-NVDA", "ts": "2026-08-01T12:00:00+00:00",
+        "trigger": "bar", "symbol": "NVDA",
+        "model_version": "alphazero/legacy", "prompt_version": "v0",
+        "forecast_id": None, "trade_id": None, "evidence_ids": [],
+        "both_sides": None, "invalidators": [], "verdict": "ABSTAIN",
+        "confidence": 0.0, "expires_at": "2026-08-01T12:00:00+00:00",
+        "suppressed_to": None, "directive": None, "abstention": None,
+        "forecast": None, "evidence": [], "pre_registration": None,
+        "emission_refused": None, "portfolio_advisory": None, "shadow": False,
+        "packet_as_of": None, "packet_max_data_ts": None, "bar_age_min": None,
+        "cost_usd": 0.0})
+    rec = ao._read_jsonl(ao.RECORDS)[0]
+    assert rec["trade_id"] is None
+
+
 def test_crash_between_seal_and_derived_rows_is_recovered(sandbox):
     """The sealed record is the transaction: wipe the derived logs, and
     reconcile rebuilds them byte-honest from the seal (review fix 1)."""

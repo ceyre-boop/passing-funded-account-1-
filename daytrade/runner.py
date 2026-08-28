@@ -403,6 +403,13 @@ def alphazero_snapshot(symbol: str) -> dict:
             items = draw if isinstance(draw, list) else draw.get("directives", [])
             # Ids and provenance only. Directive bodies stay in their own file —
             # the ledger references evidence by id (same rule as trade_events).
+            #
+            # `symbol_items` narrows to directives actually scoped to THIS
+            # symbol — `directive_ids`/`model_versions` above deliberately
+            # summarise the whole file, but evidence handed to the execution
+            # ledger's entry row must not smuggle in another symbol's citations.
+            symbol_items = [d for d in items if isinstance(d, dict)
+                            and symbol in ((d.get("scope") or {}).get("symbols") or [])]
             snap["directives"] = {
                 "available": True,
                 "source": str(DIRECTIVES),
@@ -411,6 +418,14 @@ def alphazero_snapshot(symbol: str) -> dict:
                                   if isinstance(d, dict)][:20],
                 "model_versions": sorted({str(d.get("model_version")) for d in items
                                           if isinstance(d, dict) and d.get("model_version")}),
+                # What AlphaZero cited for THIS symbol's directive(s), as it
+                # stood before entry. Every id here was minted by the same
+                # alpha_operator._make_evidence() call that produced the
+                # directive citing it, so it already exists in
+                # data/daytrade/operator/evidence.jsonl — no id is invented
+                # here, only carried through from the directive that named it.
+                "evidence_ids": sorted({str(eid) for d in symbol_items
+                                        for eid in (d.get("evidence_ids") or [])})[:20],
             }
 
     # The regime vector is NOT computed here. `regime_vector.compute()` needs
@@ -678,6 +693,14 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
                     "a Gate-2 change, not a runner change. Either run with "
                     "--ledger-mode off, or move the ledger row aside deliberately.")
             opened_at = datetime.now(timezone.utc).isoformat()
+            az_snapshot = alphazero_snapshot(symbol)
+            # Carried, not invented: every id here already exists in
+            # data/daytrade/operator/evidence.jsonl (see alphazero_snapshot's
+            # `directives.evidence_ids` note above). No directive scoped to
+            # this symbol at entry time means an honest empty list, never a
+            # fabricated one.
+            entry_evidence_ids = list(
+                (az_snapshot.get("directives") or {}).get("evidence_ids") or [])
             log_executed_trade(
                 trade_id=trade_id,
                 mode=ledger_mode,
@@ -702,11 +725,12 @@ def run(plan: dict, *, interval: int, once: bool, replay: list | None,
                     "catastrophic_sl": s.catastrophic_sl,
                     "events_log": events_path.name,
                 },
-                alphazero_snapshot=alphazero_snapshot(symbol),
+                alphazero_snapshot=az_snapshot,
                 why_this_trade=str(plan.get("thesis") or "")[:500],
                 why_this_size=f"qty {s.qty:g} × risk/share "
                               f"{abs(s.entry - s.sl):.4f} = "
                               f"${abs(s.entry - s.sl) * s.qty:.2f}",
+                evidence_ids=entry_evidence_ids,
             )
             print(f"# ledger[{ledger_mode}] entry recorded  trade_id={trade_id}")
 

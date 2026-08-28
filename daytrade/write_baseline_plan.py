@@ -170,6 +170,10 @@ def main(symbol: str = "NVDA") -> int:
     PLAN.write_text(json.dumps({
         "_writer": MARKER, "_session": today,
         "_note": "R-geometry plan for prereg scoring; NOT an order",
+        # Same scheme as daytrade/runner.py's `trade_id = f"{symbol}-{session_date}"`
+        # and alpha_operator.py's `_session_trade_id()` — one id, threaded, not a
+        # third scheme this plan would otherwise need reconciling against later.
+        "trade_id": f"{symbol}-{today}",
         "symbol": symbol, "direction": "long" if e.direction > 0 else "short",
         "entry": e.entry, "sl": e.stop, "qty": 1.0,
         "tp1": e.tp1, "tp2": e.tp2, "trail_dist": e.trail_dist,

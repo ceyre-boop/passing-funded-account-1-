@@ -40,6 +40,8 @@ ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
 LEDGER = ROOT / "data" / "daytrade" / "decision_ledger.jsonl"
 CALENDAR = ROOT / "data" / "daytrade" / "macro_calendar.md"
+MACRO_CALENDAR_JSON = ROOT / "data" / "daytrade" / "macro_calendar.json"
+FOMC_CALENDAR_JSON = ROOT / "data" / "daytrade" / "fomc_calendar.json"
 
 OR_START, OR_END = "09:30", "10:00"
 TRIGGER_END = "11:00"
@@ -81,11 +83,20 @@ def verify() -> int:
 # ------------------------------------------------------- the observable state
 
 def _event_day(day) -> bool:
-    """Event-day flag from the macro calendar the morning read already uses.
-    Absent calendar = False with the absence stated, never a guess."""
-    if not CALENDAR.exists():
-        return False
-    return str(day) in CALENDAR.read_text()
+    """Event-day flag from the merged splash schedule: FRED's release
+    calendar + the hand-verified FOMC dates + the legacy hand-written
+    macro_calendar.md the morning read already uses (see
+    daytrade/macro_calendar.py for the full three-source picture). Any
+    single missing source is legitimately absent and contributes nothing;
+    a source that IS present but corrupt fails loud rather than being read
+    as empty."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import macro_calendar as mc
+    try:
+        return mc.is_event_day(day, calendar_json=MACRO_CALENDAR_JSON,
+                                fomc_json=FOMC_CALENDAR_JSON, calendar_md=CALENDAR)
+    except mc.MacroCalendarError as e:
+        raise LedgerError(str(e)) from e
 
 
 def snapshot(symbol: str, as_of: datetime, *, source: str) -> dict:

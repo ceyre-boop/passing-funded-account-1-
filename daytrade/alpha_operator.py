@@ -118,6 +118,21 @@ def _iso(dt: datetime) -> str:
     return dt.isoformat()
 
 
+def _session_trade_id(symbol: str, now: datetime) -> str:
+    """The join key threaded through the whole plan -> forecast -> resolution
+    -> execution chain: `{symbol}-{ET session date}`. IDENTICAL in shape to
+    `daytrade/runner.py`'s own `trade_id = f"{symbol}-{session_date}"` and to
+    `write_baseline_plan.py`'s `_session` field — one scheme, not three that
+    need reconciling later.
+
+    Stamped at seal time from the record's OWN decision timestamp (`now`),
+    never invented after the fact: the record cannot know whether a trade
+    will actually be taken today, only which session it would belong to if
+    one is. A record with no matching execution-ledger row simply does not
+    join to anything — that is a fact about the day, not a bug in the id."""
+    return f"{symbol}-{now.astimezone(ET).date().isoformat()}"
+
+
 # ------------------------------------------------------- RTH tradability gate
 #
 # spec 024 review (2026-08-2x): 4 forecasts stuck OPEN forever because their
@@ -928,7 +943,7 @@ def run_once(symbol: str, *, cap: float, model: str,
             "record_id": record_id, "ts": _iso(now), "trigger": trigger,
             "symbol": symbol, "model_version": f"{MODEL_VERSION_BASE}/stale-gate",
             "prompt_version": PROMPT_VERSION, "forecast_id": None,
-            "trade_id": None, "evidence_ids": [],
+            "trade_id": _session_trade_id(symbol, now), "evidence_ids": [],
             "both_sides": None, "invalidators": [],
             "verdict": "ABSTAIN", "confidence": 0.0,
             "expires_at": _iso(now), "suppressed_to": None,
@@ -1035,7 +1050,7 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
         "symbol": symbol, "model_version": f"{MODEL_VERSION_BASE}/{model}",
         "prompt_version": PROMPT_VERSION,
         "forecast_id": fc.forecast_id if fc else None,
-        "trade_id": None, "evidence_ids": list(ev_ids),
+        "trade_id": _session_trade_id(symbol, now), "evidence_ids": list(ev_ids),
         "both_sides": {"bull": read.bull, "base": read.base, "bear": read.bear},
         "invalidators": read.invalidators, "verdict": read.verdict,
         "confidence": read.confidence,

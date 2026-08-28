@@ -344,6 +344,12 @@ ORPHANS:
     and UNTRACKED in git. Allowlisted so the audit is not red on someone else's in-flight files; NOT reviewed
     and NOT vouched for here. Whoever owns it should confirm this reason or replace it — and if the files
     are abandoned, delete them and drop these entries.
+- module: scripts.build_macro_calendar
+  reason: standalone CLI (`python3 scripts/build_macro_calendar.py`) that refreshes data/daytrade/macro_calendar.json
+    from FRED's release-dates API; run on a schedule or by hand, so no Python importer.
+- module: scripts.check_macro_calendar_freshness
+  reason: standalone preflight CLI, exit 1 on a stale calendar — mirrors carry_scan.py's staleness discipline.
+    Invoked by a shell caller, not imported.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
