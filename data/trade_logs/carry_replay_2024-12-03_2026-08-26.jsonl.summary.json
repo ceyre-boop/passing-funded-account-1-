@@ -1,0 +1,20 @@
+{
+  "window": "2024-12-03_2026-08-26",
+  "risk": 0.005,
+  "firm": "cti_1step",
+  "total_days": 632,
+  "trade_count_closed": 41,
+  "trade_count_still_open": 1,
+  "win_rate": 0.2926829268292683,
+  "mean_r": -0.25979485365853655,
+  "total_r": -10.651589,
+  "max_drawdown_r": -10.651589000000001,
+  "per_pair_closed": {
+    "AUDUSD=X": 15,
+    "EURUSD=X": 13,
+    "GBPUSD=X": 13
+  },
+  "carried_forward_rate_data_count": 4,
+  "lookahead_rate_data_count": 38,
+  "ledger_path": "/Users/taboost/passing-funded-account-1-/data/trade_logs/carry_replay_2024-12-03_2026-08-26.jsonl"
+}
