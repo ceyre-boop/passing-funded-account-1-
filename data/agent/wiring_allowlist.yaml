@@ -7,6 +7,11 @@ ORPHANS:
     --staged` from .githooks/commit-msg — a shell hook caller is not a Python import, so it correctly
     shows as an orphan while being genuinely wired. Activated per-checkout by scripts/install_hooks.sh;
     inert until then.
+- module: scripts.tsmom_backtest
+  reason: standalone research CLI (`python3 scripts/tsmom_backtest.py --universe primary`), same
+    convention as ruin_engine.py — imports sovereign.trend.tsmom_engine.decide() rather than being
+    imported. Output (data/trend/tsmom_*_summary.json, *_trades.csv, *_equity.csv) is read by a human
+    evaluating the pre-registered TSMOM spec, not by code.
 - module: scripts.ruin_engine
   reason: standalone research CLI (`python3 scripts/ruin_engine.py --firm cti_1step`), same convention
     as drawdown_margin.py and carry_buy_gate.py. It IMPORTS from carry_buy_gate and drawdown_margin rather

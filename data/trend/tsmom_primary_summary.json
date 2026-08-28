@@ -1,0 +1,49 @@
+{
+  "universe": "primary",
+  "windows": {
+    "Full window": {
+      "trades": 396,
+      "win_rate": 0.3888888888888889,
+      "mean_R": 0.15667888091338314,
+      "total_return": 0.10408217750333604,
+      "sharpe": 0.1462523496579457,
+      "max_drawdown": -0.2813403458074605,
+      "longest_drawdown_days": 1544
+    },
+    "Sub-window A": {
+      "trades": 155,
+      "win_rate": 0.36774193548387096,
+      "mean_R": 0.05813980824512248,
+      "total_return": 0.026402104749716937,
+      "sharpe": 0.12291314697382173,
+      "max_drawdown": -0.27223132667096483,
+      "longest_drawdown_days": 1067
+    },
+    "Sub-window B": {
+      "trades": 158,
+      "win_rate": 0.43670886075949367,
+      "mean_R": 0.444819237075008,
+      "total_return": 0.14722629795277276,
+      "sharpe": 0.3090929122885972,
+      "max_drawdown": -0.24059834544938963,
+      "longest_drawdown_days": 825
+    },
+    "Sub-window C": {
+      "trades": 83,
+      "win_rate": 0.3373493975903614,
+      "mean_R": -0.20781051679693444,
+      "total_return": -0.062362924445687584,
+      "sharpe": -0.24805842466121064,
+      "max_drawdown": -0.1351014774746141,
+      "longest_drawdown_days": 590
+    }
+  },
+  "placebo": {
+    "n": 1000,
+    "real_sharpe": 0.1462523496579457,
+    "placebo_mean": -0.058314245727523896,
+    "placebo_p95": 0.5604069432625576,
+    "real_percentile": 73.7
+  },
+  "excluded_tickers": []
+}
