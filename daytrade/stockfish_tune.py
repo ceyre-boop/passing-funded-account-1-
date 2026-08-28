@@ -41,6 +41,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import bars as bars_mod                                            # noqa: E402
 from bars import load_sessions, BarDataError                       # noqa: E402
 from splits import tune_sessions, TUNE_END                         # noqa: E402
 from ceiling import (find_entry, simulate, wide_space, narrow_space,  # noqa: E402
@@ -81,27 +82,43 @@ UNION_BASKET = tuple(dict.fromkeys(
     s for syms in CLASSES.values() for s in syms))
 
 
-def collect_entries(symbols: list[str]) -> list[tuple]:
+def collect_entries(symbols: list[str], cache: Path | None = None) -> list[tuple]:
     """(symbol, session, entry) for every tune-split session with a valid
     OR-break entry. Sealed sessions are excluded by construction — this
-    function never touches splits.sealed_sessions."""
-    out = []
-    for sym in symbols:
-        try:
-            sessions = load_sessions(sym, "5m", allow_fetch=False)
-        except BarDataError as e:
-            print(f"  !! {sym}: {e} — excluded from the basket, loudly")
-            continue
-        tune = tune_sessions(sessions)
-        n = 0
-        for s in tune:
-            e = find_entry(s)
-            if e is not None:
-                out.append((sym, s, e))
-                n += 1
-        print(f"  {sym}: {len(sessions)} cached sessions, {len(tune)} tune, "
-              f"{n} entries")
-    return out
+    function never touches splits.sealed_sessions.
+
+    `cache` redirects bars.CACHE for the duration and is ALWAYS restored,
+    same discipline as oracle_audit.py's `_collect` — a faulted module
+    global outliving this call would silently repoint every later reader in
+    the process at the wrong parquet tree."""
+    if cache is not None and not any(cache.glob("*_5m.parquet")):
+        raise BarDataError(
+            f"--cache {cache} holds no *_5m.parquet. Refusing to fall back to "
+            f"{bars_mod.CACHE} — a silent fallback would label a run with one "
+            f"population's name and another's data.")
+    orig = bars_mod.CACHE
+    if cache is not None:
+        bars_mod.CACHE = cache
+    try:
+        out = []
+        for sym in symbols:
+            try:
+                sessions = load_sessions(sym, "5m", allow_fetch=False)
+            except BarDataError as e:
+                print(f"  !! {sym}: {e} — excluded from the basket, loudly")
+                continue
+            tune = tune_sessions(sessions)
+            n = 0
+            for s in tune:
+                e = find_entry(s)
+                if e is not None:
+                    out.append((sym, s, e))
+                    n += 1
+            print(f"  {sym}: {len(sessions)} cached sessions, {len(tune)} tune, "
+                  f"{n} entries")
+        return out
+    finally:
+        bars_mod.CACHE = orig
 
 
 def _run_config(args):
@@ -192,6 +209,43 @@ def apply_rule(scores: dict[str, dict], shipped: dict[str, dict]) -> dict:
             "n_eligible": len(eligible)}
 
 
+def null_leak_k(wide_rows: dict[str, list[tuple]], best_shipped_mean: float,
+                n_draws: int = 200, seed: int = 26) -> dict:
+    """The K=len(wide_rows) equivalent of oracle_audit.py's Move 2 null oracle.
+
+    Same convention, reused rather than reinvented (spec 040 / oracle_audit.py
+    docstring Move 2): each config's R column permuted independently across
+    entries (destroys day<->config alignment, preserves marginals), take the
+    per-entry max across the permuted columns, average — that is what a
+    no-skill sweep of this width would have produced. null_leak = that value
+    minus the best FIXED (shipped) policy's mean, so it lives on the same
+    scale as apply_rule()'s margin_R_per_trade and can be compared directly.
+
+    This null does NOT gate the pre-registered rule (R1-R4 + BEAT_SHIPPED_BY
+    are untouched) — it is reported beside the winner's margin so a margin
+    that is smaller than the null premium can be recognised as having
+    demonstrated nothing, per specs/040's finding that this premium does not
+    shrink with n; it is a property of the max-over-K statistic itself.
+    """
+    import numpy as np
+    names = list(wide_rows)
+    R = np.array([[r for _, _, r in wide_rows[name]] for name in names]).T
+    k = R.shape[1]
+    rng = np.random.default_rng(seed)
+    draws = []
+    for _ in range(n_draws):
+        P = np.column_stack([rng.permutation(R[:, j]) for j in range(k)])
+        draws.append(float(P.max(axis=1).mean()))
+    null_max_mean = float(np.mean(draws))
+    null_leak = null_max_mean - best_shipped_mean
+    return {"k": k, "n_draws": n_draws, "seed": seed,
+            "null_max_mean_R": round(null_max_mean, 4),
+            "best_shipped_mean_R": round(best_shipped_mean, 4),
+            "null_leak_R": round(null_leak, 4),
+            "convention": "oracle_audit.py Move 2 (per-column independent "
+                          "permutation, mean of per-entry max)"}
+
+
 def slice_rows(rows_by_cfg: dict[str, list[tuple]],
                symbols: tuple) -> dict[str, list[tuple]]:
     """Slice one sweep's per-entry rows down to a symbol subset — the whole
@@ -272,12 +326,23 @@ def main(argv=None) -> int:
                     help="skip the per-class slice (whole-basket ruling only)")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--top", type=int, default=15)
+    ap.add_argument("--cache", default=None,
+                    help="bar cache dir; default: bars.CACHE (original behaviour)")
+    ap.add_argument("--out", default=None,
+                    help="output json; default: data/daytrade/stockfish_tune_report.json "
+                         "— pass a NEW path to avoid overwriting the pinned report "
+                         "(specs/033 pinned-opponent discipline)")
+    ap.add_argument("--null-draws", type=int, default=200,
+                    help="permutation draws for the K=n_configs null-oracle "
+                         "leak, reusing oracle_audit.py's Move 2 convention")
     a = ap.parse_args(argv)
     symbols = [s.strip().upper() for s in a.symbols.split(",") if s.strip()]
+    cache = Path(a.cache).resolve() if a.cache else None
+    out = Path(a.out).resolve() if a.out else OUT
 
     print(f"  furnace: OR({OR_START}-{OR_END}) break by {TRIGGER_END}, TP2 {TP2_R}R, "
           f"cost ${COST_PER_SHARE}/sh · TUNE split only (<= {TUNE_END})")
-    entries = collect_entries(symbols)
+    entries = collect_entries(symbols, cache=cache)
     print(f"  TOTAL: {len(entries)} entries across "
           f"{len({sym for sym, _, _ in entries})} symbols\n")
 
@@ -296,6 +361,26 @@ def main(argv=None) -> int:
 
     sims = (len(space) + len(shipped_space)) * len(entries)
     print(f"  {sims:,} simulations in {dt:.1f}s ({sims/dt:,.0f}/s)\n")
+
+    # K=n_configs null-oracle leak (oracle_audit.py Move 2 convention, reused
+    # not reinvented) — a max-over-K statistic carries a structural selection
+    # premium that does NOT shrink with n (specs/040). Reported beside the
+    # winner's margin so a margin smaller than this premium is recognisable
+    # as noise, not signal. best_shipped denominator matches apply_rule()'s
+    # margin so the two numbers live on the same scale.
+    best_shipped_name = max(shipped, key=lambda n: shipped[n]["mean_R"])
+    null = null_leak_k(wide_rows, shipped[best_shipped_name]["mean_R"],
+                       n_draws=a.null_draws)
+    clears_null = ruling.get("margin_R_per_trade") is not None and \
+        ruling["margin_R_per_trade"] > null["null_leak_R"]
+    print(f"  K={null['k']} null-oracle leak ({null['n_draws']} perms, "
+          f"vs {best_shipped_name}): {null['null_leak_R']:+.4f} R/trade")
+    if ruling.get("margin_R_per_trade") is not None:
+        print(f"  winner margin {ruling['margin_R_per_trade']:+.4f} R/trade "
+              f"{'CLEARS' if clears_null else 'does NOT clear'} the K={null['k']} "
+              f"null premium")
+    else:
+        clears_null = None
 
     print("  shipped policies:")
     for n, s in sorted(shipped.items(), key=lambda kv: -kv[1]["mean_R"]):
@@ -327,22 +412,26 @@ def main(argv=None) -> int:
                 cls, slice_rows(wide_rows, syms),
                 slice_rows(shipped_rows, syms), top=5))
 
-    OUT.write_text(json.dumps({
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "tune_end": str(TUNE_END), "symbols": symbols,
+        "cache": str(cache.relative_to(ROOT)) if cache else "default",
         "n_entries": len(entries), "n_configs": len(space),
         "selection_rule": {"min_entries": MIN_ENTRIES,
                            "worst_trade_floor_R": WORST_TRADE_FLOOR,
                            "beat_shipped_by_R": BEAT_SHIPPED_BY,
                            "registered": "2026-08-17, before first basket run"},
         "shipped": shipped, "ruling": ruling,
+        "null_oracle_k": null,
+        "winner_margin_clears_null": clears_null,
         "class_rulings": class_rulings,
         "class_rule": {"min_entries": CLASS_MIN_ENTRIES,
                        "registered": "2026-08-17, before first per-class run"},
         "configs": {n: scores[n] for n in
                     sorted(scores, key=lambda n: -scores[n]["mean_R"])},
     }, indent=1))
-    print(f"  report: {OUT.relative_to(ROOT)}")
+    print(f"  report: {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}")
     return 0
 
 
