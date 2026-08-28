@@ -393,6 +393,16 @@ ORPHANS:
     diagnostics, and a separate FOMC 14:00 arm; a one-shot research artifact builder over the existing
     data/daytrade/bars_premarket and data/daytrade/bars_premarket_1m caches, not a consumer of its own
     output.
+- module: scripts.build_spy_bracket_harvest_study
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_spy_bracket_harvest_study.py`), same convention as its siblings scripts.build_macro_event_study
+    / scripts.build_spy_premarket_event_study / scripts.build_spy_macro_decay_study / scripts.build_spy_whipsaw_event_study
+    / scripts.build_spy_splash_continuation_study. Tests whether the splash's measured MAGNITUDE (direction
+    already established as unharvestable) can be captured with a pre-registered, un-swept both-sides bracket
+    (08:29/13:59 reference, control-only p75 whipsaw-range width, first-touch OCO entry, 08:45/14:15 exit),
+    against a same-strategy-on-control-days check and a permutation null; a one-shot research artifact
+    builder/SIMULATION over the existing data/daytrade/bars_premarket_1m cache — no order is placed, nothing
+    is wired to a broker, not a consumer of its own output.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
@@ -517,6 +527,11 @@ IMPORTED_NOT_CALLED:
   reason: BarDataError is imported only to be CAUGHT (`except BarDataError as e:`) around `_day_window_stats`'s
     call into `build_spy_macro_decay_study._load_raw_bars_1m`, which is what raises it — this module never
     raises it itself, so the AST-level "used as a call" check can't see the except clause as a use
+- module: scripts.build_spy_bracket_harvest_study
+  target: daytrade.bars
+  reason: BarDataError is imported only to be CAUGHT (`except BarDataError as e:`) around the call into
+    `build_spy_macro_decay_study._load_raw_bars_1m`, which is what raises it — this module never raises
+    it itself, same pattern as scripts.build_spy_whipsaw_event_study's identical allowlisting above
 NO_SUPPLIER:
 - field: ExecEvent.intent
   reason: BLOCKED ON D1, the missing order path. There are ZERO production constructors of ExecEvent anywhere
@@ -705,3 +720,14 @@ DEAD_ARTIFACT:
   reason: written by scripts/build_spy_splash_continuation_study.py (see ORPHANS) — same as spy_splash_continuation_primary_days.csv,
     for the separate FOMC 14:00 continuation arm; a one-shot research dataset, not a machine input anything
     reads.
+- module: data/daytrade/event_study/spy_bracket_harvest_study_summary.json
+  reason: written by scripts/build_spy_bracket_harvest_study.py (see ORPHANS) — the pre-registered both-sides-bracket
+    harvest result (event arm, same-strategy-on-control-days check, permutation null) plus the separate
+    FOMC 14:00 arm; a research finding artifact for a human to read, not a machine input.
+- module: data/daytrade/event_study/spy_bracket_harvest_primary_days.csv
+  reason: written by scripts/build_spy_bracket_harvest_study.py (see ORPHANS) — one row per SPY day in
+    the 08:29/08:30-08:45 primary population with the simulated bracket outcome and gross/net P&L, kept
+    for provenance/audit; a one-shot research dataset, not a machine input anything reads.
+- module: data/daytrade/event_study/spy_bracket_harvest_fomc_days.csv
+  reason: written by scripts/build_spy_bracket_harvest_study.py (see ORPHANS) — same as spy_bracket_harvest_primary_days.csv,
+    for the separate FOMC 14:00 arm; a one-shot research dataset, not a machine input anything reads.

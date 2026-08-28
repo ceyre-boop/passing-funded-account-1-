@@ -1,0 +1,408 @@
+{
+ "generated_at": "2026-08-28T23:55:25.131063+00:00",
+ "headline": "NULL -- does not clearly exceed both controls",
+ "follows_up_on": [
+  "data/daytrade/event_study/spy_macro_decay_study_summary.json (splash real+causal)",
+  "data/daytrade/event_study/spy_whipsaw_event_study_summary.json (path barely degrades)",
+  "data/daytrade/event_study/spy_splash_continuation_study_summary.json (direction does not exist -- seven independent nulls)"
+ ],
+ "parameterization": "pre-registered, single, not searched -- see module docstring: 08:29/13:59 reference close, control-only p75 range as bracket width, first-touch OCO entry, 08:45/14:15 close exit",
+ "cost_model_bp": {
+  "spread_bp": 1.0,
+  "stop_through_bp": 2.0,
+  "entry_cost_bp": 3.0,
+  "exit_cost_bp": 1.0
+ },
+ "PRIMARY_ARM_0830": {
+  "arm": "primary_0830",
+  "window_et": "08:30-08:45",
+  "reference_minute_et": "08:29",
+  "bracket_width_pct": 0.0018215510876059163,
+  "bracket_width_bp": 18.215510876059163,
+  "bracket_width_control_n": 1238,
+  "bracket_width_percentile": 0.75,
+  "cost_model": {
+   "entry_cost_bp": 3.0,
+   "exit_cost_bp": 1.0,
+   "round_trip_cost_bp": 4.0,
+   "double_stop_cost_bp": 6.0
+  },
+  "reference_scan_complete_days": 2078,
+  "reference_excluded_days": 89,
+  "reference_excluded_reasons_sample": [
+   {
+    "date": "2015-12-31",
+    "reason": "missing 08:29 1m reference bar"
+   },
+   {
+    "date": "2016-04-25",
+    "reason": "missing 08:29 1m reference bar"
+   },
+   {
+    "date": "2016-05-16",
+    "reason": "missing 08:29 1m reference bar"
+   },
+   {
+    "date": "2016-05-27",
+    "reason": "missing 08:29 1m reference bar"
+   },
+   {
+    "date": "2016-06-02",
+    "reason": "missing 08:29 1m reference bar"
+   }
+  ],
+  "scan_excluded_days": 568,
+  "scan_excluded_reasons_sample": [
+   {
+    "date": "2015-12-31",
+    "reason": "15 missing 1m bar(s) in 08:30-08:45 scan window (first at 08:30)"
+   },
+   {
+    "date": "2016-03-16",
+    "reason": "1 missing 1m bar(s) in 08:30-08:45 scan window (first at 08:38)"
+   },
+   {
+    "date": "2016-03-22",
+    "reason": "1 missing 1m bar(s) in 08:30-08:45 scan window (first at 08:36)"
+   },
+   {
+    "date": "2016-03-29",
+    "reason": "1 missing 1m bar(s) in 08:30-08:45 scan window (first at 08:44)"
+   },
+   {
+    "date": "2016-05-09",
+    "reason": "1 missing 1m bar(s) in 08:30-08:45 scan window (first at 08:42)"
+   }
+  ],
+  "event_dates_dropped_no_complete_window": [
+   "2015-12-31",
+   "2016-03-16",
+   "2016-03-25",
+   "2016-05-17",
+   "2016-05-27",
+   "2016-06-02",
+   "2016-06-09",
+   "2016-06-23",
+   "2016-08-02",
+   "2016-08-04",
+   "2016-08-18",
+   "2016-08-25",
+   "2016-08-26",
+   "2016-08-29",
+   "2016-09-01",
+   "2016-09-29",
+   "2016-10-06",
+   "2016-10-27",
+   "2016-11-25",
+   "2016-11-30",
+   "2016-12-08",
+   "2016-12-14",
+   "2016-12-22",
+   "2016-12-29",
+   "2017-01-13",
+   "2017-01-19",
+   "2017-01-26",
+   "2017-01-27",
+   "2017-02-09",
+   "2017-02-10",
+   "2017-02-14",
+   "2017-02-15",
+   "2017-02-23",
+   "2017-02-28",
+   "2017-03-14",
+   "2017-03-15",
+   "2017-03-23",
+   "2017-03-24",
+   "2017-04-14",
+   "2017-04-20",
+   "2017-04-27",
+   "2017-04-28",
+   "2017-05-01",
+   "2017-05-04",
+   "2017-05-12",
+   "2017-05-25",
+   "2017-05-30",
+   "2017-06-01",
+   "2017-06-13",
+   "2017-06-22",
+   "2017-06-30",
+   "2017-07-27",
+   "2017-08-01",
+   "2017-08-03",
+   "2017-08-10",
+   "2017-08-17",
+   "2017-08-30",
+   "2017-08-31",
+   "2017-09-07",
+   "2017-09-21",
+   "2017-09-28",
+   "2017-09-29",
+   "2017-10-03",
+   "2017-10-05",
+   "2017-10-12",
+   "2017-10-19",
+   "2017-10-27",
+   "2017-10-30",
+   "2017-11-02",
+   "2017-11-03",
+   "2017-11-14",
+   "2017-11-22",
+   "2017-11-24",
+   "2017-11-29",
+   "2017-11-30",
+   "2017-12-12",
+   "2017-12-13",
+   "2017-12-14",
+   "2017-12-21",
+   "2017-12-22",
+   "2017-12-28",
+   "2018-01-04",
+   "2018-01-11",
+   "2018-01-29",
+   "2018-04-30",
+   "2018-05-09",
+   "2018-05-10",
+   "2018-05-31",
+   "2018-06-07",
+   "2018-06-13",
+   "2018-07-05",
+   "2018-07-19",
+   "2018-07-31",
+   "2018-08-02",
+   "2018-08-09",
+   "2018-08-16",
+   "2018-08-23",
+   "2018-08-30",
+   "2018-09-06",
+   "2018-09-12",
+   "2018-09-20",
+   "2018-10-04",
+   "2018-11-28",
+   "2019-03-01",
+   "2019-03-13",
+   "2019-03-14",
+   "2019-04-04",
+   "2019-04-10",
+   "2019-04-18",
+   "2019-04-29",
+   "2019-05-16",
+   "2019-06-13",
+   "2019-06-27",
+   "2019-06-28",
+   "2019-07-03",
+   "2019-07-12",
+   "2019-07-30",
+   "2019-09-11",
+   "2019-10-24",
+   "2019-10-30",
+   "2019-11-13",
+   "2019-11-14",
+   "2019-11-27",
+   "2019-12-11",
+   "2019-12-19",
+   "2019-12-26",
+   "2020-01-09",
+   "2020-01-15",
+   "2020-02-19",
+   "2020-02-20",
+   "2020-04-10",
+   "2020-07-23",
+   "2020-08-27",
+   "2020-11-06",
+   "2020-11-13",
+   "2020-12-31",
+   "2021-02-12",
+   "2021-02-17",
+   "2021-03-26",
+   "2021-04-02",
+   "2021-08-05",
+   "2021-11-04",
+   "2021-12-30",
+   "2022-02-08",
+   "2022-07-07",
+   "2023-04-07",
+   "2023-12-28",
+   "2024-03-29",
+   "2024-06-06",
+   "2024-08-21",
+   "2024-10-30",
+   "2024-12-05",
+   "2024-12-26",
+   "2025-01-02",
+   "2025-01-23",
+   "2025-02-06",
+   "2025-02-20",
+   "2026-04-03"
+  ],
+  "PRIMARY_EVENT_ARM": {
+   "label": "primary_0830_event_days",
+   "n": 860,
+   "hit_rate": 0.19186046511627908,
+   "double_stop_rate": 0.02558139534883721,
+   "no_fill_rate": 0.5290697674418605,
+   "mean_gross_bp_per_event": 1.976408424976304,
+   "mean_net_bp_per_event": 0.04152470404607162,
+   "mean_net_R_per_event": 0.002279634336286873,
+   "net_ci95": [
+    -1.52269260325749,
+    1.605742011349633
+   ]
+  },
+  "CONTROL_1_SAME_STRATEGY_ON_CONTROL_DAYS": {
+   "label": "primary_0830_control_days_same_strategy",
+   "n": 1218,
+   "hit_rate": 0.05665024630541872,
+   "double_stop_rate": 0.0008210180623973727,
+   "no_fill_rate": 0.8243021346469622,
+   "mean_gross_bp_per_event": -0.06601569691709588,
+   "mean_net_bp_per_event": -0.7704491944540418,
+   "mean_net_R_per_event": -0.04229632644927083,
+   "net_ci95": [
+    -1.1853669531246012,
+    -0.3555314357834821
+   ]
+  },
+  "event_vs_control_days_welch": {
+   "event_n": 860,
+   "event_mean": 0.041524704046071524,
+   "event_ci95": [
+    -1.52269260325749,
+    1.605742011349633
+   ],
+   "control_n": 1218,
+   "control_mean": -0.7704491944540417,
+   "control_ci95": [
+    -1.1853669531246012,
+    -0.3555314357834821
+   ],
+   "diff_event_minus_control": 0.8119738985001133,
+   "welch_t": 0.9834130904213173,
+   "welch_p_two_sided": 0.32564671466847045,
+   "cohens_d": 0.05048840630745215,
+   "control_reliable": true
+  },
+  "CONTROL_2_PERMUTATION_NULL": {
+   "n_perm": 2000,
+   "null_mean_net_bp": -0.4293903519420222,
+   "null_sd_net_bp": 0.4220673282254167,
+   "observed_mean_net_bp": 0.04152470404607162,
+   "p_value_one_sided_event_gt_random": 0.135
+  },
+  "interpretation": "NULL -- does not clearly exceed both controls"
+ },
+ "FOMC_ARM_1400_SEPARATE_THIN_SAMPLE": {
+  "arm": "fomc_1400",
+  "window_et": "14:00-14:15",
+  "reference_minute_et": "13:59",
+  "bracket_width_pct": 0.002096283386153924,
+  "bracket_width_bp": 20.962833861539238,
+  "bracket_width_control_n": 1592,
+  "bracket_width_percentile": 0.75,
+  "cost_model": {
+   "entry_cost_bp": 3.0,
+   "exit_cost_bp": 1.0,
+   "round_trip_cost_bp": 4.0,
+   "double_stop_cost_bp": 6.0
+  },
+  "reference_scan_complete_days": 2660,
+  "reference_excluded_days": 3,
+  "reference_excluded_reasons_sample": [
+   {
+    "date": "2015-12-31",
+    "reason": "missing 13:59 1m reference bar"
+   },
+   {
+    "date": "2018-07-03",
+    "reason": "missing 13:59 1m reference bar"
+   },
+   {
+    "date": "2023-07-03",
+    "reason": "missing 13:59 1m reference bar"
+   }
+  ],
+  "scan_excluded_days": 19,
+  "scan_excluded_reasons_sample": [
+   {
+    "date": "2015-12-31",
+    "reason": "15 missing 1m bar(s) in 14:00-14:15 scan window (first at 14:00)"
+   },
+   {
+    "date": "2016-11-25",
+    "reason": "1 missing 1m bar(s) in 14:00-14:15 scan window (first at 14:04)"
+   },
+   {
+    "date": "2017-07-03",
+    "reason": "3 missing 1m bar(s) in 14:00-14:15 scan window (first at 14:11)"
+   },
+   {
+    "date": "2017-11-24",
+    "reason": "2 missing 1m bar(s) in 14:00-14:15 scan window (first at 14:04)"
+   },
+   {
+    "date": "2018-07-03",
+    "reason": "2 missing 1m bar(s) in 14:00-14:15 scan window (first at 14:07)"
+   }
+  ],
+  "event_dates_dropped_no_complete_window": [
+   "2026-09-16",
+   "2026-10-28",
+   "2026-12-09"
+  ],
+  "PRIMARY_EVENT_ARM": {
+   "label": "fomc_1400_event_days",
+   "n": 84,
+   "hit_rate": 0.25,
+   "double_stop_rate": 0.05952380952380952,
+   "no_fill_rate": 0.2857142857142857,
+   "mean_gross_bp_per_event": -0.8237343799643598,
+   "mean_net_bp_per_event": -3.7999248561548353,
+   "mean_net_R_per_event": -0.1812696165629879,
+   "net_ci95": [
+    -11.871834131180782,
+    4.271984418871108
+   ]
+  },
+  "CONTROL_1_SAME_STRATEGY_ON_CONTROL_DAYS": {
+   "label": "fomc_1400_control_days_same_strategy",
+   "n": 1592,
+   "hit_rate": 0.059673366834170856,
+   "double_stop_rate": 0.0,
+   "no_fill_rate": 0.8304020100502513,
+   "mean_gross_bp_per_event": 0.1496046196555932,
+   "mean_net_bp_per_event": -0.5287873401434017,
+   "mean_net_R_per_event": -0.025224993130035445,
+   "net_ci95": [
+    -0.950455888584244,
+    -0.10711879170255939
+   ]
+  },
+  "event_vs_control_days_welch": {
+   "event_n": 84,
+   "event_mean": -3.799924856154836,
+   "event_ci95": [
+    -11.871834131180782,
+    4.271984418871108
+   ],
+   "control_n": 1592,
+   "control_mean": -0.5287873401434017,
+   "control_ci95": [
+    -0.950455888584244,
+    -0.10711879170255939
+   ],
+   "diff_event_minus_control": -3.2711375160114344,
+   "welch_t": -0.7932075370105993,
+   "welch_p_two_sided": 0.42990634677644274,
+   "cohens_d": -0.27580312209812047,
+   "control_reliable": true
+  },
+  "CONTROL_2_PERMUTATION_NULL": {
+   "n_perm": 2000,
+   "null_mean_net_bp": -0.8897517972379005,
+   "null_sd_net_bp": 1.1508727741717355,
+   "observed_mean_net_bp": -3.7999248561548353,
+   "p_value_one_sided_event_gt_random": 0.9905
+  },
+  "interpretation": "NULL -- does not clearly exceed both controls",
+  "note": "thin sample -- n~84 scheduled meetings across the covered period, stated explicitly, not left for a reader to infer"
+ }
+}
