@@ -362,6 +362,20 @@ ORPHANS:
     Reruns the macro-splash study on SPY/QQQ's 08:30-09:00 ET pre-market window (the NVDA/full-session
     study came back null on 0/72 BH-corrected comparisons); a one-shot research artifact builder over
     its own data/daytrade/bars_premarket cache, not a consumer of its own output.
+- module: scripts.build_fomc_splash_event_study
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_fomc_splash_event_study.py`), same convention as its siblings scripts.build_macro_event_study
+    and scripts.build_spy_premarket_event_study. Measures SPY's 14:00 (statement) and 14:30 (press conference)
+    windows on FOMC decision days — the one splash every prior study in this family deliberately excluded,
+    now unblocked by the hand-verified data/daytrade/fomc_calendar.json; a one-shot research artifact
+    builder over its own data/daytrade/bars_premarket cache, not a consumer of its own output.
+- module: scripts.build_spy_macro_decay_study
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_spy_macro_decay_study.py --refresh`), same convention as its siblings scripts.build_macro_event_study
+    / scripts.build_spy_premarket_event_study. Follows up on the 08:30-09:00 ET SPY splash finding with
+    a pre-registered single-bar (08:30-08:35) primary plus two exploratory analyses (1-minute decay curve,
+    breath-holding expansion); a one-shot research artifact builder over its own data/daytrade/bars_premarket
+    and data/daytrade/bars_premarket_1m caches, not a consumer of its own output.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
@@ -630,3 +644,21 @@ DEAD_ARTIFACT:
   reason: written by scripts/build_spy_premarket_event_study.py (see ORPHANS) — same as spy_premarket_days.csv,
     for the secondary/exploratory QQQ cross-instrument test; a one-shot research dataset, not a machine
     input anything reads.
+- module: data/daytrade/event_study/spy_fomc_double_splash_event_study_summary.json
+  reason: written by scripts/build_fomc_splash_event_study.py (see ORPHANS) — the pre-registered primary
+    result (SPY 14:00-14:05 abs_ret, scheduled FOMC meetings only) plus the labelled secondary/exploratory
+    family (14:30 presser window, signed-return directionality, and the descriptive scheduled-vs-unscheduled
+    natural experiment); a research finding artifact for a human to read, not a machine input.
+- module: data/daytrade/event_study/spy_fomc_days.csv
+  reason: written by scripts/build_fomc_splash_event_study.py (see ORPHANS) — one row per day with whatever
+    of the 14:00/14:30 5m bars it actually has, kept for provenance/audit; a one-shot research dataset,
+    not a machine input anything reads.
+- module: data/daytrade/event_study/spy_macro_decay_study_summary.json
+  reason: written by scripts/build_spy_macro_decay_study.py (see ORPHANS) — the pre-registered single-bar
+    (08:30-08:35) primary result plus the labelled decay-curve and breath-holding-expansion exploratory
+    families; a research finding artifact for a human to read, not a machine input. Fitting anything on
+    this dataset is explicitly out of scope per this study's own docstring.
+- module: data/daytrade/event_study/spy_decay_minute_days.csv
+  reason: written by scripts/build_spy_macro_decay_study.py (see ORPHANS) — one row per complete SPY day
+    across the 08:25-08:40 1-minute decay window, kept for provenance/audit; a one-shot research dataset,
+    not a machine input anything reads.
