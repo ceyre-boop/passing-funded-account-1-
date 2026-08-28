@@ -1,0 +1,135 @@
+{
+  "anchor_check": {
+    "expected_n": 288,
+    "expected_avg_r": 0.3226,
+    "observed_n": 397,
+    "observed_avg_r": 0.3107,
+    "match": false
+  },
+  "cb_on": {
+    "label": "cb_on (CB_LAYER_DISABLED=False)",
+    "n": 397,
+    "avg_r": 0.3107,
+    "win_rate": 0.4887,
+    "median_hold_days": 5.0,
+    "sharpe": 1.2092,
+    "total_r": 123.33,
+    "se_avg_r": 0.0644,
+    "control_mean_centered": {
+      "avg_r": -0.0,
+      "win_rate": 0.4055,
+      "sharpe": -0.0
+    },
+    "control_direction_permutation": {
+      "avg_r_5_95": [
+        -0.1093,
+        0.1084
+      ],
+      "sharpe_5_95": [
+        -0.5284,
+        0.5191
+      ],
+      "p_avg_r_ge_observed": 0.0
+    }
+  },
+  "cb_off": {
+    "label": "cb_off (CB_LAYER_DISABLED=True, current default)",
+    "n": 350,
+    "avg_r": 0.0983,
+    "win_rate": 0.4429,
+    "median_hold_days": 5.0,
+    "sharpe": 0.4895,
+    "total_r": 34.41,
+    "se_avg_r": 0.0602,
+    "control_mean_centered": {
+      "avg_r": -0.0,
+      "win_rate": 0.4086,
+      "sharpe": -0.0
+    },
+    "control_direction_permutation": {
+      "avg_r_5_95": [
+        -0.0962,
+        0.1026
+      ],
+      "sharpe_5_95": [
+        -0.5152,
+        0.5521
+      ],
+      "p_avg_r_ge_observed": 0.0605
+    }
+  },
+  "paired": {
+    "n_matched": 343,
+    "n_cb_on_only": 54,
+    "n_cb_off_only": 7,
+    "matched_n_direction_changed": 2,
+    "matched_n_exit_date_changed": 38,
+    "matched_n_hold_days_changed": 38,
+    "matched_mean_delta_r_on_minus_off": 0.1012,
+    "matched_delta_r_95ci_bootstrap": [
+      0.0376,
+      0.1707
+    ],
+    "bootstrap_draws": 10000,
+    "bootstrap_seed": 20260827,
+    "cb_on_only": {
+      "n": 54,
+      "avg_r": 0.9263,
+      "win_rate": 0.5926,
+      "total_r": 50.02
+    },
+    "per_pair": {
+      "AUDUSD=X": {
+        "cb_on": {
+          "n": 102,
+          "avg_r": 0.2054
+        },
+        "cb_off": {
+          "n": 90,
+          "avg_r": 0.0031
+        }
+      },
+      "EURUSD=X": {
+        "cb_on": {
+          "n": 92,
+          "avg_r": 0.2597
+        },
+        "cb_off": {
+          "n": 81,
+          "avg_r": 0.0168
+        }
+      },
+      "GBPUSD=X": {
+        "cb_on": {
+          "n": 106,
+          "avg_r": 0.4219
+        },
+        "cb_off": {
+          "n": 89,
+          "avg_r": 0.1886
+        }
+      },
+      "USDJPY=X": {
+        "cb_on": {
+          "n": 97,
+          "avg_r": 0.3481
+        },
+        "cb_off": {
+          "n": 90,
+          "avg_r": 0.1776
+        }
+      }
+    }
+  },
+  "cb_off_permutation_control": {
+    "avg_r_5_95": [
+      -0.0956,
+      0.0993
+    ],
+    "sharpe_5_95": [
+      -0.5079,
+      0.5186
+    ],
+    "p_avg_r_ge_observed": 0.0525
+  }
+}
