@@ -384,6 +384,15 @@ ORPHANS:
     prior `|return|`-only study in this family already covers, plus an FOMC arm and an asymmetry check;
     a one-shot research artifact builder over its own data/daytrade/bars_premarket_1m cache, not a consumer
     of its own output.
+- module: scripts.build_spy_splash_continuation_study
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_spy_splash_continuation_study.py`), same convention as its siblings scripts.build_macro_event_study
+    / scripts.build_spy_premarket_event_study / scripts.build_spy_macro_decay_study. Asks whether the
+    splash direction is harvestable — sign(r_08:30-08:31) times r_08:31-08:35, event days vs matched control
+    (momentum/reversion/null), plus a large-impulse bounce check, a horizon sweep, max-excursion/ whipsaw
+    diagnostics, and a separate FOMC 14:00 arm; a one-shot research artifact builder over the existing
+    data/daytrade/bars_premarket and data/daytrade/bars_premarket_1m caches, not a consumer of its own
+    output.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
@@ -683,3 +692,16 @@ DEAD_ARTIFACT:
   reason: written by scripts/build_spy_whipsaw_event_study.py (see ORPHANS) — one row per complete SPY
     day across the 08:30-08:45 1-minute primary window (up_exc/down_exc/range/endpoint/ratio), kept for
     provenance/audit; a one-shot research dataset, not a machine input anything reads.
+- module: data/daytrade/event_study/spy_splash_continuation_study_summary.json
+  reason: written by scripts/build_spy_splash_continuation_study.py (see ORPHANS) — the pre-registered
+    momentum-vs-reversion primary result plus the labelled large-impulse/horizon-sweep/max-excursion exploratory
+    family and the separate FOMC 14:00 arm; a research finding artifact for a human to read, not a machine
+    input.
+- module: data/daytrade/event_study/spy_splash_continuation_primary_days.csv
+  reason: written by scripts/build_spy_splash_continuation_study.py (see ORPHANS) — one row per SPY day
+    with the 08:30 impulse-minute and 08:31-08:35 continuation returns, kept for provenance/audit; a one-shot
+    research dataset, not a machine input anything reads.
+- module: data/daytrade/event_study/spy_splash_continuation_fomc_days.csv
+  reason: written by scripts/build_spy_splash_continuation_study.py (see ORPHANS) — same as spy_splash_continuation_primary_days.csv,
+    for the separate FOMC 14:00 continuation arm; a one-shot research dataset, not a machine input anything
+    reads.
