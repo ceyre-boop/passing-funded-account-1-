@@ -351,3 +351,25 @@ def test_promotion_ref_feeds_the_authority_registry():
     reg.grant("ch", 3, by="colin", reason="cleared 017", ts=T0.isoformat(),
               promotion_ref=d.promotion_ref)
     assert reg.granted_level("ch") == 3
+
+
+# ------------------------------------------------------------ anchor_event
+
+def test_anchor_event_defaults_none_and_round_trips():
+    """Ordinary (unanchored) forecasts are unaffected; an anchored one
+    carries its tag through to_dict() and back through the constructor —
+    same optional-field discipline as horizon_clamped_from/recommendation_
+    reason, so historical rows with no anchor_event still load."""
+    plain = forecast("f-plain")
+    assert plain.anchor_event is None
+    anchored = Forecast(forecast_id="f-anchor", model_version="az-1",
+                        prompt_version="p1", as_of=T0.isoformat(), symbol="NVDA",
+                        horizon_min=60,
+                        scenario_probs={"bull_continuation": 0.7,
+                                       "range_consolidation": 0.3},
+                        direction="up", recommendation=None, interrupt=None,
+                        confidence=0.7, evidence_ids=("ev1",),
+                        anchor_event="Consumer Price Index@2026-09-10")
+    assert anchored.anchor_event == "Consumer Price Index@2026-09-10"
+    body = anchored.to_dict()
+    assert Forecast(**body).anchor_event == "Consumer Price Index@2026-09-10"

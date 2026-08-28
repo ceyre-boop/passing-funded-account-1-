@@ -35,7 +35,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Literal, Optional
 from zoneinfo import ZoneInfo
@@ -51,6 +51,7 @@ from context_directive import (ContextDirective, Scope, Abstention,       # noqa
 from scenarios import ALL_SCENARIOS                                       # noqa: E402
 import news_claude                                                        # noqa: E402
 import bars as bars_mod                                                   # noqa: E402
+import macro_calendar                                                     # noqa: E402
 from stockfish_exit import _satisfiable                                   # noqa: E402
 from shadow import run_shadow                                             # noqa: E402
 import regret as regret_mod                                               # noqa: E402
@@ -62,6 +63,12 @@ OPDIR = OUT / "operator"
 RECORDS = OPDIR / "records.jsonl"
 EV_LOG = OPDIR / "evidence.jsonl"
 FC_LOG = OPDIR / "forecasts.jsonl"
+# Every ledger.grade() ScoreReport, one append per grading run — durable, so
+# calibration over time is READABLE rather than recomputed-and-lost each time
+# `grade` is invoked. This file is a derived, append-only HISTORY (never
+# replayed to reconstruct the 017 ledger — load_ledger() has no "score_report"
+# kind and must not gain one; it stays FC_LOG's separate, pure companion).
+SCORE_LOG = OPDIR / "score_history.jsonl"
 STATE = OPDIR / "state.json"
 DIRECTIVES = OUT / "directives.json"          # the runner's existing input
 PLAN = OUT / "plan.json"
@@ -102,6 +109,20 @@ CODRIFT_N = 2
 CODRIFT_WINDOW_MIN = 30
 GROUPS_FILE = OPDIR / "correlated_groups.json"
 LIMITS_FILE = OPDIR / "limits.json"
+
+# ---- event-anchoring (track-record harness). A forecast anchored to a known
+# upcoming macro_calendar release, pre-registered before that release, so its
+# resolution time is knowable in advance rather than arbitrary (see
+# seal_anchored_forecast()). Weekly claims (importance 0.3) is excluded by
+# default — anchoring to a low-signal weekly release every week would dilute
+# the record with noise no different from an unanchored day; PPI/GDP (0.6)
+# and above qualify.
+ANCHOR_MIN_IMPORTANCE = 0.5
+ANCHOR_LOOKAHEAD_DAYS = 14
+# Minimum detectable directional edge over the 50% chance baseline (a 60% hit
+# rate), registered NOW per the same discipline oracle_audit.py's sample-size
+# line follows — chosen before anyone wants the answer, not tuned to it.
+ANCHOR_POWER_DELTA = 0.10
 
 VERDICTS = ("ABSTAIN", "ALLOW_BASELINE", "TIGHTEN", "EXIT")
 
@@ -824,7 +845,8 @@ def _make_forecast(read: OperatorRead, symbol: str, now: datetime,
                    record_id: str, model: str,
                    evidence_ids: tuple[str, ...], *,
                    horizon_min: Optional[int] = None,
-                   horizon_clamped_from: Optional[int] = None) -> Forecast:
+                   horizon_clamped_from: Optional[int] = None,
+                   anchor_event: Optional[str] = None) -> Forecast:
     recommendation, recommendation_reason = _recommendation_for(read)
     return Forecast(
         forecast_id=f"fc-{record_id}",
@@ -845,7 +867,8 @@ def _make_forecast(read: OperatorRead, symbol: str, now: datetime,
         confidence=read.confidence,
         evidence_ids=evidence_ids,
         horizon_clamped_from=horizon_clamped_from,
-        recommendation_reason=recommendation_reason)
+        recommendation_reason=recommendation_reason,
+        anchor_event=anchor_event)
 
 
 def _make_directive(read: OperatorRead, symbol: str, now: datetime,
@@ -904,6 +927,202 @@ def _write_directive(d: ContextDirective) -> None:
     tmp = DIRECTIVES.with_suffix(f".tmp-{os.getpid()}")
     tmp.write_text(json.dumps(existing, indent=1))
     tmp.replace(DIRECTIVES)
+
+
+# ------------------------------------------------------ event-anchored track
+# record harness. B: a forecast made before a KNOWN, scheduled macro event,
+# resolving after it — the resolution time is knowable in advance rather than
+# arbitrary, so the claim can be pre-registered rather than judged after the
+# fact. Deliberately a SEPARATE, additive path from run_once()/_seal_and_emit
+# (the live 5-minute tick): it never touches triggers, the emission gates, or
+# directive writes, so it cannot perturb the live path. It makes NO network
+# call itself — `read` must already be a complete OperatorRead, produced
+# however the caller chooses (a real news_claude._call() for live use, or an
+# injected/stubbed OperatorRead for tests). Wiring this to a real model call
+# on a schedule is a separate, deliberate step, not done here.
+
+def _next_scheduled_event(after: datetime, *, lookahead_days: int = ANCHOR_LOOKAHEAD_DAYS,
+                          min_importance: float = ANCHOR_MIN_IMPORTANCE
+                          ) -> Optional[dict]:
+    """The next macro_calendar event at/after `after`'s ET calendar date,
+    within `lookahead_days`, meeting `min_importance`. None if nothing
+    qualifies — never a guessed date (macro_calendar.py's own NEVER FABRICATE
+    discipline). Ties within a day broken deterministically by importance
+    then name, never by dict order."""
+    start = after.astimezone(ET).date()
+    for i in range(lookahead_days + 1):
+        d = start + timedelta(days=i)
+        evs = [e for e in macro_calendar.scheduled_events(d)
+              if e["importance"] >= min_importance]
+        if evs:
+            return max(evs, key=lambda e: (e["importance"], e["name"]))
+    return None
+
+
+def _anchor_window(event_date: date, *, now: datetime) -> dict:
+    """The [as_of, resolves_at] window for a forecast anchored to a scheduled
+    event on `event_date`. as_of is `now`, unchanged — resolution is fixed to
+    that event day's RTH session close (bars_mod.RTH_OPEN/RTH_CLOSE, the same
+    sourced exchange-hours constants the live RTH tradability gate already
+    uses), the earliest point at which this repo's RTH-only bar cache is
+    guaranteed to hold data for the day. macro_calendar.py carries no
+    per-release time-of-day and this function does not invent one — closing
+    at the session's own known close is the only boundary that is both fixed
+    in advance and not a fabricated release time.
+
+    Raises OperatorError if `now` is already at-or-after that close, or if
+    `event_date` is not a trading day at all — a forecast minted after its
+    own resolution point is not a forecast, it is hindsight."""
+    bounds = _rth_session_bounds(event_date)
+    if bounds is None:
+        raise OperatorError(f"{event_date.isoformat()} is not a trading day "
+                            "(weekend) — cannot anchor a forecast to it")
+    _, session_close = bounds
+    if now >= session_close:
+        raise OperatorError(
+            f"now ({_iso(now)}) is at-or-after the anchor event's own "
+            f"session close ({session_close.isoformat()}) — refusing to "
+            "mint a forecast after its own resolution point")
+    horizon_min = max(1, int((session_close - now).total_seconds() // 60))
+    return {"as_of": now, "horizon_min": horizon_min, "resolves_at": session_close}
+
+
+def seal_anchored_forecast(symbol: str, read: "OperatorRead", *, model: str,
+                          now: Optional[datetime] = None,
+                          lookahead_days: int = ANCHOR_LOOKAHEAD_DAYS,
+                          min_importance: float = ANCHOR_MIN_IMPORTANCE,
+                          event: Optional[dict] = None) -> Optional[dict]:
+    """Pre-register `read` against a known upcoming macro_calendar event and
+    seal it exactly like every other forecast in this module — same
+    append-only + fsync discipline (_append_jsonl), same 017 ledger contract,
+    same evidence/pre-registration validation, same RECORDS/EV_LOG/FC_LOG
+    trio. `event` may be supplied directly (tests, or a caller that already
+    picked one); otherwise the next qualifying calendar event is looked up.
+
+    NEVER emits a directive — an anchored forecast exists to build a graded
+    track record, not to trade; `directive`/`suppressed_to` are always None
+    and nothing is written to DIRECTIVES. Returns the sealed record dict, or
+    None if no qualifying event exists within `lookahead_days`.
+
+    Resolution reuses resolve_open() unchanged — an anchored Forecast is
+    recorded into the same ledger/FC_LOG as any other, so the existing
+    resolver picks it up once its horizon passes; no separate resolver
+    exists or is needed."""
+    now = now or _utcnow()
+    if event is None:
+        event = _next_scheduled_event(now, lookahead_days=lookahead_days,
+                                      min_importance=min_importance)
+        if event is None:
+            print(f"  no scheduled event >= importance {min_importance} "
+                  f"within {lookahead_days}d — nothing to anchor to")
+            return None
+
+    if read.verdict == "ABSTAIN" and read.abstain_reason is None:
+        raise OperatorError("verdict ABSTAIN with no abstain_reason — "
+                            "anonymous silence cannot be scored")
+
+    event_date = date.fromisoformat(event["date"])
+    window = _anchor_window(event_date, now=now)
+    anchor_tag = f"{event['name']}@{event['date']}"
+
+    # VALIDATE BEFORE WRITING ANYTHING (same discipline as _seal_and_emit).
+    prereg = _pre_registration(read)
+    # Event slug in the id: two DIFFERENT events scheduled for the same day
+    # (e.g. CPI and a Fed speaker) anchored from the same `now` would
+    # otherwise collide on the same microsecond timestamp and the same
+    # symbol — the 017 ledger rightly refuses a duplicated forecast_id.
+    event_slug = "".join(c for c in event["name"] if c.isalnum()).lower()[:16]
+    record_id = f"anchor-{now.strftime('%Y%m%d-%H%M%S-%f')}-{symbol}-{event_slug}"
+    evs = _make_evidence(read, symbol, now, record_id)
+    ev_ids = tuple(ev.evidence_id for ev in evs)
+
+    fc = _make_forecast(read, symbol, now, record_id, model, ev_ids,
+                        horizon_min=window["horizon_min"],
+                        anchor_event=anchor_tag)
+    ledger = load_ledger()
+    ledger.record(fc)                       # validates against the 017 contract
+
+    abst = None
+    if read.verdict == "ABSTAIN":
+        abst = Abstention(model_version=f"{MODEL_VERSION_BASE}/{model}",
+                          reason=read.abstain_reason,
+                          detail=read.base, issued_at=_iso(now))
+
+    row = {
+        "record_id": record_id, "ts": _iso(now), "trigger": "event_anchor",
+        "symbol": symbol, "model_version": f"{MODEL_VERSION_BASE}/{model}",
+        "prompt_version": PROMPT_VERSION, "forecast_id": fc.forecast_id,
+        "trade_id": _session_trade_id(symbol, now), "evidence_ids": list(ev_ids),
+        "both_sides": {"bull": read.bull, "base": read.base, "bear": read.bear},
+        "invalidators": read.invalidators, "verdict": read.verdict,
+        "confidence": read.confidence,
+        "expires_at": _iso(now + timedelta(minutes=read.expires_min)),
+        "suppressed_to": None,
+        "directive": None,                  # anchored forecasts NEVER emit a directive
+        "abstention": abst.to_dict() if abst else None,
+        "forecast": fc.to_dict(), "evidence": [ev.to_dict() for ev in evs],
+        "pre_registration": prereg, "emission_refused": None,
+        "forecast_refused": None, "portfolio_advisory": None, "shadow": True,
+        "anchor_event": anchor_tag, "anchor_resolves_at": _iso(window["resolves_at"]),
+        # No live 5-minute-tick packet is built for an anchored forecast —
+        # these fields describe THAT choice, not a missing observation.
+        "packet_as_of": None, "packet_max_data_ts": None, "bar_age_min": None,
+        "cost_usd": 0.0}
+    _append_jsonl(RECORDS, row)
+
+    store = load_evidence_store()
+    for ev in evs:
+        store.add(ev)
+        _append_jsonl(EV_LOG, {"kind": "evidence", **ev.to_dict()})
+    _append_jsonl(FC_LOG, {"kind": "forecast", **fc.to_dict()})
+
+    print(f"  ANCHORED forecast {fc.forecast_id} sealed — event: {anchor_tag}"
+          f", resolves {window['resolves_at'].isoformat()} "
+          f"({window['horizon_min']}m horizon), verdict {read.verdict}")
+    return row
+
+
+def events_to_power(*, delta: float = ANCHOR_POWER_DELTA) -> float:
+    """Anchored events needed to detect a `delta` directional edge over the
+    50% chance baseline at one-sided 95% / 80% power. SAME convention as
+    oracle_audit.py's sample-size line — z=1.645 (95% one-sided) and z=0.842
+    (80% power) on (sigma/delta)^2 — reused, not re-derived. sigma is the
+    Bernoulli worst-case stdev at p=0.5 (0.5): a directional hit/miss is
+    proportion data, unlike oracle_audit's continuous per-day R."""
+    sigma = 0.5
+    return ((1.645 + 0.842) ** 2) * (sigma / delta) ** 2
+
+
+def grade_anchored(model: str, *, event_name: Optional[str] = None) -> dict:
+    """Directional calibration on EVENT-ANCHORED forecasts only: answers
+    'is AlphaZero's directional call better than chance on <event> days' by
+    replaying the durable FC_LOG (same replay load_ledger() already does for
+    grade()), filtered to rows carrying an anchor_event tag. `event_name`
+    filters to one release family (e.g. 'Consumer Price Index'); None pools
+    every anchored event."""
+    ledger = load_ledger()
+    version = f"{MODEL_VERSION_BASE}/{model}"
+    n_power = events_to_power()
+    fs = [f for f in ledger._forecasts.values()
+         if f.model_version == version and f.anchor_event
+         and (event_name is None or f.anchor_event.split("@", 1)[0] == event_name)]
+    pairs = [(f, ledger._resolutions[f.forecast_id]) for f in fs
+            if f.forecast_id in ledger._resolutions]
+    n_open = len(fs) - len(pairs)
+    if not pairs:
+        return {"model_version": version, "event_filter": event_name,
+                "n_resolved": 0, "n_open": n_open, "hit_rate": None,
+                "events_to_power": round(n_power),
+                "note": "no resolved anchored forecasts yet — needs "
+                        f"~{round(n_power)} to be powered at "
+                        f"+{ANCHOR_POWER_DELTA:.0%} over chance "
+                        f"(oracle_audit.py sample-size convention)"}
+    hits = sum(1 for f, r in pairs if f.direction == r.outcome_direction)
+    return {"model_version": version, "event_filter": event_name,
+            "n_resolved": len(pairs), "n_open": n_open, "hits": hits,
+            "hit_rate": hits / len(pairs),
+            "events_to_power": round(n_power),
+            "powered": len(pairs) >= n_power}
 
 
 # ----------------------------------------------------------------- run once
@@ -1376,6 +1595,12 @@ def grade(model: str) -> int:
     except ForecastError as e:
         print(f"  {e}")
         return 1
+    # A: persist the ScoreReport itself — append-only, fsync'd (the
+    # _append_jsonl house standard) — so calibration over time is a durable,
+    # readable history rather than something recomputed and lost on every
+    # `grade` invocation. Never replayed back into the 017 ledger (SCORE_LOG
+    # is a derived companion to FC_LOG, not an input to it).
+    _append_jsonl(SCORE_LOG, {"at": _iso(_utcnow()), **rep.to_dict()})
     for k, v in rep.to_dict().items():
         print(f"  {k:24s} {v}")
 
@@ -1537,6 +1762,14 @@ def main(argv=None) -> int:
     grd = sub.add_parser("grade", help="score the operator against the 017 gates")
     grd.add_argument("--model", default=DEFAULT_MODEL)
 
+    gra = sub.add_parser("grade-anchored", help="B: directional calibration on "
+                         "event-anchored forecasts only — reads the durable "
+                         "FC_LOG, makes no network call")
+    gra.add_argument("--model", default=DEFAULT_MODEL)
+    gra.add_argument("--event", default=None,
+                     help="filter to one release family, e.g. "
+                          "'Consumer Price Index'; omit to pool all anchored events")
+
     prm = sub.add_parser("promote", help="D3 link 3: a reachable, auditable "
                          "promotion_decision() call. Refuses with an honest "
                          "INSUFFICIENT_DATA verdict unless --incumbent is given "
@@ -1563,6 +1796,11 @@ def main(argv=None) -> int:
         return resolve_open()
     if a.cmd == "grade":
         return grade(a.model)
+    if a.cmd == "grade-anchored":
+        row = grade_anchored(a.model, event_name=a.event)
+        for k, v in row.items():
+            print(f"  {k:24s} {v}")
+        return 0
     if a.cmd == "promote":
         promotion_status(challenger_model=a.model, incumbent_model=a.incumbent,
                          oos=a.oos)

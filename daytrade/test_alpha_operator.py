@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -63,6 +63,7 @@ def sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(ao, "RECORDS", opdir / "records.jsonl")
     monkeypatch.setattr(ao, "EV_LOG", opdir / "evidence.jsonl")
     monkeypatch.setattr(ao, "FC_LOG", opdir / "forecasts.jsonl")
+    monkeypatch.setattr(ao, "SCORE_LOG", opdir / "score_history.jsonl")
     monkeypatch.setattr(ao, "STATE", opdir / "state.json")
     monkeypatch.setattr(ao, "DIRECTIVES", tmp_path / "directives.json")
     monkeypatch.setattr(ao, "PLAN", tmp_path / "plan.json")
@@ -1159,3 +1160,142 @@ def test_promotion_status_never_calls_grant(sandbox, monkeypatch):
     ao.promotion_status(challenger_model="claude-sonnet-5",
                         incumbent_model="claude-opus-5")
     assert called == []
+
+
+# ------------------------------------------ A: grade() persists a track record
+
+def test_grade_persists_score_report_append_only(sandbox):
+    """ledger.grade()'s ScoreReport must be written to SCORE_LOG, durably —
+    calibration over time is readable rather than recomputed-and-lost."""
+    _seed_graded_model(sandbox, "claude-sonnet-5", 5, hit_rate=0.8)
+    assert not ao.SCORE_LOG.exists()
+    rc = ao.grade("claude-sonnet-5")
+    assert rc == 0
+    rows = ao._read_jsonl(ao.SCORE_LOG)
+    assert len(rows) == 1
+    assert rows[0]["model_version"] == "alpha-operator-v1/claude-sonnet-5"
+    assert rows[0]["n_resolved"] == 5
+    assert "at" in rows[0]
+
+    # A second grading run APPENDS, never overwrites — the history compounds.
+    ao.grade("claude-sonnet-5")
+    rows = ao._read_jsonl(ao.SCORE_LOG)
+    assert len(rows) == 2
+
+
+# --------------------------------------------- B: event-anchored track record
+
+CPI_EVENT = {"date": "2026-08-14", "source": "fred", "name": "Consumer Price Index",
+            "importance": 1.0}
+
+
+def test_next_scheduled_event_skips_low_importance_and_finds_first_qualifying(
+        sandbox, monkeypatch):
+    calendar = {
+        "2026-08-14": [{"date": "2026-08-14", "source": "fred",
+                        "name": "Weekly Claims", "importance": 0.3}],
+        "2026-08-17": [{"date": "2026-08-17", "source": "fred",
+                        "name": "Producer Price Index", "importance": 0.6}],
+    }
+    monkeypatch.setattr(ao.macro_calendar, "scheduled_events",
+                        lambda d, **kw: calendar.get(d.isoformat(), []))
+    ev = ao._next_scheduled_event(NOW, lookahead_days=14, min_importance=0.5)
+    assert ev is not None
+    assert ev["name"] == "Producer Price Index"
+    assert ev["date"] == "2026-08-17"
+
+
+def test_next_scheduled_event_none_beyond_lookahead(sandbox, monkeypatch):
+    monkeypatch.setattr(ao.macro_calendar, "scheduled_events",
+                        lambda d, **kw: [{"date": d.isoformat(), "source": "fred",
+                                          "name": "FOMC", "importance": 1.0}]
+                        if d.isoformat() == "2026-09-30" else [])
+    ev = ao._next_scheduled_event(NOW, lookahead_days=5, min_importance=0.5)
+    assert ev is None
+
+
+def test_anchor_window_horizon_ends_exactly_at_session_close(sandbox):
+    anchor_now = datetime(2026, 8, 14, 19, 50, tzinfo=UTC)     # 15:50 ET, Fri
+    window = ao._anchor_window(date(2026, 8, 14), now=anchor_now)
+    assert window["horizon_min"] == 5
+    assert window["resolves_at"].astimezone(ao.ET).strftime("%H:%M") == "15:55"
+
+
+def test_anchor_window_refuses_after_own_session_close(sandbox):
+    past_close = datetime(2026, 8, 14, 20, 0, tzinfo=UTC)      # 16:00 ET
+    with pytest.raises(ao.OperatorError, match="at-or-after"):
+        ao._anchor_window(date(2026, 8, 14), now=past_close)
+
+
+def test_anchor_window_refuses_weekend_event_date(sandbox):
+    with pytest.raises(ao.OperatorError, match="not a trading day"):
+        ao._anchor_window(date(2026, 8, 15), now=NOW)          # Saturday
+
+
+def test_seal_anchored_forecast_no_qualifying_event_returns_none(sandbox, monkeypatch):
+    monkeypatch.setattr(ao.macro_calendar, "scheduled_events", lambda d, **kw: [])
+    row = ao.seal_anchored_forecast("NVDA", _read(), model="claude-sonnet-5",
+                                    now=NOW)
+    assert row is None
+    assert not ao.RECORDS.exists()
+
+
+def test_seal_anchored_forecast_seals_record_never_writes_directive(sandbox):
+    anchor_now = datetime(2026, 8, 14, 19, 50, tzinfo=UTC)
+    row = ao.seal_anchored_forecast(
+        "NVDA", _read(verdict="TIGHTEN"), model="claude-sonnet-5",
+        now=anchor_now, event=CPI_EVENT)
+    assert row is not None
+    assert row["anchor_event"] == "Consumer Price Index@2026-08-14"
+    assert row["directive"] is None
+    assert row["suppressed_to"] is None
+    assert row["shadow"] is True
+    assert not ao.DIRECTIVES.exists()          # never, even on a TIGHTEN verdict
+
+    fc_rows = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "forecast"]
+    assert len(fc_rows) == 1
+    assert fc_rows[0]["anchor_event"] == "Consumer Price Index@2026-08-14"
+    assert fc_rows[0]["horizon_min"] == 5                       # to the session close
+
+
+def test_seal_anchored_forecast_resolves_through_existing_resolver(sandbox, monkeypatch):
+    """No separate resolver exists — resolve_open() picks up an anchored
+    Forecast exactly like any other, because it lives in the same ledger."""
+    anchor_now = datetime(2026, 8, 14, 19, 50, tzinfo=UTC)
+    _write_bars(sandbox["tmp"], monkeypatch, [100.0, 101.0], start=anchor_now)
+    row = ao.seal_anchored_forecast(
+        "NVDA", _read(verdict="ALLOW_BASELINE", direction="up"),
+        model="claude-sonnet-5", now=anchor_now, event=CPI_EVENT)
+    assert row is not None
+    ao.resolve_open(now=anchor_now + timedelta(minutes=6))
+    res = [r for r in ao._read_jsonl(ao.FC_LOG) if r["kind"] == "resolution"]
+    assert len(res) == 1
+    assert res[0]["outcome_direction"] == "up"
+
+
+def test_grade_anchored_no_data_names_events_to_power(sandbox):
+    result = ao.grade_anchored("claude-sonnet-5", event_name="Consumer Price Index")
+    assert result["n_resolved"] == 0
+    assert result["hit_rate"] is None
+    assert result["events_to_power"] == round(ao.events_to_power())
+    assert "note" in result
+
+
+def test_grade_anchored_filters_by_event_and_counts_hits(sandbox, monkeypatch):
+    anchor_now = datetime(2026, 8, 14, 19, 50, tzinfo=UTC)
+    _write_bars(sandbox["tmp"], monkeypatch, [100.0, 101.0], start=anchor_now)
+    ao.seal_anchored_forecast("NVDA", _read(verdict="ALLOW_BASELINE", direction="up"),
+                              model="claude-sonnet-5", now=anchor_now, event=CPI_EVENT)
+    ppi_event = {**CPI_EVENT, "name": "Producer Price Index"}
+    ao.seal_anchored_forecast("NVDA", _read(verdict="ALLOW_BASELINE", direction="down"),
+                              model="claude-sonnet-5", now=anchor_now, event=ppi_event)
+    ao.resolve_open(now=anchor_now + timedelta(minutes=6))
+
+    cpi_only = ao.grade_anchored("claude-sonnet-5", event_name="Consumer Price Index")
+    assert cpi_only["n_resolved"] == 1
+    assert cpi_only["hits"] == 1                # direction "up" matched the up-move
+    assert cpi_only["hit_rate"] == 1.0
+
+    pooled = ao.grade_anchored("claude-sonnet-5")
+    assert pooled["n_resolved"] == 2
+    assert pooled["hits"] == 1                  # the PPI-anchored "down" call missed

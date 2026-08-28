@@ -76,6 +76,14 @@ class Forecast:
     # already on disk with `recommendation=None` and no reason recorded
     # still load through `Forecast(**body)` rather than raising retroactively.
     recommendation_reason: Optional[str] = None
+    # Set only when this claim was PRE-REGISTERED against a known upcoming
+    # macro-calendar release (track-record harness, see
+    # alpha_operator.seal_anchored_forecast) — a canonical "{release
+    # name}@{ISO date}" tag, e.g. "Consumer Price Index@2026-09-10". None on
+    # every ordinary trigger-driven forecast. Carried so calibration can be
+    # queried per event family later (grade_anchored()) without re-deriving
+    # which forecasts were anchored from timing alone.
+    anchor_event: Optional[str] = None
 
     def __post_init__(self):
         if not self.forecast_id or not self.model_version:
