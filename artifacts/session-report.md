@@ -15,9 +15,10 @@ Pre-registration: `specs/045_CARRY_EXIT_TABLEBASE.md` (+ Amendment 1). HEAD at r
 | sign-flip permutation (base) | p = **0.726** | — | — | null 5–95% [−0.070, +0.071] | −0.0274 | — | 50/97 nonzero |
 
 Decision rule (pre-registered): replace only if both arms ACCEPT_H1 and p < 0.05. **None held.**
-Per block (base): B2 ΔR ≈ 0 (coverage 8% — the table barely deviates with 24 training units);
-B3 +0.040 mean; B4 +0.028 mean but −6.9 R summed; **B5 −0.200 mean, −14.2 R summed, 16 of 22
-units negative** (worst unit −4.46 R over 5 trades — not one trade). The table learned "hold
+Per block (base, **descriptive — the sequential test stopped at unit 68, inside block 4, and never
+consumed block 5**; red-team finding 3): B2 ΔR ≈ 0 (coverage 8% — the table barely deviates with 24
+training units); B3 +0.040 mean; B4 +0.028 mean but −6.9 R summed; B5 −0.200 mean, −14.2 R summed,
+16 of 22 units negative (worst unit −4.46 R over 5 trades — not one trade). The table learned "hold
 through the trail" in-sample and it lost out of sample. The pre-registered prediction
 (ACCEPT_H0) held. Empirical σ_ΔR 0.42 (base) against the declared σ 0.758 — the declared σ was
 conservative, as intended.
@@ -75,6 +76,46 @@ blocked nothing tonight because nothing moved the engine — every commit after 
 ## 5. Red-team findings (verbatim)
 
 _See `artifacts/redteam.md` — appended below unedited when the red team returns._
+
+## 5b. Architect's response to the red team (their text above is unedited; this is mine)
+
+The decision survives; the test's claimed strength does not. Taking the open findings in order:
+
+1. **Free ACCEPT_H0 from non-deviating units — agreed, MAJOR.** 47 of 97 units contributed
+   −1.498 of the −1.558 bound without the table making a decision. Recomputed independently: on the
+   50 deviating units alone, mean ΔR −0.053 (sd 0.588), SPRT with the declared parameters →
+   ACCEPT_H0 at 38; with a post-hoc σ_ΔR/δ=MDE pair (not pre-registered, shown only to answer the
+   finding) → ACCEPT_H0 at 28. The candidate is negative on every reading; what the spec measured on
+   the first 23 units was coverage, not skill. A block-level deviation floor belongs in spec 046.
+2. **δ from the level variance — agreed.** σ = SD of unit-level incumbent R (0.758) was declared
+   "conservative" on the argument that overestimating σ only lengthens the test; that is false when
+   δ = mde(σ, n) — it raises the bar to 0.19 R against a +0.098 R/trade edge. Empirical σ_ΔR was 0.42
+   (MDE 0.106). Re-running with those (post-hoc, reported by the red team) → ACCEPT_H0 at 72.
+   Direction unchanged; the rule was wrong and is recorded as such.
+3. **The SPRT never saw block 5 — agreed;** §1 now labels the per-block table descriptive.
+4. **The pessimistic arm is not a handicap on decisions — agreed, MAJOR, and it is my design.**
+   Independently computed: an all-FALLBACK (incumbent-identical) candidate scores **−0.049 R/unit,
+   −8.6 R, 39 units up / 40 down** under the pessimistic fill — the arm re-prices the incumbent's own
+   exits at next open with doubled costs. It cannot separate "worse decisions" from "next-open noise".
+   The base arm is clean (identity → 0.0000 exactly). The pessimistic ACCEPT_H0 is therefore not
+   independent evidence; the decision rests on the base arm and the permutation.
+5. **CARRY-FROZEN-001 pins the exit side, not the entry inputs — agreed, MAJOR.** The 350 reproduce
+   only through a scratchpad `macro_nominal` directory that a reboot deletes; it is hashed nowhere.
+   What is sealed and re-runnable by anyone is the path parquet (hashed, attached) — the tablebase
+   and the gate depend only on it. The checkpoint's `why` overstates what it pins; the fix is to move
+   those parquets under `data/` and attach them, or rebuild them via `build_rate_vintages.py`.
+6. **Per-trade `cost_frac` carries the incumbent's final hold — agreed, MINOR** (91 of 2,667 rows off
+   by >0.01 R, bins ~0.3 R wide). Fix in the extractor: per-bar cost via `BaseFill.cost_fracs(hold_bars=t)`.
+7. **One commit for tablebase + driver + results — agreed as process.** The builder reported the
+   walk-forward numbers to me before the driver ran, and Amendment 1 was written before that report,
+   but git cannot show it. Next time: commit the module, then the driver, then run.
+8. **Per-trade −0.055 R vs unit-mean −0.027 — agreed;** the losing units are the multi-trade clusters.
+
+**Net:** INCUMBENT STAYS stands, on the base-arm SPRT, the permutation (p = 0.726), and the
+per-trade sum (−16.4 R). What does not stand is the claim that the gate as designed could have
+detected a real 0.10 R improvement: with 47 free H0 votes and a 0.19 R bar it could not. That is
+the finding to carry into spec 046, and it is why a passing result tonight would not have been
+trustworthy either.
 
 ## 6. Null results logged (none deleted)
 
