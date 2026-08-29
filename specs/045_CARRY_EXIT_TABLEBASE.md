@@ -186,7 +186,7 @@ incumbent — not as "deviation failed".
 | parameter | value | source |
 |---|---|---|
 | `H_max` | 10 bars | 2× the modal hold_limit (208/350 trades hold 5); at 60 the 4-pair overlap graph has 2 components over the decade |
-| `t_bucket` | {1, 2-3, 4-5, 6-8, 9-10} | declared |
+| `t_bucket` | {1, 2-3, 4-5, 6-8, 9-10} — **reporting only after Amendment 1**; the state key uses exact `t` | declared |
 | `r_bin` | 5, edges at train-row quantiles {.2,.4,.6,.8} | declared |
 | `n_min` | 20 visits | declared |
 | cross-fit split seed | 20260829 | declared |
@@ -248,3 +248,36 @@ work out of this repo).
 Trading anything; any change to `exit_machine.py`, `carry_exit.py`, spec 034's
 exit vocabulary (I58 — opened only on a pass, by ruling); any `MECHANISMS.json`
 edit; rebuilding vintage caches; an entry gate.
+
+---
+
+# AMENDMENT 1 — 2026-08-29, before any result existed
+
+**Found by the builder seat on the first real walk-forward, reported verbatim:**
+
+> `TablebaseError: Gauss-Seidel did not converge within 10 sweeps (max |ΔV| stayed >= 1e-12) — the acyclic-in-t assumption may be violated`
+>
+> In block 2's table, cell `(r_bin=4, t_bucket=(6,8), weekend_next=0)` has 28 training rows, and 16 of the 28 (57%) have their own "next decision row" landing back in that same cell (an extreme-R FX carry path tends to stay in the extreme bin for several consecutive bars). With a hard EXIT/HOLD argmax this produces an exact period-2 limit cycle — traced to 40 sweeps, the value alternates between 2.445 and 1.778 forever. Fires in all four test blocks. I did not touch `n_min`, `seed`, `t_buckets`, or any other declared parameter to route around this.
+
+**The defect is in §4 as written, not in the implementation.** Pooling bars 6–8 into one
+cell makes the state graph acyclic in *t* but cyclic in *cells*; §4's convergence claim was
+false for this discretization on this data. The builder's refusal to loosen a parameter to
+get past it is exactly the behaviour the spec asks for.
+
+**Change (algorithm, not parameter):** the state key is `(r_bin, t, weekend_next)` with `t`
+**exact** (1..H_max) — 100 cells, not 60. Backward induction is a single pass over levels
+t = H_max..1; every transition goes from level t to level t+1, so termination is by
+construction and the convergence check becomes an assertion that a second pass changes
+nothing. `t_bucket` is retained for **reporting only** (coverage and deviation by bucket)
+and is no longer part of the key. Consequences, stated before the run: fewer visits per
+cell, so more cells fall to FALLBACK and coverage is lower; the candidate can only deviate
+where ≥ `n_min` = 20 rows exist at that exact bar. A lower coverage is the honest price of
+a table that terminates.
+
+**Not changed:** `H_max`, `r_bin`, `n_min`, seed, blocks, α, β, σ, δ, fill parameters,
+the decision rule, the prediction. §7's table row `t_bucket` now reads "reporting only".
+
+**What the red team should ask:** whether the exact-level table was chosen *because* it
+would produce less deviation (it was chosen because the bucketed one does not terminate;
+the builder found the cycle, the architect wrote this amendment, no result was seen by
+either).
