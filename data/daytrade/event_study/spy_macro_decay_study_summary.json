@@ -1,0 +1,703 @@
+{
+ "generated_at": "2026-08-28T23:20:46.285009+00:00",
+ "follows_up_on": "data/daytrade/event_study/spy_premarket_event_study_summary.json (08:30-09:00 event 0.1783% n=1008 vs control 0.0890% n=1667, Welch t=9.50, p=1.16e-20, d=0.456)",
+ "primary_symbol": "SPY",
+ "primary_bar_source": "data/daytrade/bars_premarket (Alpaca SIP, extended hours, 5m)",
+ "decay_curve_bar_source": "data/daytrade/bars_premarket_1m (Alpaca SIP, extended hours, 1m)",
+ "fetch_start_1m": "2016-01-01",
+ "events_found_in_window": 1221,
+ "primary_complete_days": 2676,
+ "primary_excluded_days": 2,
+ "primary_excluded_reasons_sample": [
+  {
+   "date": "2015-12-31",
+   "reason": "no 08:30 5m bar in the premarket cache"
+  },
+  {
+   "date": "2019-07-02",
+   "reason": "no 08:30 5m bar in the premarket cache"
+  }
+ ],
+ "PRIMARY": {
+  "event_n": 1009,
+  "event_mean": 0.0012399920888396339,
+  "event_ci95": [
+   0.0011002664953715618,
+   0.001379717682307706
+  ],
+  "control_n": 1667,
+  "control_mean": 0.0004119690573198995,
+  "control_ci95": [
+   0.00038672436966822476,
+   0.0004372137449715743
+  ],
+  "diff_event_minus_control": 0.0008280230315197343,
+  "welch_t": 11.430032204547768,
+  "welch_p_two_sided": 1.2389262983604216e-28,
+  "cohens_d": 0.5706720115763182,
+  "control_reliable": true,
+  "hypothesis": "SPY absolute return over the single 08:30-08:35 ET 5-minute bar is larger on scheduled-release days than on matched non-event days",
+  "instrument": "SPY",
+  "window_et": "08:30-08:35",
+  "metric": "abs_ret",
+  "event_dates_matched": 1009,
+  "event_dates_dropped_no_premarket_window": [
+   "2016-03-25",
+   "2017-04-14",
+   "2020-04-10",
+   "2021-04-02",
+   "2023-04-07",
+   "2024-03-29",
+   "2026-04-03"
+  ],
+  "control_weekdays_matched_against": [
+   "Friday",
+   "Monday",
+   "Thursday",
+   "Tuesday",
+   "Wednesday"
+  ],
+  "welch_p_one_sided_event_gt_control": 6.194631491802108e-29
+ },
+ "EXPLORATORY_A_DECAY_CURVE_1M_NO_INFERENTIAL_WEIGHT": {
+  "tests": [
+   {
+    "event_n": 827,
+    "event_mean": 0.0001537142440122764,
+    "event_ci95": [
+     0.0001390574804730521,
+     0.0001683710075515007
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00015332902402995062,
+    "control_ci95": [
+     0.00014095027444161945,
+     0.00016570777361828178
+    ],
+    "diff_event_minus_control": 3.8521998232577564e-07,
+    "welch_t": 0.03935582435444572,
+    "welch_p_two_sided": 0.9686110906949665,
+    "cohens_d": 0.0017802305252629434,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:25",
+    "metric": "abs_ret",
+    "welch_p_bh": 0.9686110906949665
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00015521945975537015,
+    "event_ci95": [
+     0.00014049755292114497,
+     0.00016994136658959533
+    ],
+    "control_n": 1184,
+    "control_mean": 0.0001583092839964608,
+    "control_ci95": [
+     0.00014412564342245726,
+     0.00017249292457046433
+    ],
+    "diff_event_minus_control": -3.0898242410906467e-06,
+    "welch_t": -0.29624318034059466,
+    "welch_p_two_sided": 0.7670764546296726,
+    "cohens_d": -0.01309272308952009,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:26",
+    "metric": "abs_ret",
+    "welch_p_bh": 0.8182148849383174
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00013711464631606474,
+    "event_ci95": [
+     0.00012588735030445632,
+     0.00014834194232767316
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00014983646055263144,
+    "control_ci95": [
+     0.00013466761570005216,
+     0.00016500530540521072
+    ],
+    "diff_event_minus_control": -1.2721814236566696e-05,
+    "welch_t": -1.3212684578654434,
+    "welch_p_two_sided": 0.18656435800250004,
+    "cohens_d": -0.055303956726464,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:27",
+    "metric": "abs_ret",
+    "welch_p_bh": 0.22961767138769235
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00014658852623817984,
+    "event_ci95": [
+     0.0001273346628075239,
+     0.00016584238966883577
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00015064749498192528,
+    "control_ci95": [
+     0.00013336043600776156,
+     0.000167934553956089
+    ],
+    "diff_event_minus_control": -4.05896874374544e-06,
+    "welch_t": -0.3074532460150606,
+    "welch_p_two_sided": 0.758532945996789,
+    "cohens_d": -0.013757429257085438,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:28",
+    "metric": "abs_ret",
+    "welch_p_bh": 0.8182148849383174
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00022592429228756886,
+    "event_ci95": [
+     0.0001864960155072593,
+     0.00026535256906787844
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00015604443504243598,
+    "control_ci95": [
+     0.00014144776524595396,
+     0.000170641104838918
+    ],
+    "diff_event_minus_control": 6.987985724513288e-05,
+    "welch_t": 3.257689763106801,
+    "welch_p_two_sided": 0.0011590728977896975,
+    "cohens_d": 0.16644428988945162,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:29",
+    "metric": "abs_ret",
+    "welch_p_bh": 0.0015454305303862633
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.001144370356357839,
+    "event_ci95": [
+     0.0009947586274347477,
+     0.0012939820852809305
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00023823041506707487,
+    "control_ci95": [
+     0.00021925199259614138,
+     0.0002572088375380084
+    ],
+    "diff_event_minus_control": 0.0009061399412907642,
+    "welch_t": 11.776584551078209,
+    "welch_p_two_sided": 9.059369664979242e-30,
+    "cohens_d": 0.6334085427879536,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:30",
+    "metric": "abs_ret",
+    "welch_p_bh": 1.4494991463966787e-28
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00044981242660751354,
+    "event_ci95": [
+     0.0004126282382586945,
+     0.00048699661495633256
+    ],
+    "control_n": 1184,
+    "control_mean": 0.0002282934709850477,
+    "control_ci95": [
+     0.0002005054259761269,
+     0.0002560815159939685
+    ],
+    "diff_event_minus_control": 0.00022151895562246585,
+    "welch_t": 9.353184943919144,
+    "welch_p_two_sided": 2.6793765115209555e-20,
+    "cohens_d": 0.4323448104812458,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:31",
+    "metric": "abs_ret",
+    "welch_p_bh": 7.145004030722548e-20
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00042895546215696565,
+    "event_ci95": [
+     0.00038663883601017734,
+     0.00047127208830375397
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00019215495869667285,
+    "control_ci95": [
+     0.00017622832328326372,
+     0.00020808159411008197
+    ],
+    "diff_event_minus_control": 0.0002368005034602928,
+    "welch_t": 10.265038502568748,
+    "welch_p_two_sided": 1.2344291380633458e-23,
+    "cohens_d": 0.5236048205413534,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:32",
+    "metric": "abs_ret",
+    "welch_p_bh": 6.583622069671178e-23
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00036207947073558784,
+    "event_ci95": [
+     0.0003328020958660705,
+     0.0003913568456051052
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00019268317467849557,
+    "control_ci95": [
+     0.00017718444137698538,
+     0.00020818190798000576
+    ],
+    "diff_event_minus_control": 0.00016939629605709227,
+    "welch_t": 10.022645474888943,
+    "welch_p_two_sided": 8.154547975625018e-23,
+    "cohens_d": 0.49010311989588107,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:33",
+    "metric": "abs_ret",
+    "welch_p_bh": 3.2618191902500073e-22
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.0003191253566996092,
+    "event_ci95": [
+     0.0002922492723768451,
+     0.0003460014410223733
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00016603203879672913,
+    "control_ci95": [
+     0.0001526050444549012,
+     0.00017945903313855706
+    ],
+    "diff_event_minus_control": 0.00015309331790288008,
+    "welch_t": 9.987635789219826,
+    "welch_p_two_sided": 1.2124555374323215e-22,
+    "cohens_d": 0.49243663451379044,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:34",
+    "metric": "abs_ret",
+    "welch_p_bh": 3.879857719783429e-22
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00030917972462140555,
+    "event_ci95": [
+     0.000282916745758813,
+     0.0003354427034839981
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00018150771088828785,
+    "control_ci95": [
+     0.0001690940513872418,
+     0.0001939213703893339
+    ],
+    "diff_event_minus_control": 0.0001276720137331177,
+    "welch_t": 8.61431906455529,
+    "welch_p_two_sided": 2.1926247368310747e-17,
+    "cohens_d": 0.4279184100468042,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:35",
+    "metric": "abs_ret",
+    "welch_p_bh": 5.0117136841853136e-17
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.0003181934706608146,
+    "event_ci95": [
+     0.0002934774545370255,
+     0.0003429094867846037
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00016498503969717657,
+    "control_ci95": [
+     0.00015400628278322976,
+     0.00017596379661112338
+    ],
+    "diff_event_minus_control": 0.00015320843096363804,
+    "welch_t": 11.103424315316596,
+    "welch_p_two_sided": 2.7593656242054238e-27,
+    "cohens_d": 0.5559488161807935,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:36",
+    "metric": "abs_ret",
+    "welch_p_bh": 2.207492499364339e-26
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.0002889730967532978,
+    "event_ci95": [
+     0.0002654965189802352,
+     0.0003124496745263604
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00018230394994189834,
+    "control_ci95": [
+     0.00016630967145353205,
+     0.00019829822843026463
+    ],
+    "diff_event_minus_control": 0.00010666914681139945,
+    "welch_t": 7.359818423750313,
+    "welch_p_two_sided": 2.9845594121388096e-13,
+    "cohens_d": 0.34569905335673773,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:37",
+    "metric": "abs_ret",
+    "welch_p_bh": 4.775295059422096e-13
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.000269051060827901,
+    "event_ci95": [
+     0.00024704106410411886,
+     0.00029106105755168316
+    ],
+    "control_n": 1184,
+    "control_mean": 0.0001638230969918807,
+    "control_ci95": [
+     0.00014963367558057684,
+     0.00017801251840318457
+    ],
+    "diff_event_minus_control": 0.0001052279638360203,
+    "welch_t": 7.875804840234409,
+    "welch_p_two_sided": 6.51070574461923e-15,
+    "cohens_d": 0.37339697161217317,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:38",
+    "metric": "abs_ret",
+    "welch_p_bh": 1.302141148923846e-14
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.0002458911944514065,
+    "event_ci95": [
+     0.00022633301190381805,
+     0.00026544937699899497
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00015935564946091327,
+    "control_ci95": [
+     0.00014745710285363144,
+     0.0001712541960681951
+    ],
+    "diff_event_minus_control": 8.653554499049324e-05,
+    "welch_t": 7.408740581528257,
+    "welch_p_two_sided": 2.1830116684483973e-13,
+    "cohens_d": 0.35460865661484575,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:39",
+    "metric": "abs_ret",
+    "welch_p_bh": 3.880909632797151e-13
+   },
+   {
+    "event_n": 827,
+    "event_mean": 0.00027670448509076385,
+    "event_ci95": [
+     0.0002536097150149501,
+     0.0002997992551665776
+    ],
+    "control_n": 1184,
+    "control_mean": 0.00017964886488914422,
+    "control_ci95": [
+     0.00016433966957486094,
+     0.0001949580602034275
+    ],
+    "diff_event_minus_control": 9.705562020161963e-05,
+    "welch_t": 6.865461154728274,
+    "welch_p_two_sided": 9.653246864813689e-12,
+    "cohens_d": 0.3239801558291253,
+    "control_reliable": true,
+    "family": "decay_curve_1m",
+    "instrument": "SPY",
+    "minute_et": "08:40",
+    "metric": "abs_ret",
+    "welch_p_bh": 1.4041086348819912e-11
+   }
+  ],
+  "event_n": 827,
+  "control_n": 1184,
+  "control_weekdays_matched_against": [
+   "Friday",
+   "Monday",
+   "Thursday",
+   "Tuesday",
+   "Wednesday"
+  ],
+  "multiple_testing": {
+   "tests_run": 16,
+   "significant_raw_p_lt_0.05": 12,
+   "expected_by_chance_at_alpha_0.05": 0.8,
+   "significant_after_bh_correction": 12
+  }
+ },
+ "decay_curve_history_note": "1m decay curve n starts 2016-01-04; primary (5m) cache starts 2016-01-04. SAME depth -- not fewer events.",
+ "decay_curve_excluded_days": 668,
+ "decay_curve_excluded_reasons_sample": [
+  {
+   "date": "2015-12-31",
+   "reason": "16 missing 1m bar(s) in 08:25-08:40 window (first at 08:25)"
+  },
+  {
+   "date": "2016-03-16",
+   "reason": "1 missing 1m bar(s) in 08:25-08:40 window (first at 08:38)"
+  },
+  {
+   "date": "2016-03-22",
+   "reason": "1 missing 1m bar(s) in 08:25-08:40 window (first at 08:36)"
+  },
+  {
+   "date": "2016-04-07",
+   "reason": "1 missing 1m bar(s) in 08:25-08:40 window (first at 08:28)"
+  },
+  {
+   "date": "2016-04-25",
+   "reason": "1 missing 1m bar(s) in 08:25-08:40 window (first at 08:29)"
+  }
+ ],
+ "EXPLORATORY_B_BREATH_HOLDING_EXPANSION_NO_INFERENTIAL_WEIGHT": {
+  "tests": [
+   {
+    "event_n": 1007,
+    "event_mean": 0.001097336549248242,
+    "event_ci95": [
+     0.0009892611667522827,
+     0.001205411931744201
+    ],
+    "control_n": 1666,
+    "control_mean": 0.0011787381837043507,
+    "control_ci95": [
+     0.0010809344042672006,
+     0.0012765419631415008
+    ],
+    "diff_event_minus_control": -8.140163445610879e-05,
+    "welch_t": -1.0945912229534278,
+    "welch_p_two_sided": 0.27380705698211555,
+    "cohens_d": -0.04209690052807982,
+    "control_reliable": true,
+    "family": "breath_holding_expansion",
+    "instrument": "SPY",
+    "block_et": "08:00-08:30",
+    "metric": "abs_ret",
+    "event_control_ratio": 0.9309417175234854,
+    "complete_days": 2673,
+    "excluded_days": 5,
+    "control_weekdays_matched_against": [
+     "Friday",
+     "Monday",
+     "Thursday",
+     "Tuesday",
+     "Wednesday"
+    ],
+    "welch_p_bh": 0.5476141139642311
+   },
+   {
+    "event_n": 987,
+    "event_mean": 0.0007569913426210193,
+    "event_ci95": [
+     0.0006967483774908474,
+     0.0008172343077511912
+    ],
+    "control_n": 1630,
+    "control_mean": 0.0007544819274200952,
+    "control_ci95": [
+     0.0007063468639076527,
+     0.0008026169909325378
+    ],
+    "diff_event_minus_control": 2.5094152009240292e-06,
+    "welch_t": 0.06378357674217372,
+    "welch_p_two_sided": 0.9491485599790184,
+    "cohens_d": 0.002555846014634829,
+    "control_reliable": true,
+    "family": "breath_holding_expansion",
+    "instrument": "SPY",
+    "block_et": "07:30-08:00",
+    "metric": "abs_ret",
+    "event_control_ratio": 1.0033260110146107,
+    "complete_days": 2617,
+    "excluded_days": 61,
+    "control_weekdays_matched_against": [
+     "Friday",
+     "Monday",
+     "Thursday",
+     "Tuesday",
+     "Wednesday"
+    ],
+    "welch_p_bh": 0.9491485599790184
+   },
+   {
+    "event_n": 973,
+    "event_mean": 0.0007653087227444137,
+    "event_ci95": [
+     0.0007061097000316245,
+     0.000824507745457203
+    ],
+    "control_n": 1614,
+    "control_mean": 0.0008022084397744114,
+    "control_ci95": [
+     0.0007421185032564878,
+     0.0008622983762923351
+    ],
+    "diff_event_minus_control": -3.689971702999773e-05,
+    "welch_t": -0.8573965734117032,
+    "welch_p_two_sided": 0.3913098321184782,
+    "cohens_d": -0.03261039186635268,
+    "control_reliable": true,
+    "family": "breath_holding_expansion",
+    "instrument": "SPY",
+    "block_et": "07:00-07:30",
+    "metric": "abs_ret",
+    "event_control_ratio": 0.9540023325603826,
+    "complete_days": 2587,
+    "excluded_days": 91,
+    "control_weekdays_matched_against": [
+     "Friday",
+     "Monday",
+     "Thursday",
+     "Tuesday",
+     "Wednesday"
+    ],
+    "welch_p_bh": 0.5869647481777173
+   },
+   {
+    "event_n": 614,
+    "event_mean": 0.0011381998032610606,
+    "event_ci95": [
+     0.0010269627641840745,
+     0.0012494368423380468
+    ],
+    "control_n": 1031,
+    "control_mean": 0.0012626524260523722,
+    "control_ci95": [
+     0.0011325545020961698,
+     0.0013927503500085745
+    ],
+    "diff_event_minus_control": -0.00012445262279131152,
+    "welch_t": -1.4250582744603888,
+    "welch_p_two_sided": 0.15433225196738673,
+    "cohens_d": -0.06572461487047433,
+    "control_reliable": true,
+    "family": "breath_holding_expansion",
+    "instrument": "SPY",
+    "block_et": "06:00-07:00",
+    "metric": "abs_ret",
+    "event_control_ratio": 0.9014355651456615,
+    "complete_days": 1645,
+    "excluded_days": 1033,
+    "control_weekdays_matched_against": [
+     "Friday",
+     "Monday",
+     "Thursday",
+     "Tuesday",
+     "Wednesday"
+    ],
+    "welch_p_bh": 0.46299675590216016
+   },
+   {
+    "event_n": 482,
+    "event_mean": 0.0013098868084392371,
+    "event_ci95": [
+     0.0011798602746476096,
+     0.0014399133422308647
+    ],
+    "control_n": 829,
+    "control_mean": 0.0012568079987851728,
+    "control_ci95": [
+     0.0011544594610683207,
+     0.001359156536502025
+    ],
+    "diff_event_minus_control": 5.30788096540643e-05,
+    "welch_t": 0.6287003329646259,
+    "welch_p_two_sided": 0.529684432235115,
+    "cohens_d": 0.03570993801344378,
+    "control_reliable": true,
+    "family": "breath_holding_expansion",
+    "instrument": "SPY",
+    "block_et": "05:00-06:00",
+    "metric": "abs_ret",
+    "event_control_ratio": 1.0422330297908433,
+    "complete_days": 1311,
+    "excluded_days": 1367,
+    "control_weekdays_matched_against": [
+     "Friday",
+     "Monday",
+     "Thursday",
+     "Tuesday",
+     "Wednesday"
+    ],
+    "welch_p_bh": 0.635621318682138
+   },
+   {
+    "event_n": 538,
+    "event_mean": 0.0016229450358329967,
+    "event_ci95": [
+     0.00146613628109455,
+     0.0017797537905714434
+    ],
+    "control_n": 965,
+    "control_mean": 0.0018576122229028262,
+    "control_ci95": [
+     0.0017129984853181746,
+     0.0020022259604874776
+    ],
+    "diff_event_minus_control": -0.0002346671870698295,
+    "welch_t": -2.156217813130817,
+    "welch_p_two_sided": 0.03124811961690284,
+    "cohens_d": -0.10934440113085592,
+    "control_reliable": true,
+    "family": "breath_holding_expansion",
+    "instrument": "SPY",
+    "block_et": "04:00-05:00",
+    "metric": "abs_ret",
+    "event_control_ratio": 0.8736726728126696,
+    "complete_days": 1503,
+    "excluded_days": 1175,
+    "control_weekdays_matched_against": [
+     "Friday",
+     "Monday",
+     "Thursday",
+     "Tuesday",
+     "Wednesday"
+    ],
+    "welch_p_bh": 0.18748871770141703
+   }
+  ],
+  "multiple_testing": {
+   "tests_run": 6,
+   "significant_raw_p_lt_0.05": 1,
+   "expected_by_chance_at_alpha_0.05": 0.3,
+   "significant_after_bh_correction": 0
+  }
+ }
+}

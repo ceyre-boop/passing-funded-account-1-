@@ -1,0 +1,60 @@
+{
+ "symbol": "NVDA",
+ "tf": "5m",
+ "window": [
+  "2024-01-01",
+  "2026-08-26"
+ ],
+ "source": {
+  "vendor": "alpaca",
+  "feed": "sip"
+ },
+ "populations": {
+  "yfinance_60d": {
+   "n_entries": 50,
+   "best_fixed_policy": "TRAIL_TIGHT",
+   "Z_best_fixed_R": 5.074878744985744,
+   "Z_R_per_trade": 0.10149757489971488,
+   "W_oracle_R": 9.064593826173022,
+   "prize_R": 3.9897150811872777,
+   "prize_R_per_trade": 0.07979430162374555,
+   "random_picker_R": -2.3857727609214834,
+   "random_picker_R_per_trade": -0.04771545521842967,
+   "anti_oracle_R": -10.570968516281923,
+   "days_with_any_winning_config": 10,
+   "per_config_total_R": {
+    "STATIC": -7.92238001701077,
+    "TRAIL_WIDE": -4.309817010739426,
+    "TRAIL_TIGHT": 5.074878744985744
+   },
+   "oracle_policy_hist": {
+    "STATIC": 29,
+    "TRAIL_TIGHT": 17,
+    "TRAIL_WIDE": 4
+   }
+  },
+  "alpaca_extended": {
+   "n_entries": 429,
+   "best_fixed_policy": "TRAIL_WIDE",
+   "Z_best_fixed_R": -5.987242644251921,
+   "Z_R_per_trade": -0.013956276560027788,
+   "W_oracle_R": 94.07536284685918,
+   "prize_R": 100.0626054911111,
+   "prize_R_per_trade": 0.2332461666459466,
+   "random_picker_R": -12.228583524145174,
+   "random_picker_R_per_trade": -0.0285048566996391,
+   "anti_oracle_R": -105.58068731981895,
+   "days_with_any_winning_config": 105,
+   "per_config_total_R": {
+    "STATIC": -11.54985880508876,
+    "TRAIL_WIDE": -5.987242644251921,
+    "TRAIL_TIGHT": -19.148649123094845
+   },
+   "oracle_policy_hist": {
+    "STATIC": 286,
+    "TRAIL_TIGHT": 92,
+    "TRAIL_WIDE": 51
+   }
+  }
+ }
+}

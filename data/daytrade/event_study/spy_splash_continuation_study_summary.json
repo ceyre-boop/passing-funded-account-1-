@@ -1,0 +1,334 @@
+{
+ "generated_at": "2026-08-28T23:39:29.381928+00:00",
+ "follows_up_on": "data/daytrade/event_study/spy_macro_decay_study_summary.json (splash real+causal+magnitude-only, established, not re-derived)",
+ "primary_symbol": "SPY",
+ "bar_source_1m": "data/daytrade/bars_premarket_1m (Alpaca SIP, OHLCV only -- no bid/ask/midpoint field, see MICROSTRUCTURE_CAVEAT)",
+ "bar_source_5m": "data/daytrade/bars_premarket (Alpaca SIP, OHLCV only)",
+ "MICROSTRUCTURE_CAVEAT": "Bars carry Open/High/Low/Close/Volume only -- no bid/ask or midpoint field exists in this cache, so no midpoint/VWAP alternative to close-to-close could be computed. Close-to-close on SIP consolidated-tape trade prints is reported. SPY's tight spread mitigates but does not eliminate bid-ask-bounce risk in a conditional-reversion test; see EXPLORATORY_LARGE_IMPULSE for the partial check (bounce dominates small moves, not large ones).",
+ "events_found_in_window": 1222,
+ "primary_complete_days": 2425,
+ "primary_impulse_excluded_days": 65,
+ "primary_continuation_excluded_days": 219,
+ "PRIMARY": {
+  "event_n": 964,
+  "event_mean": 9.525673476831326e-06,
+  "event_ci95": [
+   -6.046637296046931e-05,
+   7.951771991413196e-05
+  ],
+  "control_n": 1461,
+  "control_mean": 1.2906293119042e-05,
+  "control_ci95": [
+   -2.1497310769640383e-05,
+   4.730989700772438e-05
+  ],
+  "diff_event_minus_control": -3.3806196422106734e-06,
+  "welch_t": -0.08495941600851824,
+  "welch_p_two_sided": 0.9323055519247145,
+  "cohens_d": -0.0038783108224026766,
+  "control_reliable": true,
+  "hypothesis": "sign(r_08:30-08:31) * r_08:31-08:35 is different on SPY scheduled-release days than on matched non-event days (momentum if positive, reversion if negative, null if not significant)",
+  "instrument": "SPY",
+  "window_et": "impulse 08:30-08:31, continuation 08:31-08:35",
+  "metric": "sign(r_impulse) * r_continuation",
+  "event_n_days": 964,
+  "control_n_days": 1461,
+  "control_weekdays_matched_against": [
+   "Friday",
+   "Monday",
+   "Thursday",
+   "Tuesday",
+   "Wednesday"
+  ],
+  "interpretation": "NULL -- indistinguishable from control, no incremental conditional directional structure beyond ordinary-day autocorrelation"
+ },
+ "EXPLORATORY_LARGE_IMPULSE_NO_INFERENTIAL_WEIGHT": {
+  "large_vs_small_event_days": {
+   "event_n": 241,
+   "event_mean": 8.770653043150713e-06,
+   "event_ci95": [
+    -0.00021798534937347833,
+    0.00023552665545977975
+   ],
+   "control_n": 723,
+   "control_mean": 9.777346954724865e-06,
+   "control_ci95": [
+    -4.5130112399251714e-05,
+    6.468480630870144e-05
+   ],
+   "diff_event_minus_control": -1.0066939115741516e-06,
+   "welch_t": -0.008457108929730495,
+   "welch_p_two_sided": 0.9932585601548879,
+   "cohens_d": -0.0009074876654559072,
+   "control_reliable": true,
+   "family": "large_impulse_diagnostic",
+   "instrument": "SPY",
+   "comparison": "top quartile |r_impulse| vs bottom 3 quartiles, event days only",
+   "abs_r_impulse_threshold_p75": 0.0010002832286412078,
+   "interpretation": "NULL -- indistinguishable from control, no incremental conditional directional structure beyond ordinary-day autocorrelation"
+  },
+  "large_vs_full_control": {
+   "event_n": 241,
+   "event_mean": 8.770653043150713e-06,
+   "event_ci95": [
+    -0.00021798534937347833,
+    0.00023552665545977975
+   ],
+   "control_n": 1461,
+   "control_mean": 1.2906293119042e-05,
+   "control_ci95": [
+    -2.1497310769640383e-05,
+    4.730989700772438e-05
+   ],
+   "diff_event_minus_control": -4.135640075891287e-06,
+   "welch_t": -0.03534256955950635,
+   "welch_p_two_sided": 0.9718346520365639,
+   "cohens_d": -0.00450704256509171,
+   "control_reliable": true,
+   "family": "large_impulse_diagnostic",
+   "instrument": "SPY",
+   "comparison": "top quartile |r_impulse| event days vs FULL (unfiltered) control",
+   "caveat": "control is NOT filtered by move size -- this is not a clean apples-to-apples on impulse magnitude, read as informative context for whether the primary finding survives restricting to moves too large for bid-ask bounce to plausibly dominate, not as a standalone clean test",
+   "abs_r_impulse_threshold_p75": 0.0010002832286412078,
+   "interpretation": "NULL -- indistinguishable from control, no incremental conditional directional structure beyond ordinary-day autocorrelation",
+   "welch_p_bh": 0.9718346520365639
+  }
+ },
+ "EXPLORATORY_HORIZON_SWEEP_AND_MAX_EXCURSION_NO_INFERENTIAL_WEIGHT": {
+  "tests": [
+   {
+    "event_n": 241,
+    "event_mean": 8.770653043150713e-06,
+    "event_ci95": [
+     -0.00021798534937347833,
+     0.00023552665545977975
+    ],
+    "control_n": 1461,
+    "control_mean": 1.2906293119042e-05,
+    "control_ci95": [
+     -2.1497310769640383e-05,
+     4.730989700772438e-05
+    ],
+    "diff_event_minus_control": -4.135640075891287e-06,
+    "welch_t": -0.03534256955950635,
+    "welch_p_two_sided": 0.9718346520365639,
+    "cohens_d": -0.00450704256509171,
+    "control_reliable": true,
+    "family": "large_impulse_diagnostic",
+    "instrument": "SPY",
+    "comparison": "top quartile |r_impulse| event days vs FULL (unfiltered) control",
+    "caveat": "control is NOT filtered by move size -- this is not a clean apples-to-apples on impulse magnitude, read as informative context for whether the primary finding survives restricting to moves too large for bid-ask bounce to plausibly dominate, not as a standalone clean test",
+    "abs_r_impulse_threshold_p75": 0.0010002832286412078,
+    "interpretation": "NULL -- indistinguishable from control, no incremental conditional directional structure beyond ordinary-day autocorrelation",
+    "welch_p_bh": 0.9718346520365639
+   },
+   {
+    "event_n": 936,
+    "event_mean": 2.7494623642783365e-05,
+    "event_ci95": [
+     -3.625775920077294e-05,
+     9.124700648633967e-05
+    ],
+    "control_n": 1398,
+    "control_mean": 2.2259145945945753e-05,
+    "control_ci95": [
+     -7.18092849872681e-06,
+     5.169922039061832e-05
+    ],
+    "diff_event_minus_control": 5.235477696837612e-06,
+    "welch_t": 0.14613060137445086,
+    "welch_p_two_sided": 0.8838403403683883,
+    "cohens_d": 0.006839280214747002,
+    "control_reliable": true,
+    "hypothesis": "sign(r_08:30-08:31) * r_08:35-08:40 -- does conditional structure appear one horizon further out than the primary window",
+    "instrument": "SPY",
+    "window_et": "impulse 08:30-08:31, continuation 08:35-08:40",
+    "metric": "sign(r_impulse) * r_continuation",
+    "event_n_days": 936,
+    "control_n_days": 1398,
+    "control_weekdays_matched_against": [
+     "Friday",
+     "Monday",
+     "Thursday",
+     "Tuesday",
+     "Wednesday"
+    ],
+    "interpretation": "NULL -- indistinguishable from control, no incremental conditional directional structure beyond ordinary-day autocorrelation",
+    "family": "horizon_sweep",
+    "welch_p_bh": 0.9718346520365639
+   },
+   {
+    "event_n": 963,
+    "event_mean": 1.8221404645289112e-05,
+    "event_ci95": [
+     -8.153922427366807e-05,
+     0.00011798203356424631
+    ],
+    "control_n": 1461,
+    "control_mean": -1.5899276604175065e-05,
+    "control_ci95": [
+     -7.484899701412286e-05,
+     4.305044380577272e-05
+    ],
+    "diff_event_minus_control": 3.412068124946418e-05,
+    "welch_t": 0.5771386843941981,
+    "welch_p_two_sided": 0.5639259214493244,
+    "cohens_d": 0.02552024024841256,
+    "control_reliable": true,
+    "family": "horizon_sweep",
+    "instrument": "SPY",
+    "window_et": "impulse 08:30-08:31, continuation 08:40-09:00",
+    "metric": "sign(r_impulse) * r_window",
+    "bar_source": "5m premarket cache",
+    "event_n_days": 963,
+    "control_n_days": 1461,
+    "interpretation": "NULL -- indistinguishable from control, no incremental conditional directional structure beyond ordinary-day autocorrelation",
+    "welch_p_bh": 0.7894962900290542
+   },
+   {
+    "event_n": 963,
+    "event_mean": 3.315089075200944e-05,
+    "event_ci95": [
+     -6.28119702279844e-05,
+     0.0001291137517320033
+    ],
+    "control_n": 1461,
+    "control_mean": -5.25190519896215e-05,
+    "control_ci95": [
+     -0.00012603131257235106,
+     2.0993208593108044e-05
+    ],
+    "diff_event_minus_control": 8.566994274163093e-05,
+    "welch_t": 1.3890439841981812,
+    "welch_p_two_sided": 0.16497602522584678,
+    "cohens_d": 0.05834777865166568,
+    "control_reliable": true,
+    "family": "horizon_sweep",
+    "instrument": "SPY",
+    "window_et": "impulse 08:30-08:31, continuation into RTH open 09:30-09:35",
+    "metric": "sign(r_impulse) * r_window",
+    "bar_source": "5m premarket/RTH cache",
+    "event_n_days": 963,
+    "control_n_days": 1461,
+    "interpretation": "NULL -- indistinguishable from control, no incremental conditional directional structure beyond ordinary-day autocorrelation",
+    "welch_p_bh": 0.2887080441452319
+   },
+   {
+    "event_n": 873,
+    "event_mean": 0.0017378349116326812,
+    "event_ci95": [
+     0.0015622172647726791,
+     0.0019134525584926833
+    ],
+    "control_n": 1238,
+    "control_mean": 0.0007508850101031688,
+    "control_ci95": [
+     0.0006804430216112317,
+     0.000821326998595106
+    ],
+    "diff_event_minus_control": 0.0009869499015295125,
+    "welch_t": 10.223218412168121,
+    "welch_p_two_sided": 1.5190240030797422e-23,
+    "cohens_d": 0.503927472504867,
+    "control_reliable": true,
+    "family": "max_excursion_08_30_to_08_45",
+    "instrument": "SPY",
+    "metric": "max_upside_excursion",
+    "window_et": "08:30-08:45",
+    "welch_p_bh": 5.316584010779098e-23
+   },
+   {
+    "event_n": 873,
+    "event_mean": 0.001549534645770446,
+    "event_ci95": [
+     0.0013747349972084036,
+     0.0017243342943324884
+    ],
+    "control_n": 1238,
+    "control_mean": 0.0008185127276412643,
+    "control_ci95": [
+     0.0007577648619452353,
+     0.0008792605933372932
+    ],
+    "diff_event_minus_control": 0.0007310219181291817,
+    "welch_t": 7.742594015841865,
+    "welch_p_two_sided": 2.225040619791299e-14,
+    "cohens_d": 0.3869810507980914,
+    "control_reliable": true,
+    "family": "max_excursion_08_30_to_08_45",
+    "instrument": "SPY",
+    "metric": "max_downside_excursion",
+    "window_et": "08:30-08:45",
+    "welch_p_bh": 5.191761446179698e-14
+   },
+   {
+    "event_n": 873,
+    "event_mean": 0.003287369557403127,
+    "event_ci95": [
+     0.0030415212011349595,
+     0.003533217913671295
+    ],
+    "control_n": 1238,
+    "control_mean": 0.001569397737744433,
+    "control_ci95": [
+     0.0014790470793364754,
+     0.0016597483961523906
+    ],
+    "diff_event_minus_control": 0.0017179718196586942,
+    "welch_t": 12.855687660177388,
+    "welch_p_two_sided": 2.3294448192319654e-35,
+    "cohens_d": 0.6392718800842272,
+    "control_reliable": true,
+    "family": "max_excursion_08_30_to_08_45",
+    "instrument": "SPY",
+    "metric": "total_excursion_whipsaw_magnitude",
+    "window_et": "08:30-08:45",
+    "welch_p_bh": 1.6306113734623758e-34
+   }
+  ],
+  "whipsaw_ratio_summary": {
+   "note": "ratio of MEAN total_excursion to MEAN |net_move| (population-level, not per-day -- per-day ratios blow up when net_move is near zero). Near 1.0 means the window mostly moves in a straight line; well above 1.0 means it thrashes both ways before settling, information that |return| alone (endpoint-to-endpoint) cannot see.",
+   "event_n_days": 873,
+   "event_whipsaw_ratio": 1.9602947156264163,
+   "control_n_days": 1238,
+   "control_whipsaw_ratio": 1.9929684626173199
+  },
+  "multiple_testing": {
+   "tests_run": 7,
+   "significant_raw_p_lt_0.05": 3,
+   "expected_by_chance_at_alpha_0.05": 0.4,
+   "significant_after_bh_correction": 3
+  }
+ },
+ "FOMC_ARM_SEPARATE_NOT_POWERED_LIKE_PRIMARY": {
+  "event_n": 84,
+  "event_mean": -0.00020117703899533818,
+  "event_ci95": [
+   -0.0006682831625572717,
+   0.00026592908456659535
+  ],
+  "control_n": 362,
+  "control_mean": 2.627502536191371e-05,
+  "control_ci95": [
+   -5.754827760085439e-05,
+   0.0001100983283246818
+  ],
+  "diff_event_minus_control": -0.0002274520643572519,
+  "welch_t": -0.939394044258182,
+  "welch_p_two_sided": 0.35008791587971566,
+  "cohens_d": -0.1901926540157453,
+  "control_reliable": true,
+  "hypothesis": "sign(r_14:00-14:01) * r_14:01-14:05 is different on SCHEDULED FOMC decision days than on matched non-event days",
+  "instrument": "SPY",
+  "window_et": "impulse 14:00-14:01, continuation 14:01-14:05",
+  "metric": "sign(r_impulse) * r_continuation",
+  "event_n_days": 84,
+  "control_n_days": 362,
+  "control_weekdays_matched_against": [
+   "Thursday",
+   "Wednesday"
+  ],
+  "interpretation": "NULL -- indistinguishable from control, no incremental conditional directional structure beyond ordinary-day autocorrelation",
+  "note": "much thinner n than the 08:30 primary (scheduled meetings in bar coverage: 84)"
+ }
+}

@@ -1,0 +1,203 @@
+{
+ "generated_at": "2026-08-29T01:33:53.096815+00:00",
+ "headline": "DOES NOT REPLICATE: no significant positive drift found in this sample",
+ "primary_symbol": "SPY",
+ "replication_of": "Lucca & Moench (2015), 'The Pre-FOMC Announcement Drift', Journal of Finance -- direction (UP) fixed by that prior literature, not chosen after seeing this sample",
+ "bar_source": "data/daytrade/bars_premarket (Alpaca SIP, RTH bars read raw)",
+ "fomc_calendar_total_meetings": 89,
+ "fomc_calendar_scheduled_meetings": 87,
+ "fomc_calendar_unscheduled_meetings": 2,
+ "unscheduled_meetings_note": "2 unscheduled FOMC meeting(s) in the calendar; excluded from every population above by construction -- a surprise meeting has no anticipation window to measure drift over.",
+ "primary_excluded_days_count": 3,
+ "primary_excluded_reasons_sample": [
+  {
+   "date": "2015-12-31",
+   "reason": "fewer than 1 prior trading day(s) in coverage"
+  },
+  {
+   "date": "2016-01-04",
+   "reason": "missing 15:55 close bar on entry day 2015-12-31"
+  },
+  {
+   "date": "2019-08-13",
+   "reason": "missing 15:55 close bar on entry day 2019-08-12"
+  }
+ ],
+ "PRIMARY": {
+  "event_n": 84,
+  "event_mean": 0.0018044053040642536,
+  "event_ci95": [
+   0.00043249657356724674,
+   0.0031763140345612605
+  ],
+  "control_n": 334,
+  "control_mean": 0.0008415177464763061,
+  "control_ci95": [
+   -0.0003221739120620312,
+   0.0020052094050146433
+  ],
+  "diff_event_minus_control": 0.0009628875575879475,
+  "welch_t": 1.049074824512995,
+  "welch_p_two_sided": 0.2953087459930597,
+  "cohens_d": 0.09512734137895335,
+  "control_reliable": true,
+  "hypothesis": "SPY signed return from the prior trading day's close to 13:59 ET is larger (more positive) ahead of SCHEDULED FOMC announcements than on matched clean non-event windows -- direction (UP) fixed by Lucca & Moench prior to this replication",
+  "instrument": "SPY",
+  "window": "prior day 15:55 close -> announcement day 13:55 close",
+  "metric": "signed_ret",
+  "event_n_days_with_complete_window": 84,
+  "control_weekdays_matched_against": [
+   "Thursday",
+   "Wednesday"
+  ],
+  "welch_p_one_sided_event_gt_control": 0.14765437299652984,
+  "net_of_cost_event_mean": 0.0016044053040642535,
+  "cost_model_bp": {
+   "spread_bp_per_leg": 1.0,
+   "round_trip_cost_bp": 2.0,
+   "note": "both legs are scheduled market orders, never stop orders -- no stop-through cost, unlike the bracket harvest study"
+  },
+  "scheduled_meetings_with_complete_window": 84,
+  "scheduled_meetings_dropped_incomplete_window": [
+   "2026-09-16",
+   "2026-10-28",
+   "2026-12-09"
+  ]
+ },
+ "PERMUTATION_NULL": {
+  "n_perm": 2000,
+  "null_mean": 0.0005500448224024653,
+  "null_sd": 0.0010603306993388396,
+  "observed_mean": 0.0018044053040642536,
+  "p_value_one_sided_event_gt_random": 0.1095
+ },
+ "SECONDARY_EXPLORATORY_NO_INFERENTIAL_WEIGHT": {
+  "horizon_sweep": [
+   {
+    "event_n": 84,
+    "event_mean": 0.0018044053040642536,
+    "event_ci95": [
+     0.00043249657356724674,
+     0.0031763140345612605
+    ],
+    "control_n": 334,
+    "control_mean": 0.0008415177464763061,
+    "control_ci95": [
+     -0.0003221739120620312,
+     0.0020052094050146433
+    ],
+    "diff_event_minus_control": 0.0009628875575879475,
+    "welch_t": 1.049074824512995,
+    "welch_p_two_sided": 0.2953087459930597,
+    "cohens_d": 0.09512734137895335,
+    "control_reliable": true,
+    "family": "horizon_sweep",
+    "lag_trading_days": 1,
+    "horizon_label": "T-24h (PRIMARY)",
+    "excluded_days_count": 3
+   },
+   {
+    "event_n": 84,
+    "event_mean": 0.002725157549937362,
+    "event_ci95": [
+     0.000544642123406526,
+     0.004905672976468198
+    ],
+    "control_n": 330,
+    "control_mean": 0.0021081905008764217,
+    "control_ci95": [
+     0.0005026923891698143,
+     0.003713688612583029
+    ],
+    "diff_event_minus_control": 0.0006169670490609402,
+    "welch_t": 0.4465794825031618,
+    "welch_p_two_sided": 0.6557045386329418,
+    "cohens_d": 0.043872567516574354,
+    "control_reliable": true,
+    "family": "horizon_sweep",
+    "lag_trading_days": 2,
+    "horizon_label": "T-48h",
+    "excluded_days_count": 4,
+    "welch_p_bh": 0.6557045386329418
+   },
+   {
+    "event_n": 84,
+    "event_mean": 0.003264283322789539,
+    "event_ci95": [
+     0.00035174662132179957,
+     0.006176820024257278
+    ],
+    "control_n": 157,
+    "control_mean": 0.001728848438076772,
+    "control_ci95": [
+     -0.0014440406830678535,
+     0.004901737559221397
+    ],
+    "diff_event_minus_control": 0.0015354348847127668,
+    "welch_t": 0.6987380618887367,
+    "welch_p_two_sided": 0.48543135356273864,
+    "cohens_d": 0.08414576727526701,
+    "control_reliable": true,
+    "family": "horizon_sweep",
+    "lag_trading_days": 3,
+    "horizon_label": "T-72h",
+    "excluded_days_count": 5,
+    "welch_p_bh": 0.6472418047503182
+   }
+  ],
+  "press_conference_split": [
+   {
+    "event_n": 72,
+    "event_mean": 0.0022447853299107615,
+    "event_ci95": [
+     0.0006805706577311494,
+     0.0038090000020903738
+    ],
+    "control_n": 334,
+    "control_mean": 0.0008415177464763061,
+    "control_ci95": [
+     -0.0003221739120620312,
+     0.0020052094050146433
+    ],
+    "diff_event_minus_control": 0.0014032675834344554,
+    "welch_t": 1.410752162938944,
+    "welch_p_two_sided": 0.1602489608179709,
+    "cohens_d": 0.13687703509158788,
+    "control_reliable": true,
+    "family": "press_conference_split",
+    "subset": "press_conference",
+    "meetings_in_subset": 72,
+    "welch_p_bh": 0.3204979216359418
+   },
+   {
+    "event_n": 12,
+    "event_mean": -0.0008378748510147934,
+    "event_ci95": [
+     -0.0021830963413841196,
+     0.0005073466393545328
+    ],
+    "control_n": 334,
+    "control_mean": 0.0008415177464763061,
+    "control_ci95": [
+     -0.0003221739120620312,
+     0.0020052094050146433
+    ],
+    "diff_event_minus_control": -0.0016793925974910996,
+    "welch_t": -1.850562913902341,
+    "welch_p_two_sided": 0.07319881725684403,
+    "cohens_d": -0.15718465259752018,
+    "control_reliable": true,
+    "family": "press_conference_split",
+    "subset": "no_press_conference",
+    "meetings_in_subset": 12,
+    "welch_p_bh": 0.2927952690273761
+   }
+  ],
+  "sep_dot_plot_split": "SKIPPED -- fomc_calendar.json has no SEP field; fabricating one is refused, see module docstring",
+  "post_2016_vs_pre_2016": "N/A -- fomc_calendar.json coverage is 2016-2026; no pre-2016 scheduled FOMC dates exist in this repo's verified calendar to split against, even though the SPY bar cache itself reaches back to 2015-12-31.",
+  "multiple_testing": {
+   "tests_run": 4,
+   "significant_after_bh_correction": 0
+  }
+ }
+}
