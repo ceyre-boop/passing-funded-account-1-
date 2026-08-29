@@ -1,0 +1,60 @@
+{
+  "n_sessions_tune": 401,
+  "always_static_R": -4.224896712739771,
+  "always_trail_wide_R": -0.37293418205236095,
+  "always_trail_tight_R": -19.57261700527294,
+  "Z_narrow": -0.37293418205236095,
+  "W_narrow": 91.6530108999781,
+  "prize_narrow_R": 92.02594508203046,
+  "prize_narrow_pct": 24676.18939502568,
+  "Z_wide": 23.377653906178566,
+  "W_wide": 247.68764539414062,
+  "prize_wide_R": 224.30999148796207,
+  "prize_wide_pct": 959.5059982844488,
+  "best_fixed_narrow": "TRAIL_WIDE",
+  "best_fixed_wide": "be1.0_fl11:00_exitTP2",
+  "oracle_policy_hist_wide": {
+    "tmNone_be0.25_pf0.0_fl11:00_hold1": 255,
+    "tmNone_be0.5_pf0.0_fl11:00_hold1": 18,
+    "tmNone_be0.25_pf0.0_fl12:00_hold1": 17,
+    "tmNone_be1.0_pf0.0_fl11:00_hold1": 14,
+    "be0.25_fl11:00_exitTP2": 10,
+    "tmNone_be1.0_pf0.0_flNone_hold1": 7,
+    "tmNone_be0.25_pf0.0_fl15:45_hold1": 7,
+    "tmNone_be0.5_pf0.0_flNone_hold1": 4,
+    "tm0.25_be0.25_pf0.75_fl11:00_hold1": 4,
+    "tmNone_be1.0_pf0.0_fl15:45_hold1": 4
+  },
+  "prize_by_time_block_wide": {
+    "MORNING": {
+      "n": 125,
+      "prize_R": 85.62291456391009
+    },
+    "OPEN_DRIVE": {
+      "n": 276,
+      "prize_R": 138.68707692405204
+    }
+  },
+  "verdict": "NO_VERDICT \u2014 pre-registered rule is not evaluable",
+  "prescribed_action": "The rule thresholds on prize as a %% of Z, but Z = +0.058 R/trade is indistinguishable from zero, so the percentage (960%%) is an artefact of the denominator. Absolute figures: prize_wide +0.559 R/trade, prize_narrow +0.229 R/trade, ratio 2.4x. Re-register a rule in R/trade BEFORE reading these again.",
+  "prize_narrow_R_per_trade": 0.2294911348679064,
+  "prize_wide_R_per_trade": 0.559376537376464,
+  "random_picker_R": -7.186092307944922,
+  "anti_oracle_R": -161.93550714734383,
+  "days_with_any_winning_config": 136,
+  "n_entries": 401,
+  "_population": {
+    "symbol": "NVDA",
+    "sessions_complete": 664,
+    "sessions_used": 627,
+    "span": [
+      "2024-01-02",
+      "2026-07-02"
+    ],
+    "tune_end": "2026-07-06",
+    "sealed_never_read": true,
+    "half_days_excluded": 0,
+    "gapped_excluded": 0,
+    "gapped_days": []
+  }
+}

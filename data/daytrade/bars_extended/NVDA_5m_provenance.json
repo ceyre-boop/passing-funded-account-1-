@@ -1,0 +1,26 @@
+{
+ "cache": "NVDA_5m.parquet",
+ "fetches": [
+  {
+   "fetched_utc": "2026-08-26T19:24:11+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 126919,
+   "span": [
+    "2024-01-02 04:00:00-05:00",
+    "2026-08-25 19:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip"
+  },
+  {
+   "fetched_utc": "2026-08-26T19:25:07+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip"
+  }
+ ]
+}

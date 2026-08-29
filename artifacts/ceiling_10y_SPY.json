@@ -1,0 +1,81 @@
+{
+  "n_sessions_tune": 2115,
+  "always_static_R": -118.96625289567295,
+  "always_trail_wide_R": -172.67275907348238,
+  "always_trail_tight_R": -206.3609872705065,
+  "Z_narrow": -118.96625289567295,
+  "W_narrow": 380.04285468381863,
+  "prize_narrow_R": 499.00910757949157,
+  "prize_narrow_pct": 419.4543372035899,
+  "Z_wide": -28.918429703057836,
+  "W_wide": 1316.611502555503,
+  "prize_wide_R": 1345.5299322585608,
+  "prize_wide_pct": 4652.845766782019,
+  "best_fixed_narrow": "STATIC",
+  "best_fixed_wide": "tmNone_be0.5_pf0.0_flNone_hold1",
+  "oracle_policy_hist_wide": {
+    "tmNone_be0.25_pf0.0_fl11:00_hold1": 1397,
+    "tmNone_be1.0_pf0.0_fl11:00_hold1": 93,
+    "tmNone_be0.25_pf0.0_fl12:00_hold1": 76,
+    "tmNone_be0.5_pf0.0_fl11:00_hold1": 69,
+    "tmNone_be1.0_pf0.0_fl12:00_hold1": 43,
+    "be0.25_fl11:00_exitTP2": 41,
+    "tmNone_be0.25_pf0.0_flNone_hold1": 26,
+    "tmNone_be0.25_pf0.0_fl15:45_hold1": 26,
+    "tm0.25_be0.25_pf0.75_fl11:00_hold1": 25,
+    "tmNone_be0.5_pf0.0_fl15:45_hold1": 17
+  },
+  "prize_by_time_block_wide": {
+    "MORNING": {
+      "n": 624,
+      "prize_R": 470.88117136478274
+    },
+    "OPEN_DRIVE": {
+      "n": 1491,
+      "prize_R": 874.6487608937747
+    }
+  },
+  "verdict": "NO_VERDICT \u2014 pre-registered rule is not evaluable",
+  "prescribed_action": "The rule thresholds on prize as a %% of Z, but Z = -0.014 R/trade is indistinguishable from zero, so the percentage (4653%%) is an artefact of the denominator. Absolute figures: prize_wide +0.636 R/trade, prize_narrow +0.236 R/trade, ratio 2.7x. Re-register a rule in R/trade BEFORE reading these again.",
+  "prize_narrow_R_per_trade": 0.23593811233072887,
+  "prize_wide_R_per_trade": 0.6361843651340713,
+  "random_picker_R": -172.65468704890324,
+  "anti_oracle_R": -1001.2575811090119,
+  "days_with_any_winning_config": 664,
+  "n_entries": 2115,
+  "_population": {
+    "symbol": "SPY",
+    "sessions_complete": 2656,
+    "sessions_used": 2618,
+    "span": [
+      "2016-01-04",
+      "2026-07-02"
+    ],
+    "tune_end": "2026-07-06",
+    "sealed_never_read": true,
+    "half_days_excluded": 1,
+    "gapped_excluded": 20,
+    "gapped_days": [
+      "2016-02-02",
+      "2016-11-25",
+      "2017-07-03",
+      "2017-11-24",
+      "2018-07-03",
+      "2018-11-23",
+      "2019-07-03",
+      "2019-11-29",
+      "2020-03-09",
+      "2020-03-12",
+      "2020-03-16",
+      "2020-03-18",
+      "2020-11-27",
+      "2020-12-24",
+      "2022-11-25",
+      "2023-07-03",
+      "2023-11-24",
+      "2024-07-03",
+      "2024-11-29",
+      "2024-12-24"
+    ]
+  }
+}
