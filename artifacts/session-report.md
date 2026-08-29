@@ -51,7 +51,17 @@ pending
 
 ## 6. Null results logged
 
-- (pending the run)
+- **Spec 045 §4 as written does not terminate.** Cells keyed by `t_bucket` pool bars 6–8; 16 of 28
+  rows in one block-2 cell transition into their own cell, and the hard argmax oscillates in an exact
+  period-2 cycle (2.445 ↔ 1.778, traced to 40 sweeps). Found by the builder on the first real
+  walk-forward, in all four blocks; no parameter was touched to get past it. Amendment 1 (`e940bc7`)
+  moves to exact-level states before any result existed. Lower coverage is the stated price.
+- **A 0.01% trail-multiple change flips no exit** on the frozen workload (bench mutation test) —
+  recorded in `scripts/test_carry_bench.py`, not hidden; the bench's sensitivity is at the
+  exit-decision level, not the parameter level.
+- **Four order-dependent test failures** were caused by running the rig capture in-process
+  (`yfinance.download` patched globally, `sovereign.forex.*` reloaded). Fixed structurally (`42bec94`).
+- (gate outcomes pending the run)
 
 ## 7. Gap list — annotated
 
@@ -60,7 +70,7 @@ pending
 | G1 | carry incumbent unhashed | **CLOSED** — CARRY-FROZEN-001 (`a74f12f`) |
 | G2 | no frozen path dataset | **CLOSED** — `carry_paths.parquet` f1708fec…, attached to CARRY-FROZEN-001 (`04f4fed`) |
 | G3 | no SPRT | **CLOSED** — `sovereign/forex/sprt.py` (`c1f7683`) |
-| G4 | no overlap-respecting OOS scheme | pending — Step 6 |
+| G4 | no overlap-respecting OOS scheme | in progress — anchored walk-forward over 121 units, Amendment 1 applied |
 | G5 | no bench / pre-commit | **CLOSED** — `scripts/carry_bench.py` + `.githooks/pre-commit` |
 | G6 | nothing halts on an unhashed dependency | **CLOSED** — `inventory.require_hashes` (`6c9c77e`); driver wiring pending |
 | G7 | extraction parity unproven | **CLOSED** — 350/350 exits reproduced; the builder's own hold_limit bug took it 125→350 |
