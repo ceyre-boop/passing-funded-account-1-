@@ -10,6 +10,6 @@
 - [ ] Step 6 walk-forward + tablebase — I65/I66/I67/I71 mutations bite
 - [ ] Step 7 fill model — BaseFill ≡ _apply_costs on 5 synthetic trades + mutation bites (12 tests); the 350-parity (I68) waits on Step 2
 - [ ] Step 8 driver → artifacts/sprt_result.json (base + candidate-pessimistic + permutation)
-- [ ] Step 9 feature registry (minimal) — flip → raise
+- [x] Step 9 feature registry — require_as_of raises on NOT-AS-OF / LABEL / UNREGISTERED; flip-a-feature mutation raises (12 tests); loader integration lands with Step 6
 - [ ] Step 10 red team → artifacts/redteam.md (git status shows only that file)
 - [ ] Step 11 artifacts/session-report.md — seven DoD items; final commit
