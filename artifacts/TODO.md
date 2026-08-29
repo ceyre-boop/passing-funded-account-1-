@@ -8,7 +8,7 @@
 - [ ] Step 4 spec 045 prereg (FREEZE OVERRIDE commit) — written before any candidate fit
 - [ ] Step 5 sprt.py (Forge) — hand-computed fixture; incumbent-vs-itself → ACCEPT_H0 at computed step
 - [ ] Step 6 walk-forward + tablebase — I65/I66/I67/I71 mutations bite
-- [ ] Step 7 fill model — BaseFill ≡ _apply_costs on the 350 (I68)
+- [ ] Step 7 fill model — BaseFill ≡ _apply_costs on 5 synthetic trades + mutation bites (12 tests); the 350-parity (I68) waits on Step 2
 - [ ] Step 8 driver → artifacts/sprt_result.json (base + candidate-pessimistic + permutation)
 - [ ] Step 9 feature registry (minimal) — flip → raise
 - [ ] Step 10 red team → artifacts/redteam.md (git status shows only that file)
