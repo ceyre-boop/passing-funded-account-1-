@@ -6,7 +6,7 @@
 - [ ] Step 2 path extractor → artifacts/carry_paths.parquet — halts unless n=350, round(ΣR,2)=34.41; parity test
 - [ ] Step 3 bench + pre-commit — two identical runs; one-param mutation changes the number
 - [ ] Step 4 spec 045 prereg (FREEZE OVERRIDE commit) — written before any candidate fit
-- [ ] Step 5 sprt.py (Forge) — hand-computed fixture; incumbent-vs-itself → ACCEPT_H0 at computed step
+- [x] Step 5 sprt.py (Forge, gpt-5.6-terra — 5.4 refused by the account) — 17 tests; hand trace re-verified by Opus; Forge injection (d−δ) failed 4, Opus injection (B=ln β/α) failed 8; incumbent-vs-itself → ACCEPT_H0 at step 50 for δ=.25 σ=1
 - [ ] Step 6 walk-forward + tablebase — I65/I66/I67/I71 mutations bite
 - [ ] Step 7 fill model — BaseFill ≡ _apply_costs on 5 synthetic trades + mutation bites (12 tests); the 350-parity (I68) waits on Step 2
 - [ ] Step 8 driver → artifacts/sprt_result.json (base + candidate-pessimistic + permutation)
