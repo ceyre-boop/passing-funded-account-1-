@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-08-22T00:21:17.640655+00:00",
- "compared_against": "SF-FROZEN-002",
+ "generated_at": "2026-08-29T16:24:43.937947+00:00",
+ "compared_against": "SF-FROZEN-003",
  "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
  "n_sessions": 336,
  "median_efficiency": 0.654,

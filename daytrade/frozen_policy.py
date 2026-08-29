@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SF-FROZEN-002 — the pinned exit-policy checkpoint.
+"""SF-FROZEN-003 — the pinned exit-policy checkpoint.
 
 Stack exam LL-2 recorded the gap: mechanisms were measured against "the
 shipped policy", which is stable but not PINNED. Nothing stopped the
@@ -16,13 +16,15 @@ It becomes load-bearing the moment a second evaluator exists: once there is a
 carry exit evaluator beside the intraday one, "the shipped policy" is
 ambiguous — shipped which? A pinned id is not.
 
-SUPERSEDES SF-FROZEN-001 (2026-08-20, `data/daytrade/SF_FROZEN_001.json`,
-engine_sha256 1c437fc4e49c9a60cf1c497feaa0269af61440423cf1b6c94c69e068588ff457).
-001 is never deleted or overwritten — it stays on disk as history and its
+SUPERSEDES SF-FROZEN-002 (2026-08-21, `data/daytrade/SF_FROZEN_002.json`,
+engine_sha256 eb12b4a4f78acd3747e9ff64122ee2a7a4cef64a628947794960ef7e9b2d9991).
+002 is never deleted or overwritten — it stays on disk as history and its
 `pin()` refusal-on-overwrite is what forced this file to become a NEW
-checkpoint id instead of quietly rewriting the old one. See SF-FROZEN-002's
-own `why` field (`data/daytrade/SF_FROZEN_002.json`) for the re-pin reason and
-the empirical proof that motivated it.
+checkpoint id instead of quietly rewriting the old one. See SF-FROZEN-003's
+own `why` field (`data/daytrade/SF_FROZEN_003.json`) for the re-pin reason and
+the empirical proof that motivated it. SF-FROZEN-002 in turn superseded
+SF-FROZEN-001 (2026-08-20, `data/daytrade/SF_FROZEN_001.json`) — see that
+record's own `why` field for its reason.
 """
 from __future__ import annotations
 
@@ -34,10 +36,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 ENGINE = HERE / "stockfish_exit.py"
-RECORD = ROOT / "data" / "daytrade" / "SF_FROZEN_002.json"
+RECORD = ROOT / "data" / "daytrade" / "SF_FROZEN_003.json"
 
-CHECKPOINT_ID = "SF-FROZEN-002"
-PINNED_AT = "2026-08-21"
+CHECKPOINT_ID = "SF-FROZEN-003"
+PINNED_AT = "2026-08-29"
 
 # The exact parameters in force per asset class at pin time. Copied here
 # deliberately rather than imported: if the source moves, this record must

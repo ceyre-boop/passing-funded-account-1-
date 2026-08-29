@@ -1,0 +1,32 @@
+{
+ "checkpoint_id": "SF-FROZEN-003",
+ "pinned_at": "2026-08-29",
+ "engine": "daytrade/stockfish_exit.py",
+ "engine_sha256": "89b4db77d32c81cb61427b1425e3162ccce8d7eca0906cbf6622a7f18adc624d",
+ "policies": {
+  "SINGLE_NAME": {
+   "trail_mult": null,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  },
+  "CASH_INDEX": {
+   "trail_mult": 1.5,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  },
+  "FUTURES": {
+   "trail_mult": 1.5,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  }
+ },
+ "policies_sha256": "474d817dd245fdc2ef0183bbb1ceed5bc6c8681825de23312552b001c6f21521",
+ "prices": "intraday equity/futures positions only \u2014 see SF-3, it has no term for swap accrual, days held, weekend exposure, or rate differential",
+ "why": "Re-pin required by adding the volatility layer to stockfish_exit.py as a PLACEMENT rule, not a trail (I49: repinning refuses to overwrite SF-FROZEN-002 by design). WHAT CHANGED: TradeState gained two new opt-in fields, atr (already existed, previously unvalidated) and vol_k (new, no default), plus __post_init__ validation that atr/vol_k are positive and finite when supplied (fail loud, matching every other required scalar on TradeState \u2014 never a silent 0.0 default, which is the daytrade/regime_vector.py::_atr mistake that caused an 817x mis-size elsewhere in this repo). A new _volatility_stop(state, *, k) helper and the 'volatility' entry in stop_candidates() now compute sl = entry - direction*k*ATR once, from entry and the ATR AT ENTRY, and never re-read hwm \u2014 a fixed placement, not hwm-k*ATR. hwm-k*ATR is a TRAIL and is exactly the instrument MECH-001 found net negative across 4,512 SPY/QQQ trades (tmNone won both), so the new layer is deliberately NOT built that way. Monotone-tightening (effective_stop never loosens) was re-verified with the volatility layer active: 2,403 randomized decide_exit/apply_action steps across 500 trials, 0 violations. OPT-IN, MEASURED: with no vol_k supplied (every existing caller \u2014 ceiling.py, runner.py, shadow.py, stockfish_constitution.py \u2014 passes none), the layer stays dark exactly as before and stockfish_exit.py's behaviour is UNCHANGED. Proven the same way SF-FROZEN-002 proved its own inertness: the pre-change engine was materialized read-only via `git show HEAD:daytrade/stockfish_exit.py` into a scratch copy of daytrade/ outside the working tree, and ceiling.py's own narrow_space() (3 configs) + wide_space() (396 configs) regression bench was run against both engines over the TUNE split (splits.tune_sessions, 24 NVDA entries, 1 half-day session excluded). Compared 9,576 per-config R values (72 narrow + 9,504 wide) with exact equality (no tolerance): 0 mismatches, 100% match. policies_sha256 is unchanged from SF-FROZEN-002 (474d817dd245fdc2ef0183bbb1ceed5bc6c8681825de23312552b001c6f21521) \u2014 confirmed by direct recomputation before this pin; only the engine bytes moved. k ITSELF IS NOT SELECTED HERE: a k-sweep (0.5..3.0 step 0.25) over the volatility layer was run on the tune lane (SPY premarket cache) to characterize bind rate and R/trade per k, reported separately; this checkpoint pins the mechanism, not a chosen k. SUPERSEDES: SF-FROZEN-002 (pinned 2026-08-21, data/daytrade/SF_FROZEN_002.json, engine_sha256 eb12b4a4f78acd3747e9ff64122ee2a7a4cef64a628947794960ef7e9b2d9991), which is left on disk, untouched, as history \u2014 frozen_policy.pin() refuses to overwrite an existing record by design, so a genuinely new opponent requires a new checkpoint id rather than a silent rewrite of the old one."
+}

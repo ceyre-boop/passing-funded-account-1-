@@ -47,6 +47,7 @@ unchanged, which is the real regression test.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional, List
@@ -138,6 +139,8 @@ class TradeState:
     catastrophic_sl: Optional[float] = None  # the ORIGINAL plan stop; never removed
     # --- inactive layers, awaiting their inputs (see stop_candidates)
     atr: Optional[float] = None              # volatility layer needs this
+    vol_k: Optional[float] = None            # volatility layer's other required
+                                              # input; no default — see _volatility_stop
     thesis_sl: Optional[float] = None        # AlphaZero invalidation level
     # --- constitution (spec 011). Additive: state, not emitted actions, so the
     #     v3 replay log is unchanged. Missing in older session JSONL reads as 0.
@@ -155,6 +158,18 @@ class TradeState:
             if v is not None: _et_minutes(v, f_)
         if self.trail_mult is not None and self.trail_mult <= 0:
             raise ValueError(f"trail_mult must be positive or None, got {self.trail_mult}")
+        # atr/vol_k gate the volatility PLACEMENT layer (see _volatility_stop).
+        # Same fail-loud rule as the other required scalars above: a supplied
+        # value that is garbage raises rather than silently defaulting to 0.0
+        # (the regime_vector.py::_atr mistake — a 0.0 ATR there caused an 817x
+        # mis-size). An UNSUPPLIED atr/vol_k is not an error: the layer simply
+        # stays dark, exactly like thesis_sl.
+        if self.atr is not None:
+            if not (isinstance(self.atr, (int, float)) and math.isfinite(self.atr)
+                    and self.atr > 0):
+                raise ValueError(f"atr must be positive and finite, got {self.atr!r}")
+        if self.vol_k is not None and self.vol_k <= 0:
+            raise ValueError(f"vol_k must be positive or None, got {self.vol_k}")
         if not (0 < self.be_arm_frac <= 1.0):
             raise ValueError(f"be_arm_frac must be in (0, 1], got {self.be_arm_frac}")
         if not (0 <= self.goal_fraction <= 1.0):
@@ -218,6 +233,27 @@ def trail_distance(state: TradeState) -> Optional[float]:
     return state.trail_dist * state.trail_mult * (0.5 if state.urgent == "tighten" else 1.0)
 
 
+def _volatility_stop(state: TradeState, *, k: float) -> float:
+    """The volatility layer as PLACEMENT, not a trail.
+
+    sl = entry - direction*k*ATR: entry - k*ATR for a long, entry + k*ATR for a
+    short. Computed from entry and the ATR AT ENTRY only — it never reads hwm
+    and never moves for the life of the trade. Once placed it is a constant
+    candidate in stop_candidates(), exactly like breakeven or the catastrophic
+    stop, so it plays by the same never-loosen rule effective_stop() already
+    enforces via max().
+
+    This is deliberate: MECH-001 found hwm - k*ATR TRAILING stops net negative
+    across 4,512 SPY/QQQ trades (tmNone won both). `hwm - k*ATR` is exactly the
+    instrument that result is negative about, so this function does not take
+    hwm as an input at all.
+
+    `k` has no default — stop_candidates() only calls this once state.vol_k is
+    not None, so a trade that never opts in never reaches here.
+    """
+    return state.entry - state.direction * k * state.atr
+
+
 def stop_candidates(state: TradeState) -> List[StopCandidate]:
     """Every stop layer, active or not. Inactive layers are CONSTRUCTED and
     returned carrying the reason they are dark — they are not commented-out code
@@ -226,6 +262,8 @@ def stop_candidates(state: TradeState) -> List[StopCandidate]:
     """
     d, scaled = state.direction, state.tp2_done
     trail = trail_distance(state)
+    vol_ready = state.atr is not None and state.vol_k is not None
+    vol_level = _volatility_stop(state, k=state.vol_k) if vol_ready else None
 
     return [
         StopCandidate("catastrophic", state.catastrophic_sl, True,
@@ -247,9 +285,15 @@ def stop_candidates(state: TradeState) -> List[StopCandidate]:
                       + ("" if state.be_arm_frac == 1.0
                          else f" (early, {state.be_arm_frac:g} of TP1)")),
 
-        StopCandidate("volatility", None, False,
-                      "INACTIVE: needs ATR on TradeState; no caller supplies it. "
-                      "Would sit at hwm - k*ATR to survive normal noise"),
+        StopCandidate("volatility", vol_level, vol_ready,
+                      (f"placement: entry {'-' if d > 0 else '+'} "
+                       f"{state.vol_k:g}*ATR({state.atr:g}), fixed at entry — "
+                       "not a trail (MECH-001: hwm-k*ATR trailing stops lost)")
+                      if vol_ready else
+                      "INACTIVE: needs BOTH atr and vol_k on TradeState; neither "
+                      "has a default, so this stays dark until a caller opts in. "
+                      "When active it PLACES at entry -+ k*ATR and never moves — "
+                      "see _volatility_stop()"),
 
         StopCandidate("profit_lock", state.tp1, scaled,
                       "TP2 banked: stop rides to TP1"),
@@ -638,11 +682,13 @@ def apply_actions(state: TradeState, actions: List[Action],
 # ceiling has 24 entries. Prerequisites: the 3-of-24 entry problem addressed, and
 # a counterfactual showing schedule beats cliff on days that reached TP1.
 #
-# volatility LAYER. Needs ATR on TradeState and a defensible k. Would sit at
-# hwm - k*ATR so normal noise cannot take the trade out. Cheap to add once any
-# caller actually supplies ATR — bars.py has the data, nothing threads it through.
-#
 # SALVAGE AUTO-EMISSION. See NOT_AUTO_EMITTABLE. Blocked on regime.py.
+#
+# (volatility LAYER is no longer a sketch — see stop_candidates()/
+# _volatility_stop(). It PLACES at entry -+ k*ATR, fixed at entry, opt-in via
+# TradeState.vol_k with no default k, so unchanged callers see no behaviour
+# change. `k` itself is not selected here — that is a tune-lane sweep, a
+# ruling, not a build step.)
 
 
 if __name__ == "__main__":
