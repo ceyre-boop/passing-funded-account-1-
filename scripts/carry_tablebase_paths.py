@@ -279,6 +279,29 @@ def connected_components(intervals):
 # ───────────────────────────── the rig capture (impure) ─────────────────────────── #
 
 def _run_arm_capture():
+    """Run `_run_arm_capture_unrestored` and then put the process back the way it was:
+    the reload dance deletes `sovereign.forex.*` from sys.modules, which leaves every
+    other module in the process (and every later test) holding stale objects. The
+    captured arrays are plain numpy, so restoring the original module objects loses
+    nothing. Found as order-dependent failures in two unrelated sovereign/forex tests."""
+    keep = {k: v for k, v in sys.modules.items() if k.startswith("sovereign.forex") or k == "oos_campaign_test"}
+    prev_env = os.environ.get("CARRY_RATE_VINTAGE")
+    import yfinance as _yf
+    prev_download = _yf.download          # oos_campaign_test replaces this globally at import
+    try:
+        return _run_arm_capture_unrestored()
+    finally:
+        _yf.download = prev_download
+        for k in [k for k in sys.modules if k.startswith("sovereign.forex") or k == "oos_campaign_test"]:
+            del sys.modules[k]
+        sys.modules.update(keep)
+        if prev_env is None:
+            os.environ.pop("CARRY_RATE_VINTAGE", None)
+        else:
+            os.environ["CARRY_RATE_VINTAGE"] = prev_env
+
+
+def _run_arm_capture_unrestored():
     """Replicates run_cb_ab.run_arm(cb_on=False): env + patch + the module-reload
     dance, then oos_campaign_test.get_trades(START, END) -- while capturing every
     `simulate_forex_trades_arrays` call's inputs, its inner `_simulate_forex_core`

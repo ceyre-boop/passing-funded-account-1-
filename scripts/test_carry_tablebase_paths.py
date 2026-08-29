@@ -285,45 +285,17 @@ def test_every_trade_has_exactly_one_absorbing_row(paths_df):
     assert merged.loc[~is_absorbing_row, "terminal_r"].isna().all()
 
 
-def test_parity_replay_against_real_artifacts(trades_df):
-    """G7, run against the real 350-trade population: re-runs the rig capture
-    fresh and replays `decide_exit` for every trade recorded in the real
-    carry_trades.parquet, asserting the replay reproduces that trade's own
-    recorded incumbent_exit_bar / incumbent_reason exactly."""
-    captured_trades, arrays_calls = ctp._run_arm_capture()
-    id_to_ref = {}
-    for ci, c in enumerate(arrays_calls):
-        for j, tr in enumerate(c["trades"]):
-            id_to_ref[id(tr)] = (ci, j)
-    by_key = {}
-    for tr in captured_trades:
-        ci, j = id_to_ref[id(tr)]
-        key = (tr["pair"], pd.Timestamp(tr["entry_date"]).strftime("%Y-%m-%d"), int(tr["direction"]))
-        by_key[key] = (ci, j)
-
-    n_ok = 0
-    for row in trades_df.itertuples():
-        key = (row.pair, row.entry_date, int(row.direction))
-        assert key in by_key, f"trade {row.trade_id} not reproducible from a fresh rig run"
-        ci, j = by_key[key]
-        c = arrays_calls[ci]
-        core_kwargs = c["core"]["kwargs"]
-        entry_idx, exit_idx, _dirs, _pnls, holds, reasons, _units = c["core"]["result"]
-        e_bar = int(entry_idx[j])
-        assert e_bar == row.entry_bar
-
-        rows = ctp.replay_decisions(
-            closes=core_kwargs["closes"], atr_pcts=core_kwargs["atr_pcts"],
-            signals=core_kwargs["signals"], hold_days_arr=core_kwargs["hold_days"],
-            entry_bar=e_bar, direction=int(row.direction), entry_price=float(row.entry_price),
-            stop_price=float(row.stop_price), hold_limit=int(row.hold_limit),
-            stop_atr_mult=float(row.stop_atr_mult), trailing_atr_mult=float(row.trailing_mult),
-            strict_mode=bool(core_kwargs["strict_mode"]), enable_cb_refresh=bool(core_kwargs["enable_cb_refresh"]),
-            max_t=int(row.incumbent_hold),
-        )
-        last_t, last_bar, last_decision = rows[-1]
-        assert last_bar == row.incumbent_exit_bar
-        assert ctp.CSV_REASON_STR[last_decision] == row.incumbent_reason
-        assert all(d == ctp.HOLD for (_t, _b, d) in rows[:-1])
-        n_ok += 1
-    assert n_ok == ctp.EXPECTED_N
+def test_parity_replay_against_real_artifacts():
+    """G7, run against the real 350-trade population: re-run the extractor in a SUBPROCESS
+    (the rig patches yfinance.download globally and reloads sovereign.forex.* — done in-process
+    it poisons every later test; found as 4 order-dependent failures). Exit 0 means the script's
+    own halts passed: n=350, round(sumR,2)=34.41, every trade matched, cost replication 1e-12,
+    and decide_exit reproduced every incumbent exit bar and reason. The regenerated artifacts
+    must be byte-identical to the frozen, inventoried ones (determinism)."""
+    import subprocess, sys
+    from sovereign.forex import inventory as inv
+    r = subprocess.run([sys.executable, "scripts/carry_tablebase_paths.py", "--h-max", "10"],
+                       cwd=ROOT, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[-2000:]
+    assert "parity" in (r.stdout + r.stderr).lower()
+    inv.require_hashes(["artifacts/carry_paths.parquet", "artifacts/carry_trades.parquet", "artifacts/carry_units.json"])
