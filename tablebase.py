@@ -50,6 +50,9 @@ class Transition:
     next_state: State | None    # None => terminal (session close or stop-out)
     r_if_tightened: float | None  # realized R had the tightened stop been active
     terminal_r: float       # R the episode actually ended at
+    legal_moves: frozenset[Action]  # actions the executor can actually perform
+    # from this state — computed from cfg, not from whether a value happened
+    # to be computable. See transitions.TIGHTEN_ILLEGAL_NO_TRAIL.
 
 
 class LeakError(RuntimeError):
@@ -68,10 +71,15 @@ class Cell:
     n_paths: int = 0
     episodes: frozenset[str] = frozenset()
 
-    def best(self) -> tuple[Action, float]:
+    def best(self, legal: frozenset[Action] | None = None) -> tuple[Action, float]:
+        """Argmax over Q-values. `legal`, when given, restricts the argmax to
+        that set — an action outside it can never win, regardless of its
+        Q-value. Without it, all three actions compete as before."""
         qs = {Action.HOLD: self.q_hold,
               Action.TIGHTEN: self.q_tighten,
               Action.EXIT: self.q_exit}
+        if legal is not None:
+            qs = {a: v for a, v in qs.items() if a in legal}
         live = {a: v for a, v in qs.items() if not np.isnan(v)}
         if not live:
             return Action.EXIT, NO_VALUE      # unknown state => flatten, never guess
@@ -136,11 +144,18 @@ class Tablebase:
 
     # -- query -------------------------------------------------------------
 
-    def evaluate(self, state: State, *, scoring_episode: str | None = None) -> tuple[Action, float]:
+    def evaluate(self, state: State, *, scoring_episode: str | None = None,
+                 legal: frozenset[Action] | None = None) -> tuple[Action, float]:
         """
         scoring_episode: when evaluating a path, pass its episode id. If that
         episode helped build this cell, the lookup is contaminated and raises.
         Leave-one-out is enforced here rather than trusted upstream.
+
+        legal: the set of actions the executor can actually perform from this
+        state (e.g. `transitions.legal_moves_for(cfg)`). When given, an action
+        outside it can never be returned — a caller evaluating a SINGLE_NAME
+        position cannot be handed TIGHTEN just because it happened to win an
+        unconstrained argmax.
         """
         if not self._built:
             raise RuntimeError("build() before evaluate()")
@@ -153,7 +168,7 @@ class Tablebase:
                 f"against (state={state}, n={cell.n_paths}). Rebuild with that "
                 "episode held out."
             )
-        return cell.best()
+        return cell.best(legal)
 
     # -- reporting ---------------------------------------------------------
 

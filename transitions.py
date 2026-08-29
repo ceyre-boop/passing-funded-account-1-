@@ -39,7 +39,49 @@ from splits import TUNE_END                                            # noqa: E
 from stockfish_exit import Stage                                       # noqa: E402
 
 from state_space import discretize                                     # noqa: E402
-from tablebase import Transition                                       # noqa: E402
+from tablebase import Action, Transition                               # noqa: E402
+
+
+# TIGHTEN is not weakly-supported when trail_mult is None, it is an ILLEGAL
+# move: stockfish_exit.trail_distance() (stockfish_exit.py:218) has no width
+# to scale, so the execution layer physically cannot perform it. Quotable
+# module-level constant, in the spirit of stop_candidates()'s dark-layer
+# reasons (stockfish_exit.py).
+TIGHTEN_ILLEGAL_NO_TRAIL = (
+    "TIGHTEN requires a trail to tighten: cfg['trail_mult'] is None, so "
+    "stockfish_exit.py:218 has nothing to scale"
+)
+
+ALWAYS_LEGAL = frozenset({Action.HOLD, Action.EXIT})
+ALL_ACTIONS = frozenset({Action.HOLD, Action.TIGHTEN, Action.EXIT})
+
+
+def legal_moves_for(cfg: dict) -> frozenset[Action]:
+    """HOLD and EXIT are always legal. TIGHTEN is legal iff cfg has a trail
+    to tighten — computed from the config, not from whether r_if_tightened
+    happened to be computable for a given path."""
+    return ALL_ACTIONS if cfg["trail_mult"] is not None else ALWAYS_LEGAL
+
+
+def assert_legal_moves_consistent(transitions) -> None:
+    """r_if_tightened is None **iff** TIGHTEN is absent from legal_moves.
+
+    tablebase.py's q_tighten is built only from transitions carrying a
+    non-None r_if_tightened. If a future config ever made TIGHTEN legal
+    without populating r_if_tightened (or vice versa), the tablebase would
+    silently starve a legal move of data, or silently offer a value for a
+    move the executor cannot perform. Checked here rather than assumed.
+    """
+    for t in transitions:
+        tighten_legal = Action.TIGHTEN in t.legal_moves
+        r_present = t.r_if_tightened is not None
+        if tighten_legal != r_present:
+            raise ValueError(
+                f"legal_moves / r_if_tightened disagreement in episode "
+                f"{t.episode} phase {t.phase}: TIGHTEN legal={tighten_legal} "
+                f"but r_if_tightened is "
+                f"{'a float' if r_present else 'None'}"
+            )
 
 
 def assert_phases_monotone(transitions) -> None:
@@ -86,6 +128,7 @@ def transitions_from_sessions(
     n_entries = 0
     n_r_if_tightened_none = 0
     tighten_active = cfg["trail_mult"] is not None
+    legal_moves = legal_moves_for(cfg)
 
     for s in sessions:
         e = find_entry(s)
@@ -180,6 +223,7 @@ def transitions_from_sessions(
                 next_state=next_state,
                 r_if_tightened=r_if_tightened,
                 terminal_r=terminal_r,
+                legal_moves=legal_moves,
             ))
 
     n_episodes = len(seen_episodes)
@@ -188,6 +232,8 @@ def transitions_from_sessions(
             f"episode count mismatch: {n_episodes} distinct episodes vs "
             f"{n_entries} entries processed"
         )
+
+    assert_legal_moves_consistent(transitions)
 
     n_terminal = sum(1 for t in transitions if t.next_state is None)
     distinct_states = len({t.state for t in transitions})
@@ -216,5 +262,7 @@ def transitions_from_sessions(
         "n_terminal": n_terminal,
         "n_distinct_states": distinct_states,
         "min_paths": min_paths,
+        "legal_moves": sorted(a.value for a in legal_moves),
+        "tighten_illegal_reason": None if tighten_active else TIGHTEN_ILLEGAL_NO_TRAIL,
     }
     return transitions, report
