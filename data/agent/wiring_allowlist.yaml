@@ -2,6 +2,18 @@
 # Every entry MUST have a non-empty `reason`.
 
 ORPHANS:
+- module: sovereign.forex.feature_registry
+  reason: >-
+    spec 045 / session brief 2026-08-29 Phase 3 — the as-of-computable feature registry. Its consumer is `sovereign/forex/exit_tablebase.py` (state keys pass through `require_as_of`) and `scripts/carry_exit_sprt.py`, both landing in the same session; until they do, its only importer is its test. Remove this entry when the importer lands — a stale allowlist entry is itself a finding.
+- module: sovereign.forex.sprt
+  reason: >-
+    spec 045 §6 — the Wald SPRT gate (Forge seat). Consumed by `scripts/carry_exit_sprt.py` (Step 8 of Plans/cheeky-mixing-locket.md); pure stdlib, no repo imports by design so it cannot see the candidate. Remove when the driver lands.
+- module: scripts.build_inventory
+  reason: >-
+    session brief 2026-08-29 Phase 0 — standalone CLI (`python3 scripts/build_inventory.py`) that computes the Phase 0 inventory and records dependency hashes via sovereign.forex.inventory. Invoked by hand at session start; never imported. Same convention as scripts/wiring_audit.py.
+- module: scripts.carry_bench
+  reason: >-
+    spec 045 I70 — the carry bench, a standalone CLI invoked by `.githooks/pre-commit` (`--check`) and by hand; prints one number. Its importer is its test and the git hook, neither of which the import graph sees.
 - module: scripts.check_trade_freeze
   reason: standalone CLI + git commit-msg hook target, invoked as `python3 scripts/check_trade_freeze.py
     --staged` from .githooks/commit-msg — a shell hook caller is not a Python import, so it correctly
@@ -441,6 +453,18 @@ ORPHANS:
     forbids it from importing or modifying `stockfish_exit.py`, so it is not (yet) consumed by the runner;
     a later phase may wire it in as a completeness check, not this one.
 IMPORTED_NOT_CALLED:
+- module: sovereign.forex.carry_checkpoint->sovereign.forex.forex_backtester
+  reason: >-
+    CARRY-FROZEN-001 reads ForexBacktester's class attributes and module constants via getattr() to pin the incumbent's declared configuration (STOP_ATR_MULT, PAIR_TRAILING_OVERRIDES, SPREAD_COST, ...) — attribute reads, not calls, by design: the checkpoint must never execute the engine it hashes.
+- module: scripts.carry_tablebase_paths->sovereign.forex.entry_engine
+  reason: >-
+    the extractor replicates run_cb_ab's cb_off arm by PATCHING `entry_engine.CB_LAYER_DISABLED = True` (attribute assignment, not a call) so the captured population is the honest 350 — spec 045 §2.
+- module: scripts.carry_tablebase_paths->sovereign.forex.fast_backtester
+  reason: >-
+    the extractor WRAPS `fast_backtester.simulate_forex_trades_arrays` (monkeypatch to capture the rig's per-pair arrays — never recomputes them, spec 045 §3); the original is called through the wrapper.
+- module: scripts.carry_tablebase_paths->sovereign.forex.forex_backtester
+  reason: >-
+    the extractor reads ForexBacktester constants (PAIR_TRAILING_OVERRIDES, TRAILING_ATR_MULT) to label each captured trade's config — attribute reads, not calls.
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
   reason: CB_LAYER_DISABLED is a boolean constant read for a branch test, not invoked. It is declared
