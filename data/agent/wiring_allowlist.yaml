@@ -403,6 +403,14 @@ ORPHANS:
     against a same-strategy-on-control-days check and a permutation null; a one-shot research artifact
     builder/SIMULATION over the existing data/daytrade/bars_premarket_1m cache — no order is placed, nothing
     is wired to a broker, not a consumer of its own output.
+- module: scripts.build_spy_pre_fomc_drift_event_study
+  reason: standalone CLI/research tool — has `if __name__ == "__main__":` and is invoked directly (`python3
+    scripts/build_spy_pre_fomc_drift_event_study.py`), same convention as its siblings scripts.build_macro_event_study
+    / scripts.build_spy_premarket_event_study / scripts.build_fomc_splash_event_study / scripts.build_spy_bracket_harvest_study.
+    A REPLICATION of Lucca & Moench's pre-FOMC announcement drift (prior-day close to 13:59 ET, SCHEDULED
+    meetings only, direction fixed by that prior literature), pre-registered, with a horizon sweep, a
+    press-conference split, and a permutation null; a one-shot research artifact builder over the existing
+    data/daytrade/bars_premarket cache, not a consumer of its own output.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
@@ -531,6 +539,11 @@ IMPORTED_NOT_CALLED:
   target: daytrade.bars
   reason: BarDataError is imported only to be CAUGHT (`except BarDataError as e:`) around the call into
     `build_spy_macro_decay_study._load_raw_bars_1m`, which is what raises it — this module never raises
+    it itself, same pattern as scripts.build_spy_whipsaw_event_study's identical allowlisting above
+- module: scripts.build_spy_pre_fomc_drift_event_study
+  target: daytrade.bars
+  reason: BarDataError is imported only to be CAUGHT (`except BarDataError as e:`) around the call into
+    `build_fomc_splash_event_study._load_raw_bars`, which is what raises it — this module never raises
     it itself, same pattern as scripts.build_spy_whipsaw_event_study's identical allowlisting above
 NO_SUPPLIER:
 - field: ExecEvent.intent
@@ -731,3 +744,8 @@ DEAD_ARTIFACT:
 - module: data/daytrade/event_study/spy_bracket_harvest_fomc_days.csv
   reason: written by scripts/build_spy_bracket_harvest_study.py (see ORPHANS) — same as spy_bracket_harvest_primary_days.csv,
     for the separate FOMC 14:00 arm; a one-shot research dataset, not a machine input anything reads.
+- module: data/daytrade/event_study/spy_pre_fomc_drift_event_study_summary.json
+  reason: written by scripts/build_spy_pre_fomc_drift_event_study.py (see ORPHANS) — the pre-registered
+    primary result (SPY signed return, prior-day close to 13:59 ET, scheduled FOMC meetings only) plus
+    the permutation null and the labelled secondary/exploratory family (horizon sweep, press-conference
+    split); a research finding artifact for a human to read, not a machine input.
