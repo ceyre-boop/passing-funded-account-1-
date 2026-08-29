@@ -157,3 +157,41 @@ pre-registered rule already refused it (it required ≥2 of 3 classes). It must 
 - **I74** — every reported statistic carries both null bands; a statistic emitted without them
   is a failure, not a warning.
 - **I75** — the neighbour-distance diagnostic is emitted for every (half, H) cell.
+
+---
+
+# AMENDMENT 1 — 2026-08-29, before the script existed and before any statistic was computed
+
+Written when the compute budget was checked. §3 declared the population but not the **query
+subsample** or the **null draw counts**, and both are researcher choices of exactly the kind
+§2 exists to spend in advance. Declaring them here rather than letting an implementer pick
+them silently.
+
+**Why a subsample is needed at all.** RTH query bars number ≈209,000 and the candidate pool is
+the same order. Exact brute-force retrieval is O(n_query × n_pool); at full size, one pass is
+≈4×10¹⁰ distance evaluations and the null bands need hundreds of passes. No approximate index
+is permitted (§5: an ANN index would add an approximation parameter, i.e. more freedom).
+
+**Declared:**
+
+- **Query subsample:** every **29th** RTH bar in global index order. 29 is coprime with the 78
+  RTH bars in a session, so the sample cycles through every time-of-day offset rather than
+  aliasing onto fixed clock times — `minutes_into_rth` is a state dimension and must retain its
+  full range. Yields ≈7,200 queries, ≈3,600 per date half. Candidate pool is **not** subsampled:
+  retrieval searches all admissible bars.
+- **Statistical adequacy:** ≈3,600 queries × k=200 = ≈720,000 conditional observations per
+  (half, H) cell — the binding constraint on these statistics is the null band, not the sample.
+- **Null draws:** **N1 (shuffled-state) = 100**, **N2 (random-neighbour) = 200**. N1 is fewer
+  because each draw requires a full retrieval pass; N2 requires none. A 5–95% band from 100
+  draws has adequate resolution for a decision rule that requires the observed value to fall
+  outside **both** bands in **both** halves for **2 of 3** horizons.
+- **N1 is the load-bearing null and N2 alone is insufficient.** Nearest neighbours in state
+  space cluster in time, and temporally clustered samples have inflated variance relative to an
+  IID draw. N2 does not reproduce that clustering, so N2's variance band is too narrow and
+  would produce a false positive on S3. N1 preserves the retrieval geometry and the clustering
+  while destroying only the state↔future link, so it is the null that S3 must clear.
+- **No silent caps.** If a pass exceeds the budget, the run reduces draws and **reports the
+  reduction in the output JSON**; it never truncates coverage without saying so.
+
+Unchanged: the state vector, scaling rule, weighting, k, horizons, statistics, leakage guards,
+and the §8 decision rule.
