@@ -67,3 +67,75 @@ consumer.
 Prediction, recorded before running: **direction dead, magnitude conditionable
 on C1 and C2.** Nothing is re-run with a changed conditioner; a different
 partition is spec 048.
+
+---
+
+# RESULT — 2026-08-29, SPY, 2,115 entries × 396 configs
+
+`artifacts/phase0_SPY.json`. The rule as written fires **DIRECTION LIVES** on one
+cell. It should not be acted on as a directional finding, for three reasons given
+below — and the pre-registration above is defective in a way that this result
+exposes. Both are recorded rather than repaired.
+
+## What the rule returned
+
+**DIRECTION LIVES — `C5_gap:high`** — n=705, median-config **+0.0137 R/trade**
+against a null band of [−0.1192, −0.0287], and **68% of 396 configs profitable**
+versus 0% on the full population.
+
+**MAGNITUDE CONDITIONABLE** — 4 cells outside their span null: `C3:MORNING`
+(1.255, high), `C3:OPEN_DRIVE` (1.029, low), `C5:low` (0.967, low), `C5:high`
+(1.264, high).
+
+## Why the directional reading fails anyway
+
+1. **It is exactly the chance rate.** 13 cells were tested against a 5–95% band,
+   so ~1.3 cells are expected outside by chance. Exactly 1 was.
+   **Spec 047 declared no multiple-comparison correction. That is a defect in
+   this pre-registration**, not a property of the data, and it is why the cell
+   cannot be promoted on this run.
+2. **It does not survive a half-split.** 2016–2021: −0.0093 R/trade, 34% of
+   configs profitable. 2021–2026: +0.0321, 78%. The positive result lives
+   entirely in the second half. No stability requirement was declared either.
+3. **The cell is direction-balanced** — 363 long, 342 short. Whatever separates
+   it is not a directional signal.
+
+## What is actually there, and it is the stronger result
+
+Both conditioners that separate are **magnitude** conditioners, and both are
+**monotone**:
+
+| level | C5 gap median/tr | cfg>0 | C1 OR-width median/tr | cfg>0 |
+|---|---|---|---|---|
+| low | −0.1399 | 0% | −0.1574 | 0% |
+| mid | −0.1082 | 0% | −0.0398 | 3% |
+| high | **+0.0137** | **68%** | −0.0310 | **26%** |
+
+Two independent variables, ordered gradients on both, and the high-gap cell is
+spread evenly across eleven years (22–45% of each year's entries; not a 2020
+artifact). A single false positive does not arrive with a monotone gradient on
+two separate conditioners.
+
+**Reading: the entry is not less wrong in a direction — it is less wrong on big
+days.** That is dispersion, not sign, and the cell where "direction lives" was
+selected by asking how large today is, not which way it goes.
+
+## Prediction vs outcome
+
+Recorded before the run: *"direction dead, magnitude conditionable on C1 and C2."*
+- Magnitude conditionable: **correct**, though it landed on C3 and C5, not C2.
+  FOMC (C2) separated nothing — `day_of` n=65 is under-powered and its null band
+  is enormous ([−0.2607, +0.1122]).
+- Direction dead: **the rule says otherwise**, and the honest answer is that the
+  rule was too weak to ask the question. Not a vindication of the prediction.
+
+## Consequence
+
+`C5_gap:high` is a **lead, not a result**. Promoting it requires a fresh
+pre-registration with a declared multiple-comparison correction and a stability
+requirement, tested on data this run did not consume. Everything after TUNE_END
+is still sealed and is the natural place for it.
+
+Phase 1 direction unchanged: build Stockfish as a general position manager. The
+magnitude axis is where the conditioning lives, and `dispersion.py` is its
+consumer.

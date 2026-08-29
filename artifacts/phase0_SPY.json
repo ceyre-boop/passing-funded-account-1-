@@ -1,0 +1,241 @@
+{
+  "symbol": "SPY",
+  "n_entries": 2115,
+  "n_configs": 396,
+  "seed": 20260829,
+  "draws": 1000,
+  "cells": {
+    "C1_or_width:high": {
+      "n": 705,
+      "median_per_trade": -0.030996150923322384,
+      "best_per_trade": 0.062334970012298964,
+      "frac_cfg_profitable": 0.255050505050505,
+      "span_per_trade": 1.1113150319638552,
+      "null_median_5_95": [
+        -0.13107373670117847,
+        -0.024551831489871025
+      ],
+      "null_span_5_95": [
+        1.0075306815444922,
+        1.1829267065010969
+      ],
+      "median_counts": false,
+      "span_counts": false
+    },
+    "C1_or_width:mid": {
+      "n": 705,
+      "median_per_trade": -0.03984669531739362,
+      "best_per_trade": 0.026880668775101254,
+      "frac_cfg_profitable": 0.025252525252525252,
+      "span_per_trade": 1.0615428335469348,
+      "null_median_5_95": [
+        -0.12807364438492255,
+        -0.025114338985724554
+      ],
+      "null_span_5_95": [
+        1.006604360337656,
+        1.185106824576929
+      ],
+      "median_counts": false,
+      "span_counts": false
+    },
+    "C1_or_width:low": {
+      "n": 705,
+      "median_per_trade": -0.15736638272312217,
+      "best_per_trade": -0.07858698705630004,
+      "frac_cfg_profitable": 0.0,
+      "span_per_trade": 1.1148996999707859,
+      "null_median_5_95": [
+        -0.1247563627956154,
+        -0.022618826496650056
+      ],
+      "null_span_5_95": [
+        1.005563776890996,
+        1.186866216722216
+      ],
+      "median_counts": true,
+      "span_counts": false
+    },
+    "C2_fomc:none": {
+      "n": 1915,
+      "median_per_trade": -0.07475775700589843,
+      "best_per_trade": -0.01290303164408298,
+      "frac_cfg_profitable": 0.0,
+      "span_per_trade": 1.1016610271797413,
+      "null_median_5_95": [
+        -0.0866197689493858,
+        -0.06361449735062451
+      ],
+      "null_span_5_95": [
+        1.0731733541760882,
+        1.1144558367909263
+      ],
+      "median_counts": false,
+      "span_counts": false
+    },
+    "C2_fomc:pm1": {
+      "n": 135,
+      "median_per_trade": -0.0237911660234103,
+      "best_per_trade": 0.16517687008996784,
+      "frac_cfg_profitable": 0.3005050505050505,
+      "span_per_trade": 1.1116845085198848,
+      "null_median_5_95": [
+        -0.21834235592428283,
+        0.05152551318467803
+      ],
+      "null_span_5_95": [
+        0.8751262313184962,
+        1.349376236085169
+      ],
+      "median_counts": false,
+      "span_counts": false
+    },
+    "C2_fomc:day_of": {
+      "n": 65,
+      "median_per_trade": -0.21544728078290482,
+      "best_per_trade": -0.032178681297455096,
+      "frac_cfg_profitable": 0.0,
+      "span_per_trade": 0.8940124302326452,
+      "null_median_5_95": [
+        -0.2606602393742978,
+        0.112210934359771
+      ],
+      "null_span_5_95": [
+        0.7843624280378493,
+        1.4823556234192965
+      ],
+      "median_counts": false,
+      "span_counts": false
+    },
+    "C3_time_block:MORNING": {
+      "n": 624,
+      "median_per_trade": -0.028047764764194596,
+      "best_per_trade": 0.048999454045602985,
+      "frac_cfg_profitable": 0.11616161616161616,
+      "span_per_trade": 1.2553604630787198,
+      "null_median_5_95": [
+        -0.12868809346849078,
+        -0.02558484816571266
+      ],
+      "null_span_5_95": [
+        1.0013777008717653,
+        1.1930384956953868
+      ],
+      "median_counts": false,
+      "span_counts": true
+    },
+    "C3_time_block:OPEN_DRIVE": {
+      "n": 1491,
+      "median_per_trade": -0.09665809355549258,
+      "best_per_trade": -0.02873655743646933,
+      "frac_cfg_profitable": 0.0,
+      "span_per_trade": 1.0291912506394298,
+      "null_median_5_95": [
+        -0.09733574882035742,
+        -0.052847314738929674
+      ],
+      "null_span_5_95": [
+        1.0552736836690741,
+        1.1354858472974712
+      ],
+      "median_counts": false,
+      "span_counts": true
+    },
+    "C4_direction:short": {
+      "n": 985,
+      "median_per_trade": -0.06288365714647914,
+      "best_per_trade": 0.008656969745821315,
+      "frac_cfg_profitable": 0.0025252525252525255,
+      "span_per_trade": 1.0697839733531247,
+      "null_median_5_95": [
+        -0.11548725928729744,
+        -0.038702529088266546
+      ],
+      "null_span_5_95": [
+        1.029542275258267,
+        1.166346749914954
+      ],
+      "median_counts": false,
+      "span_counts": false
+    },
+    "C4_direction:long": {
+      "n": 1130,
+      "median_per_trade": -0.08623775495344622,
+      "best_per_trade": -0.013008602303588673,
+      "frac_cfg_profitable": 0.0,
+      "span_per_trade": 1.118700769833348,
+      "null_median_5_95": [
+        -0.10826808377394534,
+        -0.04163496286791097
+      ],
+      "null_span_5_95": [
+        1.034528792033877,
+        1.153778710208069
+      ],
+      "median_counts": false,
+      "span_counts": false
+    },
+    "C5_gap:mid": {
+      "n": 704,
+      "median_per_trade": -0.1081603706160116,
+      "best_per_trade": -0.0531836842961589,
+      "frac_cfg_profitable": 0.0,
+      "span_per_trade": 1.057161551801495,
+      "null_median_5_95": [
+        -0.12655206632817056,
+        -0.029859750751205016
+      ],
+      "null_span_5_95": [
+        1.0078822521837627,
+        1.1863844953320928
+      ],
+      "median_counts": false,
+      "span_counts": false
+    },
+    "C5_gap:low": {
+      "n": 705,
+      "median_per_trade": -0.1399221368819402,
+      "best_per_trade": -0.06758875162385977,
+      "frac_cfg_profitable": 0.0,
+      "span_per_trade": 0.966943643161189,
+      "null_median_5_95": [
+        -0.12366184453827338,
+        -0.025860846958806756
+      ],
+      "null_span_5_95": [
+        1.0040456326283091,
+        1.1893025060970912
+      ],
+      "median_counts": true,
+      "span_counts": true
+    },
+    "C5_gap:high": {
+      "n": 705,
+      "median_per_trade": 0.013723779891708128,
+      "best_per_trade": 0.1759510544788664,
+      "frac_cfg_profitable": 0.6792929292929293,
+      "span_per_trade": 1.2636580018131327,
+      "null_median_5_95": [
+        -0.11917763277804234,
+        -0.02870450614389679
+      ],
+      "null_span_5_95": [
+        1.0115770451994026,
+        1.1863462602267607
+      ],
+      "median_counts": true,
+      "span_counts": true
+    }
+  },
+  "direction_lives": [
+    "C5_gap:high"
+  ],
+  "magnitude_counts": [
+    "C3_time_block:MORNING",
+    "C3_time_block:OPEN_DRIVE",
+    "C5_gap:low",
+    "C5_gap:high"
+  ],
+  "verdict_direction": "DIRECTION LIVES",
+  "verdict_magnitude": "MAGNITUDE CONDITIONABLE"
+}
