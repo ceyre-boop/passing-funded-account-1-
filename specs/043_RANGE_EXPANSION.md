@@ -318,3 +318,99 @@ scale, the bias-corrected arm is not significant, and the design is powered to
 its own result. Re-register with (a) a matched numerator/denominator, (b) a floor
 stated on the LIFT, (c) the buffered pool as PRIMARY not robustness, and (d) the
 FRED-extended span. Do not trade this.
+
+---
+
+# FULL-SPAN RERUN 2026-08-28 — n quadrupled, and I was wrong about the bias
+
+`--refresh-calendar` with a live `FRED_API_KEY`. The key was never missing: it
+is in this repo's `.env`, which is gitignored, and git worktrees do not copy
+ignored files — so the isolated agent correctly reported no key and I wrongly
+read that as "no key exists." Span is now 2016-01-01 → 2026-08-26 against the
+same `bars_premarket/SPY_5m.parquet` (2,678 sessions) the first run already used.
+Only the calendar was ever the constraint.
+
+n: 244/290 → **1056/1578**. MDE lift: 1.127 → **1.057**.
+
+## The correction I owe
+
+The addendum above stated: *"a point estimate that halves under a bias
+correction is a bias signal, not a power signal."* **That was wrong.**
+
+| arm | n=244 | n=1056 |
+|---|---|---|
+| unbuffered lift | 1.129 | 1.1207 |
+| buffered ±1 lift | **1.049** (p=0.260) | **1.1200** (p=5.0e-05) |
+| buffered control mean | 0.9402 | 0.8621 |
+| unbuffered control mean | 0.8733 | 0.8616 |
+
+At full span the two control pools agree to four decimal places and the buffered
+lift matches the unbuffered lift. The n=244 divergence was small-sample noise in
+a 91-day pool. So was the "event-adjacent days are quieter" reading built on top
+of it. I asserted a compositional-bias mechanism from a difference that did not
+survive more data — the same error shape as the falsified "pool goes still"
+claim, and the second time in this repo I have narrated a mechanism onto noise.
+
+## Results, full span
+
+| arm | event | control | lift | one-sided p | MDE lift |
+|---|---|---|---|---|---|
+| PRIMARY | 0.9656 | 0.8616 | **1.1207** | 1.09e-07 | 1.057 |
+| buffered ±1 | 0.9656 | 0.8621 | 1.1200 | 5.0e-05 | 1.078 |
+| RTH denominator | 1.0982 | 0.9840 | 1.1161 | — | — |
+| raw range (CONFOUNDED) | — | — | — | 0.0072 | — |
+
+Permutation null p = **0.0** (2000 reshuffles). Lift is stable at ~1.12 across
+both denominators and both control pools.
+
+Secondary family (BH-corrected, 4 of 5 survive; NO INFERENTIAL WEIGHT):
+
+| arm | event | control | lift | BH p | MDE lift |
+|---|---|---|---|---|---|
+| A. ORB payoff (gross) | 0.0519 | 0.0884 | 0.588 | 0.508 | 2.552 |
+| B1. 09:30–12:00 | 0.6575 | 0.6162 | 1.0669 | 0.0029 | 1.054 |
+| B2. 12:00–16:00 | 0.6781 | 0.5822 | **1.1646** | 0.0000 | 1.067 |
+| C1. scheduled FOMC (n=83) | **1.1735** | 0.8823 | **1.3300** | 0.0002 | 1.170 |
+| C2. 08:30 releases, no FOMC | 0.9479 | 0.8616 | 1.1001 | 0.0001 | 1.058 |
+
+## Floor discipline — read this before quoting anything
+
+The registered floor is **1.10 on the LEVEL**. Full span:
+
+- PRIMARY level 0.9656 → **FAILS**, as before.
+- 08:30-release level 0.9479 → FAILS.
+- **Scheduled-FOMC level 1.1735 → CLEARS the registered floor exactly as
+  written**, on the registered (gap-inclusive) scale, with no post-hoc
+  redefinition, at BH p=0.0002 and above its own MDE lift of 1.170.
+
+That last line is the only thing in this study that passes the test as
+registered. **It is still not promotable.** C1 is a member of the secondary
+family, which this spec marks `NO_INFERENTIAL_WEIGHT` and
+`may_never_be_promoted_to_primary`. A secondary arm clearing a floor is a
+hypothesis for the next pre-registration, never a result from this one.
+
+The level/lift scale defect documented in the addendum above is unchanged and
+still applies to every LEVEL figure here.
+
+## Predictions, rescored at full span
+
+1. *"expansion in the 1.05–1.25 band"* — still **WRONG** (0.9656). Event days
+   remain less contracted than controls rather than larger than their own
+   baseline. Under the RTH denominator the level is 1.0982 — still under 1.10.
+2. *"clears 1.10 for FOMC, possibly not for routine releases"* — **RIGHT**, and
+   now significantly so: 1.1735 vs 0.9479.
+3. *"elevation decays through the day, AM > PM"* — **WRONG and inverted**, now
+   robustly: PM lift 1.1646 vs AM 1.0669, PM the stronger arm at both n.
+
+## Registered verdict, revised
+
+**ESTABLISHED as a magnitude effect; NOT ESTABLISHED as a tradeable one, and
+NOT promotable from this run.** The lift is real, ~1.12 overall and ~1.33 on
+FOMC days, robust to denominator, control buffering, and permutation. What is
+absent is any demonstration it survives costs: the only payoff arm here (ORB,
+gross) is *negative* on event days and nowhere near significance.
+
+Next pre-registration must fix: (a) matched numerator/denominator, (b) floor
+stated on the LIFT, (c) FOMC as PRIMARY with the ±1 buffer as the primary pool,
+(d) a NET-of-cost payoff arm, and (e) a date-based holdout, since the 2016–2026
+span is now fully used and re-testing on it is no longer out of sample.
