@@ -432,6 +432,14 @@ ORPHANS:
     and alternate-denominator robustness arms, and a BH-corrected secondary family (ORB payoff, AM/PM
     decomposition, FOMC-vs-releases split); a one-shot research artifact builder over the existing data/daytrade/bars_premarket
     cache, not a consumer of its own output.
+- module: daytrade.exit_taxonomy
+  reason: spec 044 — the exit mechanism taxonomy register (`MECHANISMS` tuple). Its only importer today
+    is its own test file `daytrade/test_exit_taxonomy.py` (excluded from ORPHANS import-graph checks,
+    per this script's own convention). It has `if __name__ == "__main__":` and is invoked directly (`python3
+    daytrade/exit_taxonomy.py`) to print the registry grouped by family, matching this repo's script convention
+    (daytrade/operator_tick.sh calls its siblings the same way). Deliberately Phase A only — spec 044
+    forbids it from importing or modifying `stockfish_exit.py`, so it is not (yet) consumed by the runner;
+    a later phase may wire it in as a completeness check, not this one.
 IMPORTED_NOT_CALLED:
 - module: scripts.carry_scan
   target: sovereign.forex.entry_engine
