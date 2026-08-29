@@ -66,8 +66,8 @@ The extractor HALTS unless n = 350, `round(ΣR_net, 2) == 34.41`, every trade
 matches exactly one captured trade, the cost replication matches gross−csv to
 1e-12 on all 350, and replaying every path through `exit_machine.decide_exit`
 reproduces the incumbent's exit bar and reason (G7 parity). The parquet's
-sha256 is recorded in `artifacts/inventory.json` and attached to
-CARRY-FROZEN-001; the driver refuses to run against any other bytes (I64).
+sha256 (`f1708fec…`) is recorded in `artifacts/inventory.json` and attached to
+CARRY-FROZEN-001 (3 datasets, verify rc 0); the driver refuses to run against any other bytes (I64).
 
 Path semantics:
 - Decision bars are t = 1..H_max (`H_max = 10`). The candidate may EXIT at any
@@ -194,13 +194,14 @@ incumbent — not as "deviation failed".
 | α, β | 0.05, 0.20 | declared |
 | pessimistic | spread_mult 2.0, slip_mult 2.0, delay_bars 1 | declared |
 | permutation | 10,000 draws, seed 20260829 | declared |
-| `n_units` (all) | <<FILL from carry_units.json>> | incumbent |
-| `n_units_oof` (B2-B5) | <<FILL>> | incumbent |
-| `σ` | <<FILL: SD of incumbent per-unit R>> | incumbent |
-| `δ` | <<FILL: mde(σ, n_units_oof)>> | rule above |
+| `n_units` (all) | **121** (overlap components of `[entry, path_end]`, H_max 10; 124 with `[entry, incumbent_exit]`; 160 entry-date clusters) | `artifacts/carry_units.json` sha `ea3447e4…` |
+| `n_units_oof` (B2-B5) | **97** (per block B1 24 · B2 23 · B3 25 · B4 27 · B5 22) | same |
+| `σ` | **0.7580** = SD over the 121 units of the unit-mean `incumbent_r_net` (trade-level SD 1.1262, reference only) | `artifacts/carry_trades.parquet` sha `492a7c8d…` |
+| `δ` | **0.1914 R** = `mechanisms.mde(0.7580, 97)` | rule above |
 
-The `<<FILL>>` cells are filled by the commit that follows the path extraction
-and **precedes** the commit that adds `exit_tablebase.py`. After the first run
+The four incumbent-derived cells were filled on 2026-08-29 from the frozen
+artifacts (hashes above), in the commit that follows the path extraction and
+**precedes** the commit that adds `exit_tablebase.py`. After the first run
 of `scripts/carry_exit_sprt.py`, no cell in this table changes; a different
 value is a different spec (046), not an amendment.
 
