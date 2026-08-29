@@ -33,7 +33,7 @@ HOLD_EDGES = (1, 3, 8, 20, 60)                               # bars held
 ATR_EDGES = (0.7, 0.9, 1.15, 1.5)                            # atr_now / atr_entry
 CARRY_EDGES = (-0.5, 0.5)                                    # accrued swap in R
 
-SESSIONS = ("asia", "london", "ny_am", "ny_pm")
+TIME_BLOCKS = ("PREOPEN", "OPEN_DRIVE", "MORNING", "MIDDAY", "AFTERNOON", "CLOSE")
 
 
 def _bucket(x: float, edges: Sequence[float]) -> int:
@@ -49,7 +49,7 @@ class State:
     hold_b: int
     atr_b: int
     carry_b: int
-    session: str
+    time_block: str
     weekend: bool
 
     def key(self) -> tuple:
@@ -64,7 +64,7 @@ def discretize(
     bars_held: int,
     atr_ratio: float,
     carry_r: float,
-    session: str,
+    time_block: str,
     weekend_exposure: bool,
     *,
     r_edges: Sequence[float] = R_EDGES,
@@ -72,14 +72,14 @@ def discretize(
     atr_edges: Sequence[float] = ATR_EDGES,
     carry_edges: Sequence[float] = CARRY_EDGES,
 ) -> State:
-    if session not in SESSIONS:
-        raise ValueError(f"unknown session {session!r}; expected one of {SESSIONS}")
+    if time_block not in TIME_BLOCKS:
+        raise ValueError(f"unknown time_block {time_block!r}; expected one of {TIME_BLOCKS}")
     return State(
         r_b=_bucket(unrealized_r, r_edges),
         hold_b=_bucket(bars_held, hold_edges),
         atr_b=_bucket(atr_ratio, atr_edges),
         carry_b=_bucket(carry_r, carry_edges),
-        session=session,
+        time_block=time_block,
         weekend=bool(weekend_exposure),
     )
 
@@ -88,7 +88,7 @@ def discretize_frame(df: pd.DataFrame, **edge_overrides) -> pd.Series:
     """Vectorized-ish wrapper. df needs the six snapshot columns."""
     required = {
         "unrealized_r", "bars_held", "atr_ratio",
-        "carry_r", "session", "weekend_exposure",
+        "carry_r", "time_block", "weekend_exposure",
     }
     missing = required - set(df.columns)
     if missing:
@@ -100,7 +100,7 @@ def discretize_frame(df: pd.DataFrame, **edge_overrides) -> pd.Series:
             row.bars_held,
             row.atr_ratio,
             row.carry_r,
-            row.session,
+            row.time_block,
             row.weekend_exposure,
             **edge_overrides,
         ),
@@ -153,7 +153,7 @@ def audit(
         )
 
     states = discretize_frame(df, **edge_overrides)
-    counts = states.value_counts()
+    counts = states.value_counts()  # unit = snapshot, not episode/trade_id (known bug, Colin's call — left as-is)
 
     thin = counts[counts < min_paths]
     obs_in_thin = int(thin.sum())
