@@ -1,0 +1,325 @@
+{
+  "generated": "2026-08-29T05:27:07+00:00",
+  "head": "a56468397cce15c3b3474476dbbbbe9a125dc887",
+  "hashes": {
+    "data/cb_ab/cb_off_trades.csv": "95822c7fc101bbc889b0cb10ae92d862f903b95491d61351bd28f390f31cb367",
+    "data/cb_ab/stats.json": "3d912a0bbb7e011f795999bf3423250888868af06095c49ebc08377cc7bf531d",
+    "data/daytrade/SF_FROZEN_001.json": "cc8222f9313cfc61b837fcb161339093d15cd40fbfa31618fb6da5cac845c24b",
+    "data/daytrade/SF_FROZEN_002.json": "6a974664663535ff225fc2c338660657256818e1d874da7db6f7e1d6e249788f",
+    "data/proof/backtest_trades_v015_2015_2024.csv": "764446112c8c80d6688ad8761f623981b39cc547d06788a17957bfa866cf3050",
+    "data/research/spot_cache/AUDUSD_ohlc.parquet": "d345bc4e2d2ad49f215c62b38722eb9209adac5ec77562ef8d9a222f20e63f9c",
+    "data/research/spot_cache/EURUSD_ohlc.parquet": "8a9c4b7322b618a7b1994cf1e5c569796abffe5ff731e8545cbebbba48946144",
+    "data/research/spot_cache/GBPUSD_ohlc.parquet": "c67a84f0d2b46c9adc84b95d4b20a28b6784712f6cfe07385293b4e2dfdd72ad",
+    "data/research/spot_cache/USDJPY_ohlc.parquet": "e602df2ac458a35e134d8bd07f91ba478964892d615f153c2da1aac1dd5839a7",
+    "sovereign/forex/exit_machine.py": "32cbe369207eacbfa7cffff184770dc0f204fb0f58a347e16b704975054cea16",
+    "sovereign/forex/fast_backtester.py": "8db318b17a1965eb80f627cf70c5397e0b159094a974c175f3df2be61d86d58f",
+    "sovereign/forex/forex_backtester.py": "c98cb1e336c68ca5fee01a508fd2980e5b416d4d4590dd5a8e6eae43e246d8fe",
+    "sovereign/forex/signal_engine.py": "1d1e77c3b52f6ef369a73877e5547f9f43eda4d0a2442a5bb91e9303b6d30f64",
+    "sovereign/forex/swap_model.py": "f7543867f67bea169249868cf5d30ded821c86277d1c8175204dee364224fdf7"
+  },
+  "notes": {
+    "data/cb_ab/cb_off_trades.csv": "honest population: 350 CB-off trades 2015-2024",
+    "data/cb_ab/stats.json": "anchor: cb_off total_r 34.41, n 350",
+    "data/daytrade/SF_FROZEN_001.json": "intraday checkpoint (not the carry incumbent) \u2014 must stay untouched",
+    "data/daytrade/SF_FROZEN_002.json": "intraday checkpoint (current) \u2014 must stay untouched",
+    "data/proof/backtest_trades_v015_2015_2024.csv": "sealed 411 \u2014 secondary only, contaminated (102 in fabricated CB windows)",
+    "data/research/spot_cache/AUDUSD_ohlc.parquet": "path data",
+    "data/research/spot_cache/EURUSD_ohlc.parquet": "path data",
+    "data/research/spot_cache/GBPUSD_ohlc.parquet": "path data",
+    "data/research/spot_cache/USDJPY_ohlc.parquet": "path data",
+    "sovereign/forex/exit_machine.py": "carry incumbent decide_exit \u2014 the rule under test",
+    "sovereign/forex/fast_backtester.py": "the per-bar loop that calls the incumbent; entry/stop/hold semantics",
+    "sovereign/forex/forex_backtester.py": "incumbent config constants + _apply_costs (SPREAD_COST, SWAP_RATES_ANNUAL)",
+    "sovereign/forex/signal_engine.py": "atr_pct + signal frame the incumbent consumes",
+    "sovereign/forex/swap_model.py": "financing model; static table since swap_calibration.json is absent"
+  },
+  "phase0": {
+    "engines": {
+      "intraday": {
+        "module": "daytrade/stockfish_exit.py",
+        "callers": [
+          "daytrade/backtest.py:95",
+          "daytrade/ceiling.py:176",
+          "daytrade/four_books.py:180",
+          "daytrade/runner.py:4",
+          "daytrade/runner.py:798",
+          "daytrade/shadow.py:104",
+          "daytrade/stockfish_constitution.py:297",
+          "daytrade/stockfish_exit.py:486",
+          "daytrade/stockfish_exit.py:667",
+          "daytrade/stockfish_exit.py:674",
+          "daytrade/test_az_spine.py:72",
+          "daytrade/test_trade_events.py:188"
+        ],
+        "checkpoints": {
+          "SF_FROZEN_001": {
+            "engine_sha256": "1c437fc4e49c9a60cf1c497feaa0269af61440423cf1b6c94c69e068588ff457",
+            "file_sha256": "cc8222f9313cfc61b837fcb161339093d15cd40fbfa31618fb6da5cac845c24b"
+          },
+          "SF_FROZEN_002": {
+            "engine_sha256": "eb12b4a4f78acd3747e9ff64122ee2a7a4cef64a628947794960ef7e9b2d9991",
+            "file_sha256": "6a974664663535ff225fc2c338660657256818e1d874da7db6f7e1d6e249788f"
+          }
+        },
+        "frozen_policy_verify_rc": 0
+      },
+      "carry": {
+        "module": "sovereign/forex/exit_machine.py",
+        "callers_or_imports": [
+          "sovereign/execution/forex_exit_manager.py:194",
+          "sovereign/execution/forex_exit_manager.py:40",
+          "sovereign/forex/exit_machine.py:1",
+          "sovereign/forex/exit_machine.py:134",
+          "sovereign/forex/exit_machine.py:6",
+          "sovereign/forex/exit_machine.py:73",
+          "sovereign/forex/fast_backtester.py:11",
+          "sovereign/forex/fast_backtester.py:92"
+        ],
+        "checkpoint": "ABSENT"
+      }
+    },
+    "population": {
+      "file": "data/cb_ab/cb_off_trades.csv",
+      "n": 350,
+      "span": [
+        "2015-01-02",
+        "2024-12-09"
+      ],
+      "sum_r": 34.4062,
+      "anchor_total_r": 34.41,
+      "anchor_n": 350,
+      "exit_reasons": {
+        "time": 204,
+        "trailing_stop": 90,
+        "reversal": 45,
+        "stop": 10,
+        "cb_refresh": 1
+      },
+      "mean_r_by_reason": {
+        "cb_refresh": 5.771,
+        "reversal": 0.169,
+        "stop": -1.739,
+        "time": 0.432,
+        "trailing_stop": -0.552
+      },
+      "entry_date_clusters": 160,
+      "per_pair": {
+        "USDJPY=X": 90,
+        "AUDUSD=X": 90,
+        "GBPUSD=X": 89,
+        "EURUSD=X": 81
+      }
+    },
+    "path_data": {
+      "EURUSD": {
+        "rows": 3147,
+        "start": "2014-06-02",
+        "end": "2026-07-03",
+        "cols": [
+          "Close",
+          "High",
+          "Low",
+          "Open",
+          "Volume"
+        ],
+        "gaps_gt_5d": 0
+      },
+      "GBPUSD": {
+        "rows": 3147,
+        "start": "2014-06-02",
+        "end": "2026-07-03",
+        "cols": [
+          "Close",
+          "High",
+          "Low",
+          "Open",
+          "Volume"
+        ],
+        "gaps_gt_5d": 0
+      },
+      "USDJPY": {
+        "rows": 3147,
+        "start": "2014-06-02",
+        "end": "2026-07-03",
+        "cols": [
+          "Close",
+          "High",
+          "Low",
+          "Open",
+          "Volume"
+        ],
+        "gaps_gt_5d": 0
+      },
+      "AUDUSD": {
+        "rows": 3147,
+        "start": "2014-06-02",
+        "end": "2026-07-03",
+        "cols": [
+          "Close",
+          "High",
+          "Low",
+          "Open",
+          "Volume"
+        ],
+        "gaps_gt_5d": 0
+      }
+    },
+    "fx_state": {
+      "file": "data/carry/fx_state.jsonl",
+      "rows": 10208,
+      "cols": 28,
+      "null_cols_pct": {
+        "cb_calendar_days_to_next": 100.0,
+        "positioning_extreme": 100.0,
+        "prev_sha256": 0.01,
+        "weekend_next_session": 0.12
+      },
+      "date_range": [
+        "2016-11-04",
+        "2026-08-27"
+      ],
+      "rows_per_pair": {
+        "EURUSD=X": 2552,
+        "GBPUSD=X": 2552,
+        "USDJPY=X": 2552,
+        "AUDUSD=X": 2552
+      }
+    },
+    "self_exclusion": {
+      "scripts/build_fomc_splash_event_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_macro_event_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_spy_bracket_harvest_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_spy_macro_decay_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_spy_pre_fomc_drift_event_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_spy_premarket_event_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_spy_range_expansion_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_spy_second_wave_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_spy_splash_continuation_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/build_spy_whipsaw_event_study.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/ruin_engine.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/carry_buy_gate.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/drawdown_margin.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/run_cb_ab.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/run_vintage_ab.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/eval_lab.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "scripts/tsmom_backtest.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "sovereign/forex/forex_backtester.py": {
+        "asserts": false,
+        "lines": []
+      },
+      "daytrade/ceiling.py": {
+        "asserts": true,
+        "lines": [
+          43,
+          393
+        ]
+      },
+      "daytrade/oracle_audit.py": {
+        "asserts": true,
+        "lines": [
+          48,
+          119
+        ]
+      },
+      "daytrade/exit_evaluator.py": {
+        "asserts": true,
+        "lines": [
+          30,
+          200
+        ]
+      },
+      "daytrade/stack_exam.py": {
+        "asserts": true,
+        "lines": [
+          45,
+          49,
+          50,
+          60,
+          62
+        ]
+      },
+      "daytrade/ontology_audit.py": {
+        "asserts": true,
+        "lines": [
+          29,
+          66
+        ]
+      },
+      "daytrade/mechanism_fpr_harness.py": {
+        "asserts": true,
+        "lines": [
+          27,
+          43
+        ]
+      }
+    },
+    "sealed": {
+      "matches": 7,
+      "mismatches": [],
+      "unhashed": [
+        "data/daytrade/FROZEN_FUTURES_EXIT_CANDIDATE.json"
+      ]
+    },
+    "tests": {
+      "daytrade": 40,
+      "scripts": 21,
+      "sovereign": 14,
+      "execution": 1
+    },
+    "absent_by_design": [
+      "data/research/swap_calibration.json",
+      "data/execution/calibrated_costs.json"
+    ]
+  }
+}
