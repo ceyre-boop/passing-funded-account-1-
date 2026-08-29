@@ -11,5 +11,5 @@
 - [x] Step 7 fill model — I68 on the 350: test_all_fallback_table_reproduces_incumbent (BaseFill ≡ _apply_costs, 350/350 to 1e-9)
 - [x] Step 8 driver — run once: base ACCEPT_H0 @68/97, pessimistic ACCEPT_H0 @46/97, perm p=0.726 → INCUMBENT STAYS (1dfcc0d); guardrail halted once on a stale hash, correctly
 - [x] Step 9 feature registry — require_as_of raises on NOT-AS-OF / LABEL / UNREGISTERED; flip-a-feature mutation raises (12 tests); loader integration lands with Step 6
-- [ ] Step 10 red team → artifacts/redteam.md — running
-- [ ] Step 11 artifacts/session-report.md — seven DoD items; final commit
+- [x] Step 10 red team → artifacts/redteam.md — 13 findings (4 MAJOR open), verdict: INCUMBENT STAYS survives, the gate is hollow; verbatim in report §5, response in §5b; footprint verified (only redteam.md)
+- [x] Step 11 artifacts/session-report.md — seven DoD items filled; final commit
