@@ -27,7 +27,7 @@ class SignFlipResult:
     draws: int
     seed: int
     n: int
-    n_nonzero: int              # units that deviated at all
+    n_nonzero: int              # units whose |ΔR| > 1e-9 (float noise from summed deltas is not a deviation)
     null_q05: float
     null_q95: float
 
@@ -49,5 +49,5 @@ def sign_flip_test(deltas, *, draws: int, seed: int) -> SignFlipResult:
     # +1 correction: the observed arrangement is itself one of the permutations
     p = (float(np.sum(means >= obs)) + 1.0) / (draws + 1.0)
     return SignFlipResult(observed_mean=obs, p_one_sided=p, draws=draws, seed=seed, n=int(d.size),
-                          n_nonzero=int(np.sum(d != 0.0)), null_q05=float(np.quantile(means, 0.05)),
+                          n_nonzero=int(np.sum(np.abs(d) > 1e-9)), null_q05=float(np.quantile(means, 0.05)),
                           null_q95=float(np.quantile(means, 0.95)))

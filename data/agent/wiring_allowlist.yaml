@@ -2,12 +2,12 @@
 # Every entry MUST have a non-empty `reason`.
 
 ORPHANS:
-- module: sovereign.forex.feature_registry
+- module: scripts.carry_exit_sprt
   reason: >-
-    spec 045 / session brief 2026-08-29 Phase 3 — the as-of-computable feature registry. Its consumer is `sovereign/forex/exit_tablebase.py` (state keys pass through `require_as_of`) and `scripts/carry_exit_sprt.py`, both landing in the same session; until they do, its only importer is its test. Remove this entry when the importer lands — a stale allowlist entry is itself a finding.
-- module: sovereign.forex.sprt
-  reason: >-
-    spec 045 §6 — the Wald SPRT gate (Forge seat). Consumed by `scripts/carry_exit_sprt.py` (Step 8 of Plans/cheeky-mixing-locket.md); pure stdlib, no repo imports by design so it cannot see the candidate. Remove when the driver lands.
+    spec 045's gate — a standalone CLI run once with every declared parameter on the command line
+    (`python3 scripts/carry_exit_sprt.py --h-max 10 ...`); it is the importer of exit_tablebase, sprt,
+    permutation, feature_registry and fill_model, and nothing imports it except its test. Same
+    convention as scripts/wiring_audit.py.
 - module: scripts.build_inventory
   reason: >-
     session brief 2026-08-29 Phase 0 — standalone CLI (`python3 scripts/build_inventory.py`) that computes the Phase 0 inventory and records dependency hashes via sovereign.forex.inventory. Invoked by hand at session start; never imported. Same convention as scripts/wiring_audit.py.

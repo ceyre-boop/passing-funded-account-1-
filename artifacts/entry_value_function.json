@@ -1,0 +1,205 @@
+{
+  "label": "IN-SAMPLE-OPTIMISTIC table value at t=1, with OOF-realized means beside it; NOT an input to any gate",
+  "blocks": {
+    "2": {
+      "r_edges": [
+        -0.7756316608316565,
+        -0.034424154018203174,
+        0.27919869688230575,
+        1.2793014442337654
+      ],
+      "t1_cells": {
+        "(1, 1, 0)": {
+          "n_train": 6,
+          "action": "FALLBACK",
+          "q_exit": -0.04075675829067618,
+          "q_hold": 0.09158879207041935,
+          "value_cross_fit": -0.8857194986246032,
+          "oof_n": 12,
+          "oof_incumbent_mean_r": 0.6367521628153333,
+          "oof_candidate_mean_r": 0.6367521628153346
+        },
+        "(1, 1, 1)": {
+          "n_train": 2,
+          "action": "FALLBACK",
+          "q_exit": -0.039369316286108444,
+          "q_hold": 0.13288030731861067,
+          "value_cross_fit": 0.39279835528866497,
+          "oof_n": 3,
+          "oof_incumbent_mean_r": -0.6280015745822567,
+          "oof_candidate_mean_r": -0.6280015745822588
+        },
+        "(2, 1, 0)": {
+          "n_train": 30,
+          "action": "HOLD",
+          "q_exit": -0.009066098376283093,
+          "q_hold": 0.2123495244282872,
+          "value_cross_fit": 0.2009474276602951,
+          "oof_n": 51,
+          "oof_incumbent_mean_r": 0.1420784342328624,
+          "oof_candidate_mean_r": 0.14207843423286165
+        },
+        "(2, 1, 1)": {
+          "n_train": 7,
+          "action": "FALLBACK",
+          "q_exit": -0.006391448336866943,
+          "q_hold": 0.9647359358167013,
+          "value_cross_fit": 0.1898961978416671,
+          "oof_n": 10,
+          "oof_incumbent_mean_r": -0.017934190739444012,
+          "oof_candidate_mean_r": -0.017934190739444588
+        }
+      }
+    },
+    "3": {
+      "r_edges": [
+        -0.4826957823941482,
+        -0.0288127193930616,
+        0.2639683690209659,
+        0.8754242915647877
+      ],
+      "t1_cells": {
+        "(1, 1, 0)": {
+          "n_train": 22,
+          "action": "HOLD",
+          "q_exit": -0.042035344837583734,
+          "q_hold": 0.32394587272466197,
+          "value_cross_fit": 0.32394587272466197,
+          "oof_n": 18,
+          "oof_incumbent_mean_r": 0.15200379881988946,
+          "oof_candidate_mean_r": 0.2354613925312265
+        },
+        "(1, 1, 1)": {
+          "n_train": 8,
+          "action": "FALLBACK",
+          "q_exit": -0.039469126549666285,
+          "q_hold": 0.0459948654923861,
+          "value_cross_fit": -0.28038221817690623,
+          "oof_n": 4,
+          "oof_incumbent_mean_r": 1.5352088596306348,
+          "oof_candidate_mean_r": 1.3129581113902393
+        },
+        "(2, 1, 0)": {
+          "n_train": 70,
+          "action": "HOLD",
+          "q_exit": -0.010771945895983926,
+          "q_hold": 0.12352756105040458,
+          "value_cross_fit": 0.12305838239999675,
+          "oof_n": 46,
+          "oof_incumbent_mean_r": -0.18824625425543473,
+          "oof_candidate_mean_r": -0.11712632707752998
+        },
+        "(2, 1, 1)": {
+          "n_train": 14,
+          "action": "FALLBACK",
+          "q_exit": -0.008823642119957587,
+          "q_hold": 0.4211322573196575,
+          "value_cross_fit": 0.16389865783878857,
+          "oof_n": 9,
+          "oof_incumbent_mean_r": 0.009526158776939998,
+          "oof_candidate_mean_r": 0.08950932045150065
+        }
+      }
+    },
+    "4": {
+      "r_edges": [
+        -0.4711829964020776,
+        -0.038804465672867834,
+        0.22822791019308666,
+        0.8202599072406701
+      ],
+      "t1_cells": {
+        "(1, 1, 0)": {
+          "n_train": 23,
+          "action": "HOLD",
+          "q_exit": -0.05281293105664263,
+          "q_hold": 0.33561410242904466,
+          "value_cross_fit": 0.3341098442543031,
+          "oof_n": 6,
+          "oof_incumbent_mean_r": -0.23677617972825002,
+          "oof_candidate_mean_r": -0.4546620439578469
+        },
+        "(1, 1, 1)": {
+          "n_train": 5,
+          "action": "FALLBACK",
+          "q_exit": -0.07720358580150259,
+          "q_hold": 0.09793186641497315,
+          "value_cross_fit": 1.004748291387018,
+          "oof_n": 2,
+          "oof_incumbent_mean_r": -0.03634325103695002,
+          "oof_candidate_mean_r": 1.0180903334025422
+        },
+        "(2, 1, 0)": {
+          "n_train": 123,
+          "action": "HOLD",
+          "q_exit": -0.013418321645142712,
+          "q_hold": 0.16943265492803863,
+          "value_cross_fit": 0.171398517618753,
+          "oof_n": 53,
+          "oof_incumbent_mean_r": -0.1672868381821821,
+          "oof_candidate_mean_r": -0.3038823108314588
+        },
+        "(2, 1, 1)": {
+          "n_train": 30,
+          "action": "HOLD",
+          "q_exit": -0.01519960767478138,
+          "q_hold": 0.31075163061939465,
+          "value_cross_fit": 0.3221397816031366,
+          "oof_n": 11,
+          "oof_incumbent_mean_r": 0.03753224958816999,
+          "oof_candidate_mean_r": -0.0021222844042403984
+        }
+      }
+    },
+    "5": {
+      "r_edges": [
+        -0.5058331965420328,
+        -0.03761920037398326,
+        0.24144099047711234,
+        0.8331690349657239
+      ],
+      "t1_cells": {
+        "(1, 1, 0)": {
+          "n_train": 31,
+          "action": "HOLD",
+          "q_exit": -0.0508804528879029,
+          "q_hold": 0.09905672942529005,
+          "value_cross_fit": -0.0622907210940561,
+          "oof_n": 15,
+          "oof_incumbent_mean_r": 0.3381440746100573,
+          "oof_candidate_mean_r": 0.140662135455984
+        },
+        "(1, 1, 1)": {
+          "n_train": 8,
+          "action": "FALLBACK",
+          "q_exit": -0.06467802662304542,
+          "q_hold": -0.175368566986241,
+          "value_cross_fit": 0.6745690851247299,
+          "oof_n": 3,
+          "oof_incumbent_mean_r": 0.17502737165376667,
+          "oof_candidate_mean_r": 0.1840545639353803
+        },
+        "(2, 1, 0)": {
+          "n_train": 164,
+          "action": "HOLD",
+          "q_exit": -0.01386233872974276,
+          "q_hold": 0.07166269222860289,
+          "value_cross_fit": 0.07166221267459578,
+          "oof_n": 52,
+          "oof_incumbent_mean_r": 0.17169769960885067,
+          "oof_candidate_mean_r": -0.032442563117089554
+        },
+        "(2, 1, 1)": {
+          "n_train": 38,
+          "action": "HOLD",
+          "q_exit": -0.01715366757678366,
+          "q_hold": 0.16913923450248214,
+          "value_cross_fit": 0.18558895213224658,
+          "oof_n": 6,
+          "oof_incumbent_mean_r": 0.4721747867600817,
+          "oof_candidate_mean_r": 0.3706291485350068
+        }
+      }
+    }
+  }
+}

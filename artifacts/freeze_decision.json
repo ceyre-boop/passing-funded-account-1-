@@ -1,0 +1,7 @@
+{
+  "carry_exit_v1_replaces_incumbent": false,
+  "reading": "INCUMBENT STAYS \u2014 base ACCEPT_H0, pessimistic ACCEPT_H0, permutation p=0.7260",
+  "rule": "ACCEPT_H1 on both arms AND permutation p < alpha; otherwise CARRY-FROZEN-001 stays",
+  "run_at": "2026-08-29T06:29:46+00:00",
+  "spec": "045"
+}
