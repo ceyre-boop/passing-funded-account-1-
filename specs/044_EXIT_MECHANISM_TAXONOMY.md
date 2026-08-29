@@ -266,3 +266,84 @@ The purpose of this taxonomy is that the engine be **correct, complete, and
 honest about what it cannot do** before a better entry exists. It is not
 expected to raise returns on the current entry population, and any later reading
 of it that claims otherwise is overselling it.
+
+---
+
+# AMENDMENT 1 — 2026-08-29. I60 bound nothing. My defect, found by the builder seat.
+
+The builder seat reported that mutating a `FALSIFIED` entry's `evidence` produced
+**zero** test failures, and correctly refused to quietly repair the test to make
+the mutation bite. That is the Roles section working exactly as designed: a
+separate seat caught a hole the authoring seat could not see.
+
+## The defect
+
+There is a **category error** in §THE MOVE LIST and §THE FALSIFIED REGISTER as
+originally written. The registry holds **mechanisms**. `MECH-001` … `MECH-004`
+are **claims about** mechanisms. They are different kinds of object:
+
+- "a wider trailing stop captures more of the winning tail" is not a mechanism.
+  `trail` is the mechanism, and it is `ACTIVE`. What died is a claim about it.
+- `MECH-004` ("the right exit configuration is knowable from entry-time
+  features") is not about any single mechanism at all — it is a claim about the
+  **selection process** over the menu.
+
+So the falsified register lived in prose, no registry row ever carried
+`status="FALSIFIED"`, and I60 — written to bind on that status — was
+unreachable. The register's entire purpose is that a killed mechanism cannot be
+re-proposed under a new name, and prose cannot enforce that.
+
+## The fix — a second structure, not a forced mapping
+
+Do **not** coerce claims into `Mechanism` rows. Add a sibling structure to
+`daytrade/exit_taxonomy.py`:
+
+```python
+@dataclass(frozen=True)
+class FalsifiedClaim:
+    mech_id: str               # MECH-00x, must resolve in MECHANISMS.json
+    claim: str                 # the hypothesis as originally stated
+    outcome: str               # what killed it, and where that is recorded
+    about: tuple[str, ...]     # mechanism names it concerns; MAY be empty
+                               # for process-level claims such as MECH-004
+
+FALSIFIED_CLAIMS: tuple[FalsifiedClaim, ...]
+```
+
+`about` is allowed to be empty **and that is meaningful**, not a gap: it marks a
+claim about the selection process rather than about any one move. `MECH-004` is
+exactly that case and must not be forced onto a mechanism it is not about.
+
+## I60, restated so it actually binds
+
+- **I60a** — every mechanism whose `status` is `killed` in `MECHANISMS.json`
+  appears **exactly once** in `FALSIFIED_CLAIMS`. Currently that is
+  `MECH-002`, `MECH-003`, `MECH-004`. A future kill that is not registered here
+  fails the suite.
+- **I60b** — every `mech_id` in `FALSIFIED_CLAIMS` resolves to a real id in
+  `MECHANISMS.json`.
+- **I60c** — every name in any `about` tuple resolves to a real `Mechanism.name`
+  in the registry.
+
+Note `MECH-001` is `status="proposed"` in `MECHANISMS.json` even though
+`029_MUTATION_LOG.md:21-35` records **"Trailing genuinely HURTS"** and the
+`trail_mult` config was removed. **Do not edit `MECHANISMS.json` to reconcile
+this.** The discrepancy is real and is Colin's to rule on; I60a binds on the
+file's own `status` field so the taxonomy reports what the ledger says rather
+than what a passing agent thinks it should say. Record the discrepancy in the
+module docstring instead.
+
+Each of I60a/b/c requires its own fault injection.
+
+## RATIFIED — the `tp1_done` / `tp2_done` substitution
+
+The builder reported that §THE MOVE LIST names `tp1_done` and `tp2_done` in
+`requires` for `breakeven` and `profit_lock`, but both are derived `@property`
+methods on `TradeState`, not keys of `__dataclass_fields__` — making I62
+unsatisfiable as literally written. They substituted `stage`, the real field
+those properties read, with an inline comment.
+
+**That substitution is correct and is hereby ratified.** The spec table was
+wrong; the semantic dependency (both mechanisms gate on lifecycle stage) is
+preserved. `requires` means *fields*, and the move-list table above should be
+read accordingly.
