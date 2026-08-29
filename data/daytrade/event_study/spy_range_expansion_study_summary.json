@@ -1,0 +1,472 @@
+{
+ "generated_at": "2026-08-29T02:54:52.390242+00:00",
+ "spec": "specs/043_RANGE_EXPANSION.md (pre-registered before this script existed)",
+ "question": "the splash is real but directionless -- is a scheduled macro event a REGIME CONDITIONER (larger day MAGNITUDE) rather than a directional trigger?",
+ "primary_symbol": "SPY",
+ "bar_source": "data/daytrade/bars_premarket/SPY_5m.parquet (Alpaca SIP, raw)",
+ "rth_definition": "09:30-16:00 ET, 78 x 5m bars, impulse window (08:30) excluded by construction",
+ "atr": {
+  "window": 20,
+  "definition": "Wilder TR vs the PRIOR session's RTH close, averaged over the 20 sessions STRICTLY BEFORE the measured day",
+  "lookahead_chokepoint": "build_spy_range_expansion_study.prior_window refuses any end_index past the measured day"
+ },
+ "economic_floor": 1.1,
+ "calendar": {
+  "fred": {
+   "source": "data/daytrade/event_study/fred_historical_release_dates.json",
+   "generated_at": "2026-08-28T00:32:30.908742+00:00",
+   "calendar_start": "2024-01-02",
+   "calendar_end": "2026-08-25",
+   "releases": {
+    "10": "Consumer Price Index",
+    "46": "Producer Price Index",
+    "50": "Employment Situation",
+    "53": "Gross Domestic Product",
+    "54": "Personal Income and Outlays",
+    "180": "Unemployment Insurance Weekly Claims Report"
+   },
+   "n_events": 290
+  },
+  "fomc_scheduled_only": {
+   "source": "data/daytrade/fomc_calendar.json",
+   "verified_as_of": "2026-08-28",
+   "n_scheduled": 87,
+   "unscheduled_excluded": [
+    "2020-03-03",
+    "2020-03-15"
+   ]
+  },
+  "span_start": "2024-01-02",
+  "span_end": "2026-08-25",
+  "span_rationale": "outside the verified calendar span a day cannot be shown to be a NON-event day; a contaminated control pool is worse than a short one"
+ },
+ "population": {
+  "complete_rth_sessions_in_cache": 2655,
+  "sessions_excluded_incomplete_bars": 23,
+  "sessions_excluded_no_atr20_prior": 21,
+  "sessions_in_study_span": 661,
+  "event_days_in_span": 244,
+  "control_days_in_span": 417,
+  "excluded_bar_reasons_sample": [
+   {
+    "date": "2015-12-31",
+    "reason": "78 missing 5m RTH bar(s) in 09:30-16:00 (first at 2015-12-31 09:30:00-05:00)"
+   },
+   {
+    "date": "2016-02-02",
+    "reason": "1 missing 5m RTH bar(s) in 09:30-16:00 (first at 2016-02-02 11:20:00-05:00)"
+   },
+   {
+    "date": "2016-11-25",
+    "reason": "1 missing 5m RTH bar(s) in 09:30-16:00 (first at 2016-11-25 15:40:00-05:00)"
+   },
+   {
+    "date": "2017-07-03",
+    "reason": "2 missing 5m RTH bar(s) in 09:30-16:00 (first at 2017-07-03 15:00:00-04:00)"
+   },
+   {
+    "date": "2017-11-24",
+    "reason": "1 missing 5m RTH bar(s) in 09:30-16:00 (first at 2017-11-24 15:35:00-05:00)"
+   }
+  ],
+  "excluded_atr_reasons_sample": [
+   {
+    "date": "2016-01-04",
+    "reason": "fewer than 20 strictly-prior complete sessions with a defined true range -- no ATR20_prior, day excluded rather than computed on a short window"
+   },
+   {
+    "date": "2016-01-05",
+    "reason": "fewer than 20 strictly-prior complete sessions with a defined true range -- no ATR20_prior, day excluded rather than computed on a short window"
+   },
+   {
+    "date": "2016-01-06",
+    "reason": "fewer than 20 strictly-prior complete sessions with a defined true range -- no ATR20_prior, day excluded rather than computed on a short window"
+   }
+  ]
+ },
+ "PRIMARY": {
+  "event_n": 244,
+  "event_mean": 0.9862078520350684,
+  "event_ci95": [
+   0.9195528350042926,
+   1.0528628690658441
+  ],
+  "control_n": 290,
+  "control_mean": 0.8733338365434645,
+  "control_ci95": [
+   0.8157698774360241,
+   0.9308977956509049
+  ],
+  "diff_event_minus_control": 0.11287401549160392,
+  "welch_t": 2.511985505580233,
+  "welch_p_two_sided": 0.012316419826043713,
+  "cohens_d": 0.21935646406490408,
+  "control_reliable": true,
+  "label": "PRIMARY: expansion, event vs matched control",
+  "metric": "expansion = RTH_true_range / ATR20_prior",
+  "event_over_control_ratio_NOT_the_floor_statistic": 1.1292449814361296,
+  "welch_p_one_sided_event_gt_control": 0.0061582099130218565,
+  "mde_one_sided_95_power_80": {
+   "mde_expansion_units": 0.1111721590678702,
+   "pooled_sd": 0.5145689048771606,
+   "n_effective": 132.50936329588015,
+   "z_alpha_one_sided_95": 1.645,
+   "z_power_80": 0.842,
+   "control_mean": 0.8733338365434645,
+   "smallest_detectable_event_mean": 0.9845059956113347,
+   "smallest_detectable_ratio_event_over_control": 1.1272962919974272
+  },
+  "permutation_null": {
+   "n_perm": 2000,
+   "null_mean": 0.9244641508031398,
+   "null_sd": 0.024836335902193477,
+   "observed_event_mean": 0.9862078520350684,
+   "p_value_one_sided_event_gt_random": 0.0055
+  },
+  "hypothesis": "SPY RTH range normalised by its own strictly-prior ATR20 is LARGER on scheduled-macro-event days than on matched non-event days",
+  "one_sided_direction": "event > control (pre-registered)",
+  "control_weekdays_matched_against": [
+   "Friday",
+   "Thursday",
+   "Tuesday",
+   "Wednesday"
+  ],
+  "economic_floor": 1.1,
+  "event_mean_expansion": 0.9862078520350684,
+  "clears_economic_floor": false,
+  "verdict": "SIGNIFICANT AND USELESS -- the expansion ratio is below the pre-registered 1.10 economic floor and cannot move a profit target or an ORB threshold beyond noise and slippage",
+  "ROBUSTNESS_buffered_control_pm1_session": {
+   "event_n": 244,
+   "event_mean": 0.9862078520350684,
+   "event_ci95": [
+    0.9195528350042926,
+    1.0528628690658441
+   ],
+   "control_n": 91,
+   "control_mean": 0.940224215177558,
+   "control_ci95": [
+    0.8175401123766796,
+    1.0629083179784364
+   ],
+   "diff_event_minus_control": 0.04598363685751039,
+   "welch_t": 0.6455141759368516,
+   "welch_p_two_sided": 0.5196054601264392,
+   "cohens_d": 0.08363635547974892,
+   "control_reliable": true,
+   "label": "expansion, event vs +/-1-session-buffered control",
+   "metric": "expansion",
+   "event_over_control_ratio_NOT_the_floor_statistic": 1.0489070969617886,
+   "welch_p_one_sided_event_gt_control": 0.2598027300632196,
+   "mde_one_sided_95_power_80": {
+    "mde_expansion_units": 0.16795417205566154,
+    "pooled_sd": 0.5498044073506351,
+    "n_effective": 66.28059701492538,
+    "z_alpha_one_sided_95": 1.645,
+    "z_power_80": 0.842,
+    "control_mean": 0.940224215177558,
+    "smallest_detectable_event_mean": 1.1081783872332196,
+    "smallest_detectable_ratio_event_over_control": 1.1786320425962906
+   },
+   "permutation_null": {
+    "n_perm": 2000,
+    "null_mean": 0.9743239604723986,
+    "null_sd": 0.01798176109155212,
+    "observed_event_mean": 0.9862078520350684,
+    "p_value_one_sided_event_gt_random": 0.259
+   }
+  },
+  "ROBUSTNESS_rth_denominator": {
+   "event_n": 244,
+   "event_mean": 1.1242469253497551,
+   "event_ci95": [
+    1.0479017020124197,
+    1.2005921486870905
+   ],
+   "control_n": 290,
+   "control_mean": 0.9949763215722075,
+   "control_ci95": [
+    0.9302832515524815,
+    1.0596693915919335
+   ],
+   "diff_event_minus_control": 0.12927060377754762,
+   "welch_t": 2.5319591006953113,
+   "welch_p_two_sided": 0.011647587299331278,
+   "cohens_d": 0.22146131604128355,
+   "control_reliable": true,
+   "label": "expansion_rth (denominator = mean prior-20 RTH range, no gap)",
+   "metric": "expansion_rth",
+   "event_over_control_ratio_NOT_the_floor_statistic": 1.1299232966401465,
+   "welch_p_one_sided_event_gt_control": 0.005823793649665639,
+   "mde_one_sided_95_power_80": {
+    "mde_expansion_units": 0.1261114161366134,
+    "pooled_sd": 0.5837164073993389,
+    "n_effective": 132.50936329588015,
+    "z_alpha_one_sided_95": 1.645,
+    "z_power_80": 0.842,
+    "control_mean": 0.9949763215722075,
+    "smallest_detectable_event_mean": 1.1210877377088209,
+    "smallest_detectable_ratio_event_over_control": 1.126748158124345
+   },
+   "economic_floor": 1.1,
+   "event_mean_expansion": 1.1242469253497551,
+   "clears_economic_floor": true,
+   "verdict": "SIGNIFICANT AND ABOVE THE 1.10 FLOOR"
+  },
+  "CONFOUNDED_raw_range_never_primary": {
+   "event_n": 244,
+   "event_mean": 6.668922950819676,
+   "event_ci95": [
+    6.213652325573001,
+    7.12419357606635
+   ],
+   "control_n": 290,
+   "control_mean": 6.1225389655172435,
+   "control_ci95": [
+    5.588283114982682,
+    6.656794816051805
+   ],
+   "diff_event_minus_control": 0.5463839853024322,
+   "welch_t": 1.5256765203107332,
+   "welch_p_two_sided": 0.1276878149165278,
+   "cohens_d": 0.12980380153917742,
+   "control_reliable": true,
+   "label": "RAW RTH range in points -- CONFOUNDED by vol clustering",
+   "metric": "rth_range_points",
+   "event_over_control_ratio_NOT_the_floor_statistic": 1.0892414059558824,
+   "welch_p_one_sided_event_gt_control": 0.0638439074582639,
+   "mde_one_sided_95_power_80": {
+    "mde_expansion_units": 0.9094169646504523,
+    "pooled_sd": 4.209306498142293,
+    "n_effective": 132.50936329588015,
+    "z_alpha_one_sided_95": 1.645,
+    "z_power_80": 0.842,
+    "control_mean": 6.1225389655172435,
+    "smallest_detectable_event_mean": 7.031955930167696,
+    "smallest_detectable_ratio_event_over_control": 1.1485359210896624
+   },
+   "why_not_primary": "macro events cluster inside high-volatility regimes; a raw-range gap can be pure volatility autocorrelation (vol was already elevated and merely persisted) and answers a different question than the primary"
+  }
+ },
+ "SECONDARY_EXPLORATORY_BH_CORRECTED_WITHIN_ITS_OWN_FAMILY": {
+  "NO_INFERENTIAL_WEIGHT": true,
+  "may_never_be_promoted_to_primary": true,
+  "tests": [
+   {
+    "event_n": 243,
+    "event_mean": -0.02407386955903371,
+    "event_ci95": [
+     -0.1820757738804581,
+     0.13392803476239068
+    ],
+    "control_n": 286,
+    "control_mean": 0.1347807646278385,
+    "control_ci95": [
+     -0.03096872240494608,
+     0.3005302516606231
+    ],
+    "diff_event_minus_control": -0.1588546341868722,
+    "welch_t": -1.3596746325923237,
+    "welch_p_two_sided": 0.1745150125866773,
+    "cohens_d": -0.11738902398491202,
+    "control_reliable": true,
+    "label": "A. ORB payoff (GROSS of costs), event vs control",
+    "metric": "orb_R",
+    "event_over_control_ratio_NOT_the_floor_statistic": -0.17861502437315402,
+    "welch_p_one_sided_event_gt_control": 0.9127424937066614,
+    "mde_one_sided_95_power_80": {
+     "mde_expansion_units": 0.2936228602901303,
+     "pooled_sd": 1.353232430037835,
+     "n_effective": 131.37618147448015,
+     "z_alpha_one_sided_95": 1.645,
+     "z_power_80": 0.842,
+     "control_mean": 0.1347807646278385,
+     "smallest_detectable_event_mean": 0.4284036249179688,
+     "smallest_detectable_ratio_event_over_control": 3.178521995337334
+    },
+    "gross_of_costs": true,
+    "cost_note": "GROSS. The bracket-harvest study already showed costs are what kills this family -- a gross number here is a diagnostic, not a tradeable claim.",
+    "event_days_without_a_usable_orb_R": 1,
+    "control_days_without_a_usable_orb_R": 4,
+    "welch_p_bh": 0.1745150125866773
+   },
+   {
+    "event_n": 244,
+    "event_mean": 0.6833642949458416,
+    "event_ci95": [
+     0.6389423392539308,
+     0.7277862506377524
+    ],
+    "control_n": 290,
+    "control_mean": 0.6163009777129256,
+    "control_ci95": [
+     0.5785468793328631,
+     0.6540550760929881
+    ],
+    "diff_event_minus_control": 0.06706331723291603,
+    "welch_t": 2.25468477081407,
+    "welch_p_two_sided": 0.02458410691716494,
+    "cohens_d": 0.19715886350847198,
+    "control_reliable": true,
+    "label": "B1. 09:30-12:00 expansion, event vs control",
+    "metric": "expansion_am",
+    "event_over_control_ratio_NOT_the_floor_statistic": 1.1088158540357764,
+    "welch_p_one_sided_event_gt_control": 0.01229205345858247,
+    "mde_one_sided_95_power_80": {
+     "mde_expansion_units": 0.07348881208427062,
+     "pooled_sd": 0.3401486295848642,
+     "n_effective": 132.50936329588015,
+     "z_alpha_one_sided_95": 1.645,
+     "z_power_80": 0.842,
+     "control_mean": 0.6163009777129256,
+     "smallest_detectable_event_mean": 0.6897897897971962,
+     "smallest_detectable_ratio_event_over_control": 1.1192417580724687
+    },
+    "welch_p_bh": 0.05364187885564587
+   },
+   {
+    "event_n": 244,
+    "event_mean": 0.6850504350571577,
+    "event_ci95": [
+     0.6263734147440639,
+     0.7437274553702514
+    ],
+    "control_n": 290,
+    "control_mean": 0.5871778461515058,
+    "control_ci95": [
+     0.5437100899147758,
+     0.6306456023882359
+    ],
+    "diff_event_minus_control": 0.09787258890565187,
+    "welch_t": 2.626964586390412,
+    "welch_p_two_sided": 0.00889943806194712,
+    "cohens_d": 0.23239197529658268,
+    "control_reliable": true,
+    "label": "B2. 12:00-16:00 expansion, event vs control",
+    "metric": "expansion_pm",
+    "event_over_control_ratio_NOT_the_floor_statistic": 1.1666830408318887,
+    "welch_p_one_sided_event_gt_control": 0.00444971903097356,
+    "mde_one_sided_95_power_80": {
+     "mde_expansion_units": 0.09098974556355065,
+     "pooled_sd": 0.4211530487691977,
+     "n_effective": 132.50936329588015,
+     "z_alpha_one_sided_95": 1.645,
+     "z_power_80": 0.842,
+     "control_mean": 0.5871778461515058,
+     "smallest_detectable_event_mean": 0.6781675917150565,
+     "smallest_detectable_ratio_event_over_control": 1.1549611351312343
+    },
+    "welch_p_bh": 0.044497190309735604
+   },
+   {
+    "event_n": 21,
+    "event_mean": 1.1925119977769807,
+    "event_ci95": [
+     0.8025574287909758,
+     1.5824665667629856
+    ],
+    "control_n": 90,
+    "control_mean": 0.8985644014901802,
+    "control_ci95": [
+     0.8006757605168979,
+     0.9964530424634626
+    ],
+    "diff_event_minus_control": 0.29394759628680045,
+    "welch_t": 1.4329878011248036,
+    "welch_p_two_sided": 0.16556271050838078,
+    "cohens_d": 0.5072417895900984,
+    "control_reliable": true,
+    "label": "C1. expansion on SCHEDULED FOMC days vs control",
+    "metric": "expansion",
+    "event_over_control_ratio_NOT_the_floor_statistic": 1.3271302488717753,
+    "welch_p_one_sided_event_gt_control": 0.08278135525419039,
+    "mde_one_sided_95_power_80": {
+     "mde_expansion_units": 0.34926998024571165,
+     "pooled_sd": 0.5795019304784396,
+     "n_effective": 17.027027027027028,
+     "z_alpha_one_sided_95": 1.645,
+     "z_power_80": 0.842,
+     "control_mean": 0.8985644014901802,
+     "smallest_detectable_event_mean": 1.247834381735892,
+     "smallest_detectable_ratio_event_over_control": 1.3886977713188748
+    },
+    "economic_floor": 1.1,
+    "event_mean_expansion": 1.1925119977769807,
+    "clears_economic_floor": true,
+    "verdict": "NOT SIGNIFICANT (ratio above the floor, but not distinguishable from control)",
+    "welch_p_bh": 0.1745150125866773
+   },
+   {
+    "event_n": 223,
+    "event_mean": 0.9667801073687897,
+    "event_ci95": [
+     0.9038900897024336,
+     1.0296701250351459
+    ],
+    "control_n": 290,
+    "control_mean": 0.8733338365434645,
+    "control_ci95": [
+     0.8157698774360241,
+     0.9308977956509049
+    ],
+    "diff_event_minus_control": 0.0934462708253252,
+    "welch_t": 2.1482645917178513,
+    "welch_p_two_sided": 0.032185127313387525,
+    "cohens_d": 0.1902656948658046,
+    "control_reliable": true,
+    "label": "C2. expansion on 08:30 release days WITHOUT FOMC vs control",
+    "metric": "expansion",
+    "event_over_control_ratio_NOT_the_floor_statistic": 1.106999485094008,
+    "welch_p_one_sided_event_gt_control": 0.016092563656693763,
+    "mde_one_sided_95_power_80": {
+     "mde_expansion_units": 0.10878888370404567,
+     "pooled_sd": 0.49113567682935877,
+     "n_effective": 126.06237816764133,
+     "z_alpha_one_sided_95": 1.645,
+     "z_power_80": 0.842,
+     "control_mean": 0.8733338365434645,
+     "smallest_detectable_event_mean": 0.9821227202475102,
+     "smallest_detectable_ratio_event_over_control": 1.1245673523135404
+    },
+    "economic_floor": 1.1,
+    "event_mean_expansion": 0.9667801073687897,
+    "clears_economic_floor": false,
+    "verdict": "SIGNIFICANT AND USELESS -- the expansion ratio is below the pre-registered 1.10 economic floor and cannot move a profit target or an ORB threshold beyond noise and slippage",
+    "welch_p_bh": 0.05364187885564587
+   }
+  ],
+  "skipped_arms": [],
+  "multiple_testing": {
+   "family": "spec 043 secondary/exploratory ONLY -- the primary is not a member of this family",
+   "tests_run": 5,
+   "significant_raw_p_lt_0.05": 3,
+   "expected_by_chance_at_alpha_0.05": 0.2,
+   "significant_after_bh_correction": 1
+  }
+ },
+ "PREDICTION_SCORECARD": [
+  {
+   "prediction": "expansion is elevated, likely in the 1.05-1.25 band",
+   "measured": 0.9862078520350684,
+   "met": false
+  },
+  {
+   "prediction": "clears the 1.10 floor for FOMC and possibly not for routine 08:30 releases",
+   "measured": {
+    "fomc_event_mean": 1.1925119977769807,
+    "releases_event_mean": 0.9667801073687897
+   },
+   "met": true,
+   "note": null
+  },
+  {
+   "prediction": "the elevation decays through the day, so the 09:30-12:00 half is larger than the afternoon half",
+   "measured": {
+    "am_event_minus_control": 0.06706331723291603,
+    "pm_event_minus_control": 0.09787258890565187,
+    "am_event_mean": 0.6833642949458416,
+    "pm_event_mean": 0.6850504350571577
+   },
+   "met": false
+  }
+ ]
+}
