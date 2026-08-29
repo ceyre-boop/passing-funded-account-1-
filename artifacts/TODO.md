@@ -3,7 +3,7 @@
 - [x] Phase 0 discovery + gap list (Plans/cheeky-mixing-locket.md) — approved
 - [x] Step 0 inventory guardrail: sovereign/forex/inventory.py, scripts/build_inventory.py — 6 tests green
 - [x] Step 1 CARRY-FROZEN-001 checkpoint — verify rc 0; 10 tests; real-path injection (calibration file appears) → rc 1, restored → rc 0
-- [ ] Step 2 path extractor → artifacts/carry_paths.parquet — halts unless n=350, round(ΣR,2)=34.41; parity test
+- [x] Step 2 path extractor — n=350, ΣR 34.4062, parity 350/350, cost err 1e-16, 121 units, deterministic hashes; Opus rerun reproduced hashes; 14 tests
 - [ ] Step 3 bench + pre-commit — two identical runs; one-param mutation changes the number
 - [ ] Step 4 spec 045 prereg (FREEZE OVERRIDE commit) — written before any candidate fit
 - [x] Step 5 sprt.py (Forge, gpt-5.6-terra — 5.4 refused by the account) — 17 tests; hand trace re-verified by Opus; Forge injection (d−δ) failed 4, Opus injection (B=ln β/α) failed 8; incumbent-vs-itself → ACCEPT_H0 at step 50 for δ=.25 σ=1

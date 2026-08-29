@@ -76,5 +76,24 @@
     }
   },
   "config_sha256": "84a1d430c96b4fff855eff908c00a482b54a8130d313330b19279f31e834fdcc",
-  "datasets": {}
+  "datasets": {
+    "carry_paths": {
+      "path": "artifacts/carry_paths.parquet",
+      "sha256": "f1708fecddbb5f23bd0a6fd9708eee97753aae57d183a722e378b8fe289a7a12",
+      "why": "frozen per-bar paths of the 350 (H_max 10), parity 350/350 against the incumbent, cost replication 1e-16",
+      "attached_at": "2026-08-29T05:54:09+00:00"
+    },
+    "carry_trades": {
+      "path": "artifacts/carry_trades.parquet",
+      "sha256": "492a7c8d7130ca4bab342c3cce6b12f04e648061f4b08e1467d8b9af2f203988",
+      "why": "per-trade table for the frozen paths (entry/stop/hold_limit/cost fractions/unit_id)",
+      "attached_at": "2026-08-29T05:54:09+00:00"
+    },
+    "carry_units": {
+      "path": "artifacts/carry_units.json",
+      "sha256": "ea3447e4ae9a4250faf9dbd1609c1aa49ed8b69511e73015b967c70ead080456",
+      "why": "SPRT units: 121 overlap components of [entry, path_end] across pairs",
+      "attached_at": "2026-08-29T05:54:10+00:00"
+    }
+  }
 }
