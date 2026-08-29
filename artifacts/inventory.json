@@ -1,7 +1,8 @@
 {
-  "generated": "2026-08-29T05:27:07+00:00",
-  "head": "a56468397cce15c3b3474476dbbbbe9a125dc887",
+  "generated": "2026-08-29T05:31:17+00:00",
+  "head": "6c9c77e1339d32024e8d9f127ef3ce87a28ea981",
   "hashes": {
+    "data/carry/CARRY_FROZEN_001.json": "4d8986b5e2c5b9965375e06adf2b8018df9c96c31cdc567e8773c90ffcd93d7e",
     "data/cb_ab/cb_off_trades.csv": "95822c7fc101bbc889b0cb10ae92d862f903b95491d61351bd28f390f31cb367",
     "data/cb_ab/stats.json": "3d912a0bbb7e011f795999bf3423250888868af06095c49ebc08377cc7bf531d",
     "data/daytrade/SF_FROZEN_001.json": "cc8222f9313cfc61b837fcb161339093d15cd40fbfa31618fb6da5cac845c24b",
@@ -18,6 +19,7 @@
     "sovereign/forex/swap_model.py": "f7543867f67bea169249868cf5d30ded821c86277d1c8175204dee364224fdf7"
   },
   "notes": {
+    "data/carry/CARRY_FROZEN_001.json": "CARRY-FROZEN-001: the carry incumbent pinned (engine, constants, cost tables, spot cache, population, absence of calibration files)",
     "data/cb_ab/cb_off_trades.csv": "honest population: 350 CB-off trades 2015-2024",
     "data/cb_ab/stats.json": "anchor: cb_off total_r 34.41, n 350",
     "data/daytrade/SF_FROZEN_001.json": "intraday checkpoint (not the carry incumbent) \u2014 must stay untouched",

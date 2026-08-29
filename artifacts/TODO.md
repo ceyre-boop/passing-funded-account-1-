@@ -2,7 +2,7 @@
 
 - [x] Phase 0 discovery + gap list (Plans/cheeky-mixing-locket.md) — approved
 - [x] Step 0 inventory guardrail: sovereign/forex/inventory.py, scripts/build_inventory.py — 6 tests green
-- [ ] Step 1 CARRY-FROZEN-001 checkpoint — verify rc 0; byte-flip → rc≠0
+- [x] Step 1 CARRY-FROZEN-001 checkpoint — verify rc 0; 10 tests; real-path injection (calibration file appears) → rc 1, restored → rc 0
 - [ ] Step 2 path extractor → artifacts/carry_paths.parquet — halts unless n=350, round(ΣR,2)=34.41; parity test
 - [ ] Step 3 bench + pre-commit — two identical runs; one-param mutation changes the number
 - [ ] Step 4 spec 045 prereg (FREEZE OVERRIDE commit) — written before any candidate fit

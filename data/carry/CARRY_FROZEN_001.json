@@ -1,0 +1,80 @@
+{
+  "id": "CARRY-FROZEN-001",
+  "pinned_at": "2026-08-29T05:30:49+00:00",
+  "why": "Phase 0 (2026-08-29): the rule that produced the sealed 411 and the honest 350 was content-hashed nowhere; SEALS.json hashes outputs only. A candidate exit policy cannot be measured against a moving self. Pins exit_machine + fast_backtester + forex_backtester constants/_apply_costs tables + swap_model + signal_engine + 4 spot-cache parquets + the 350-trade population, and the ABSENCE of swap_calibration.json / calibrated_costs.json (their absence selects the static cost tables).",
+  "files": {
+    "sovereign/forex/exit_machine.py": "32cbe369207eacbfa7cffff184770dc0f204fb0f58a347e16b704975054cea16",
+    "sovereign/forex/fast_backtester.py": "8db318b17a1965eb80f627cf70c5397e0b159094a974c175f3df2be61d86d58f",
+    "sovereign/forex/forex_backtester.py": "c98cb1e336c68ca5fee01a508fd2980e5b416d4d4590dd5a8e6eae43e246d8fe",
+    "sovereign/forex/swap_model.py": "f7543867f67bea169249868cf5d30ded821c86277d1c8175204dee364224fdf7",
+    "sovereign/forex/signal_engine.py": "1d1e77c3b52f6ef369a73877e5547f9f43eda4d0a2442a5bb91e9303b6d30f64",
+    "data/research/spot_cache/EURUSD_ohlc.parquet": "8a9c4b7322b618a7b1994cf1e5c569796abffe5ff731e8545cbebbba48946144",
+    "data/research/spot_cache/GBPUSD_ohlc.parquet": "c67a84f0d2b46c9adc84b95d4b20a28b6784712f6cfe07385293b4e2dfdd72ad",
+    "data/research/spot_cache/USDJPY_ohlc.parquet": "e602df2ac458a35e134d8bd07f91ba478964892d615f153c2da1aac1dd5839a7",
+    "data/research/spot_cache/AUDUSD_ohlc.parquet": "d345bc4e2d2ad49f215c62b38722eb9209adac5ec77562ef8d9a222f20e63f9c",
+    "data/cb_ab/cb_off_trades.csv": "95822c7fc101bbc889b0cb10ae92d862f903b95491d61351bd28f390f31cb367",
+    "data/cb_ab/stats.json": "3d912a0bbb7e011f795999bf3423250888868af06095c49ebc08377cc7bf531d"
+  },
+  "must_be_absent": [
+    "data/research/swap_calibration.json",
+    "data/execution/calibrated_costs.json"
+  ],
+  "config": {
+    "HOLD_DAYS": 60,
+    "PAIR_HOLD_OVERRIDES": {},
+    "PAIR_TRAILING_OVERRIDES": {
+      "AUDNZD=X": 1.25,
+      "AUDUSD=X": 1.0,
+      "EURUSD=X": 1.25,
+      "GBPUSD=X": 2.0
+    },
+    "PAIR_VIX_GATES": {
+      "AUDNZD=X": 15.0,
+      "AUDUSD=X": 20.0,
+      "EURUSD=X": 18.0,
+      "GBPUSD=X": 18.0,
+      "USDJPY=X": 15.0
+    },
+    "SIGNAL_THRESHOLD": 0.15,
+    "SLIPPAGE_PER_SIDE": 5e-05,
+    "SPREAD_COST": {
+      "AUDNZD=X": 0.0002,
+      "AUDUSD=X": 0.00014,
+      "EURUSD=X": 0.0001,
+      "GBPUSD=X": 0.00012,
+      "USDJPY=X": 0.012
+    },
+    "STOP_ATR_MULT": 2.0,
+    "STOP_PCT": 0.04,
+    "SWAP_RATES_ANNUAL": {
+      "AUDNZD=X": {
+        "LONG": -0.0003,
+        "SHORT": -0.0003
+      },
+      "AUDUSD=X": {
+        "LONG": -0.0008,
+        "SHORT": -0.0012
+      },
+      "EURUSD=X": {
+        "LONG": -0.0015,
+        "SHORT": -0.001
+      },
+      "GBPUSD=X": {
+        "LONG": -0.0012,
+        "SHORT": -0.0008
+      },
+      "USDJPY=X": {
+        "LONG": 0.002,
+        "SHORT": -0.0035
+      }
+    },
+    "TRAILING_ATR_MULT": 1.25,
+    "_DEFAULT_SPREAD": 0.00015,
+    "_DEFAULT_SWAP": {
+      "LONG": -0.001,
+      "SHORT": -0.001
+    }
+  },
+  "config_sha256": "84a1d430c96b4fff855eff908c00a482b54a8130d313330b19279f31e834fdcc",
+  "datasets": {}
+}
