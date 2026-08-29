@@ -30,7 +30,7 @@ Full map: `artifacts/inventory.json` (`hashes`).
 |---|---|---|
 | `scripts/carry_exit_sprt.py` | pending | — |
 | `sovereign/forex/exit_tablebase.py` | pending | — |
-| `scripts/carry_bench.py` | n/a — replay of a frozen artifact, no fitting | — |
+| `scripts/carry_bench.py` | n/a — replay of a frozen artifact, no fitting; refuses unhashed inputs (`bench()` → `inventory.require_hashes`) | `scripts/carry_bench.py:60` |
 
 Legacy scripts WITHOUT it (not retrofitted tonight; `build_inventory.py` `self_exclusion`):
 10× `scripts/build_*_study.py`, `ruin_engine.py`, `carry_buy_gate.py`, `drawdown_margin.py`,
@@ -38,7 +38,12 @@ Legacy scripts WITHOUT it (not retrofitted tonight; `build_inventory.py` `self_e
 
 ## 4. Bench
 
-pending
+`python3 scripts/carry_bench.py` → **`34.4061881520`** (incumbent total net R over the 350 frozen
+paths replayed through the pinned `exit_machine.decide_exit`; 1,727 decision rows parity-checked
+against the frozen `incumbent_action` on every run). Two runs identical. Halving every trail
+multiple changes the number; a 0.01% change does not (no exit is that marginal — recorded, not
+hidden). `.githooks/pre-commit` runs `--check` against `artifacts/bench.txt` and blocks a mismatch.
+Refuses to run on unhashed inputs or a non-verifying CARRY-FROZEN-001.
 
 ## 5. Red-team findings (verbatim)
 
@@ -53,12 +58,12 @@ pending
 | # | gap | status |
 |---|---|---|
 | G1 | carry incumbent unhashed | **CLOSED** — CARRY-FROZEN-001 (`a74f12f`) |
-| G2 | no frozen path dataset | in progress — extractor |
+| G2 | no frozen path dataset | **CLOSED** — `carry_paths.parquet` f1708fec…, attached to CARRY-FROZEN-001 (`04f4fed`) |
 | G3 | no SPRT | **CLOSED** — `sovereign/forex/sprt.py` (`c1f7683`) |
 | G4 | no overlap-respecting OOS scheme | pending — Step 6 |
-| G5 | no bench / pre-commit | pending — Step 3 |
+| G5 | no bench / pre-commit | **CLOSED** — `scripts/carry_bench.py` + `.githooks/pre-commit` |
 | G6 | nothing halts on an unhashed dependency | **CLOSED** — `inventory.require_hashes` (`6c9c77e`); driver wiring pending |
-| G7 | extraction parity unproven | pending — falls out of G2 |
+| G7 | extraction parity unproven | **CLOSED** — 350/350 exits reproduced; the builder's own hold_limit bug took it 125→350 |
 | G8 | spec 034 carry_exit is not a candidate | recorded |
 | G9 | no pessimistic fill | **CLOSED** — `fill_model.py` (`82cdf38`); 350-parity pending G2 |
 | G10 | no as_of_computable registry | **CLOSED** — `feature_registry.py` (`b2377e2`) |
