@@ -18,7 +18,31 @@ import bars
 import ceiling
 
 REAL_CACHE = bars.ROOT / "data" / "daytrade" / "bars" / "NVDA_5m.parquet"
-DAY = pd.Timestamp("2026-08-21").date()
+def _last_complete_session_day():
+    """The fixture day is CHOSEN, not pinned.
+
+    This file used to hard-code 2026-08-21 and assert it was a full 78-bar
+    session. It was, when the file was written. After the cache was restored to
+    an earlier snapshot that same date held the operator's mid-session capture
+    (62 bars) and all five tests failed — not because anything under test
+    changed, but because the fixture named a specific date and the cache moved
+    underneath it. A fixture that breaks whenever the cache is regenerated is
+    testing the cache, not the code. So: take the most recent genuinely complete
+    RTH session actually present, and skip if there is none.
+    """
+    df = pd.read_parquet(REAL_CACHE)
+    idx = pd.to_datetime(df.index, utc=True).tz_convert(bars.ET)
+    t = idx.strftime("%H:%M")
+    rth = df[(t >= bars.RTH_OPEN) & (t <= bars.RTH_CLOSE)]
+    sizes = rth.groupby(rth.index.map(lambda x: x.date() if hasattr(x, "date") else x)).size() \
+        if not isinstance(rth.index, pd.DatetimeIndex) else rth.groupby(idx[(t >= bars.RTH_OPEN) & (t <= bars.RTH_CLOSE)].date).size()
+    full = sorted(d for d, n in sizes.items() if n == 78)
+    if not full:
+        pytest.skip("no complete 78-bar NVDA session in the cache to build fixtures from")
+    return full[-1]
+
+
+DAY = _last_complete_session_day()
 
 
 def _real_day_bars() -> pd.DataFrame:
@@ -107,7 +131,24 @@ def test_load_sessions_unchanged_on_real_cache():
     the real, untouched cache are unaffected by adding load_partial_session —
     this hits the real file directly, not a monkeypatched CACHE."""
     sessions = bars.load_sessions("NVDA", "5m", allow_fetch=False)
-    assert len(sessions) == 74
+
+    # The COUNT is computed from the cache, not pinned to a literal. What is
+    # being tested is the completeness RULE — that load_sessions returns exactly
+    # the days meeting it and silently admits no partial day. Hard-coding 74 made
+    # this test fail the moment the cache was restored to a snapshot whose last
+    # day was the operator's 62-bar mid-session capture, which is a fact about
+    # the cache and not about the rule.
+    df = pd.read_parquet(REAL_CACHE)
+    idx = pd.to_datetime(df.index, utc=True).tz_convert(bars.ET)
+    t = idx.strftime("%H:%M")
+    rth_mask = (t >= bars.RTH_OPEN) & (t <= bars.RTH_CLOSE)
+    per_day = pd.Series(1, index=idx[rth_mask]).groupby(idx[rth_mask].date).size()
+    expected = int((per_day >= bars.MIN_SESSION_BARS_5M).sum())
+    excluded = int((per_day < bars.MIN_SESSION_BARS_5M).sum())
+    assert len(sessions) == expected, (
+        f"load_sessions returned {len(sessions)} but {expected} days in the cache "
+        f"meet the {bars.MIN_SESSION_BARS_5M}-bar rule ({excluded} excluded)")
+    assert {s.day for s in sessions} == set(per_day[per_day >= bars.MIN_SESSION_BARS_5M].index)
     assert all(len(s) >= bars.MIN_SESSION_BARS_5M for s in sessions)
     # every session is either the 78-bar full day or a >=70-bar reduced day —
     # never a partial/forming day slipping into the population
