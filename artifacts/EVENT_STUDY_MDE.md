@@ -188,17 +188,68 @@ for two of them. This is not the seven-below-floor pattern. Something is there.
    before the fit, in the units of the decision it would drive (stop distance, target
    distance, size). Detection is necessary, not sufficient.
 
-## Reproducibility gap
+## Reproducibility — gap found, then closed (updated 2026-08-31)
 
-`spy_macro_decay` — the **strongest** result in the table at 0.22× — has **no
-`*_days.csv` on disk.** Its script names `DECAY_CSV`/`BREATH_CSV_TEMPLATE` as targets,
-but neither file was persisted. Its `t` and `n` cannot be independently recomputed from
-committed data, only read from the summary it wrote about itself. None of the other
-per-day CSVs carry an event/control flag either, so no study's split is currently
-reproducible from committed artifacts alone. That is a gap worth closing before anything
-is built on the magnitude axis — the top result is the least verifiable one.
+**As first published, this section reported a gap:** `spy_macro_decay` — the
+**strongest** row in the table at 0.22× — had no per-day CSV on disk. Its script names
+`DECAY_CSV`/`BREATH_CSV_TEMPLATE` as outputs, but both belong to its *exploratory*
+blocks; the PRIMARY 08:30–08:35 event/control split was never written at all. The only
+committed FRED artifact, `fred_historical_release_dates.json`, spans 2024-01-04 →
+2026-08-20 with 290 events — it belongs to a different study's window, while the PRIMARY
+used **1,221 events over 2016-01-04 → 2026-08-26**. The headline number was not
+recoverable from committed data by any route.
 
----
+**It has since been closed, and the result reproduces exactly.** The day universe always
+did reproduce offline from the committed 5m premarket cache (2,676 complete days, 2
+excluded, same span); only the calendar was missing. `scripts/persist_macro_decay_split.py`
+refetches that calendar over the study's exact span, persists it as its own artifact, and
+rebuilds the split. All eight recorded PRIMARY statistics recover to within 1e-9:
+
+| field | on record | recomputed |
+|---|---|---|
+| event_n / control_n | 1009 / 1667 | 1009 / 1667 |
+| event_mean | 0.001239992089 | 0.001239992089 |
+| control_mean | 0.0004119690573 | 0.0004119690573 |
+| diff_event_minus_control | 0.0008280230315 | 0.0008280230315 |
+| welch_t | 11.4300322 | 11.4300322 |
+| welch_p_two_sided | 1.238926298e-28 | 1.238926298e-28 |
+| cohens_d | 0.5706720116 | 0.5706720116 |
+
+The refetched calendar independently returned **1,221 events**, matching the summary's
+own recorded `events_found_in_window: 1221` — a figure the script never reads. The
+`spy_macro_decay` row **stands**. Re-verify with no network:
+`python3 scripts/persist_macro_decay_split.py --offline`.
+
+**Still open for the other studies.** None of the remaining per-day CSVs carry an
+event/control flag, so no other study's split is reproducible from committed artifacts
+alone. Only `spy_macro_decay` has been closed; the rest were not in scope.
+
+## The `cohens_d` defect — repo-wide sweep (2026-08-31)
+
+The denominator mismatch above is not confined to the studies it was found in. A
+repo-wide sweep located **three** definitions of `_cohens_d`, byte-identical, each
+paired with a Welch test in the same `_welch` helper:
+
+| definition | inherited by |
+|---|---|
+| `scripts/build_spy_premarket_event_study.py:272` | premarket, macro_decay, range_expansion, second_wave, splash_continuation, bracket_harvest |
+| `scripts/build_fomc_splash_event_study.py:266` | fomc_double_splash, pre_fomc_drift |
+| `scripts/build_spy_whipsaw_event_study.py:283` | whipsaw (a documented local re-implementation of the same formulas) |
+
+Every `cohens_d` in every one of the ten studies traces to one of these three. Two
+sites were checked and cleared: `build_macro_event_study.py:345` runs Welch but emits
+no `cohens_d` (this is why nvda has none), and `build_spy_range_expansion_study.py:523`
+computes a pooled sd for its **MDE**, which is the correct two-sample use — its own
+docstring derives it.
+
+**Resolution: annotated, not silently recomputed.** The published `cohens_d` values are
+left unchanged so existing summaries stay comparable, and the Welch t/p values beside
+them were always correct. All three `_welch` helpers now additionally emit
+`cohens_d_welch_equivalent` = `t·√(1/n₁+1/n₂)`, which *is* consistent with the test
+actually run, plus a `cohens_d_caveat` string. All three `_cohens_d` docstrings carry
+the mismatch, its direction, and its measured size. Verified: 58 gate/az tests and 140
+script tests pass, and the new field reproduces `t·√(1/n₁+1/n₂)` to 1e-12 on an
+unequal-variance fixture where the two effect sizes differ by 1.69×.
 
 ## Verification
 

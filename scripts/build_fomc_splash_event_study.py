@@ -264,6 +264,23 @@ def _matched_control(days: pd.DataFrame, all_event_dates: set[str],
 # --------------------------------------------------------------- statistics
 
 def _cohens_d(a: list[float], b: list[float]) -> float | None:
+    """POOLED-sd Cohen's d.
+
+    DENOMINATOR MISMATCH -- annotated 2026-08-31 by the repo-wide sweep.
+    Every significance test in this module is Welch (`equal_var=False`), which
+    does NOT assume equal variance. This d divides by a POOLED sd, which does.
+    The two disagree whenever the arms have unequal variance, and event days
+    are more volatile than control days by construction -- so the pooled sd
+    sits below the true standard error and this d OVERSTATES the effect,
+    worst exactly where the event is most violent (1.87x on the FOMC study,
+    1.25x macro_decay, 1.20x premarket).
+
+    The value is retained unchanged so published summaries stay comparable,
+    and the Welch t/p values it sits beside were always correct. But it must
+    not be used for power or detection-floor arithmetic. `_welch` emits
+    `cohens_d_welch_equivalent` = t * sqrt(1/n1 + 1/n2) alongside it, which is
+    consistent with the test actually run; prefer that, or |t| directly.
+    See artifacts/EVENT_STUDY_MDE.md."""
     if len(a) < 2 or len(b) < 2:
         return None
     na, nb = len(a), len(b)
@@ -290,6 +307,14 @@ def _welch(event_vals: list[float], ctrl_vals: list[float]) -> dict:
         rec["welch_t"] = float(t_stat)
         rec["welch_p_two_sided"] = float(p_val)
         rec["cohens_d"] = _cohens_d(event_vals, ctrl_vals)
+        # Effect size consistent with the Welch test actually run above. The
+        # pooled-sd `cohens_d` beside it is retained for continuity but is the
+        # wrong denominator for this test -- see `_cohens_d`.
+        n1, n2 = len(event_vals), len(ctrl_vals)
+        rec["cohens_d_welch_equivalent"] = float(t_stat) * math.sqrt(1 / n1 + 1 / n2)
+        rec["cohens_d_caveat"] = (
+            "cohens_d uses a POOLED sd; the test is Welch. For power, MDE, or "
+            "detection-floor arithmetic use cohens_d_welch_equivalent or |welch_t|.")
     return rec
 
 
