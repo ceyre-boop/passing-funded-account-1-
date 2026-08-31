@@ -124,3 +124,78 @@ lane stays sealed. `C5_gap:high` is a separate pre-registered test.
 - **I78** granularity is chosen by the §4 rule on occupancy alone; no outcome
   statistic may enter the selection.
 - **I79** no LLM-derived or `as_of_computable=False` feature enters this lane.
+
+---
+
+# GATE 1 RESULT — 2026-08-30
+
+## Grid correction, found by running it: 09:30 is ILLEGAL, not zero-support
+
+`09:30` has exactly **one bar** at or before it, and the state vector requires ≥3
+(ATR is undefined on one bar). It failed on 100% of sessions. That is a
+**legality fact**, not thin support — the same distinction as TIGHTEN under
+`trail_mult=None` on the Stockfish side.
+
+**§2's grid is corrected from 11 timestamps to 10** (10:00 … 14:30), so
+**40 candidates/day**, not 44 — 2 symbols × 10 times × 2 directions. Over the
+declared lane that is ≈104,800 candidates, still exhaustively enumerable, so
+amendment 2 stands: Gate 3b is a lookup.
+
+`09:30` moves to Gate 2's legality mask with the reason recorded, and the
+illegal fraction is reported per day there.
+
+## Occupancy — declared lane, SPY + QQQ
+
+5,234 symbol-days · **2,620 distinct calendar days** · 52,340 candidate moments
+· `min_days=30` · threshold 0.85 pre-declared.
+
+| granularity | cells | valued | `frac_candidates_in_valued_cells` | verdict |
+|---|---|---|---|---|
+| coarse | 90 | 50 | 0.9951 | OK |
+| medium | 328 | 147 | 0.9757 | OK |
+| **fine** | **933** | **260** | **0.9164** | **OK — SELECTED** |
+
+All three clear the bar. The §4 rule takes the **finest** clearing it: **`fine`**.
+The rule read occupancy only; no outcome statistic existed at selection time,
+because Gate 3a has not been built.
+
+This is a materially better position than Phase 1's exit lane, where nothing
+reached OK at episode level and `minimal` was MARGINAL at best. 2,620 days
+against 39 is the difference.
+
+## Occupancy — generalisation lane, `bars/` 12 symbols
+
+387 symbol-days · **40 distinct calendar days** · 3,870 candidate moments.
+
+| granularity | cells | valued | frac | verdict |
+|---|---|---|---|---|
+| coarse | 88 | 24 | 0.8711 | OK |
+| medium | 297 | 22 | 0.5119 | FAIL |
+| fine | 667 | 11 | 0.2364 | FAIL |
+
+As §1 said in advance, no threshold is set here — 40 days cannot support one, and
+the machinery is required to *run* unchanged, not to *pass*. It runs. The lane
+degrades exactly as day count predicts, which is itself a check on the audit.
+
+## Lookahead guard — fault-injection result
+
+The guard computes each feature, then corrupts every bar strictly after `t` by a
+**per-bar factor shared across O/H/L/C** (independent per-column corruption
+inverts High/Low, yields a negative ATR, and raises `StateError` before the
+comparison can run — a real bug found and fixed while building this) and
+recomputes. Any movement raises `LookaheadError`.
+
+A feature reading only `truncate_at(df, t)` **cannot** leak — the truncation makes
+it structurally impossible. So the thing that can break is the truncation, and
+that is what the guard tests. `truncate_at` is therefore a named, patchable seam.
+
+- Break the truncation (return the full session): **all five features move** —
+  `vol` 0.00267→0.00304, `expansion` −0.135→−0.039, `trend` −3.77→−235.15,
+  `gap` 2.185→1.922, `vwap` −3.48→−96.37 — and `LookaheadError` raises. ✓
+- Disable the guard's comparison (`if moved:` → `if False:`): **exactly the two
+  guard tests fail**, nothing else. Restored, 7/7 green. ✓
+
+## Gate 1 status: CLOSED
+
+Occupancy passes at the pre-declared threshold, granularity selected by the
+declared rule, lookahead guard fires correctly under fault injection.
