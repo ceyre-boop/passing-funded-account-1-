@@ -142,12 +142,25 @@ def simulate(session, e: Entry, cfg: dict, observer=None,
     stop and the target, the stop wins. Intrabar path is unknowable at 5m
     resolution; assuming the good outcome is how backtests lie.
     """
+    # vol_k / atr are OPT-IN: absent from cfg, the volatility placement layer stays
+    # dark and this constructs exactly what it always did. Present, they reach the
+    # engine through THIS simulator rather than a parallel one — the volatility
+    # layer was previously unreachable from ceiling.simulate, which forced a second
+    # implementation of the decision loop and made its numbers incomparable to every
+    # other measurement in the repo.
+    vol_k = cfg.get("vol_k")
+    atr = cfg.get("atr")
+    if (vol_k is None) != (atr is None):
+        raise ValueError(
+            "vol_k and atr must be supplied together: the volatility placement stop "
+            f"is entry - direction*k*ATR, and got vol_k={vol_k!r} atr={atr!r}")
     st = TradeState(direction=e.direction, entry=e.entry, qty=1.0, price=e.entry,
                     sl=e.stop, tp1=e.tp1, tp2=e.tp2, trail_dist=e.trail_dist,
                     goal_fraction=cfg["partial_frac"],
                     trail_mult=cfg["trail_mult"], be_arm_frac=cfg["be_arm_frac"],
                     hold_past_tp2=cfg["hold_past_tp2"],
-                    flatten_at_et=cfg["flatten_et"])
+                    flatten_at_et=cfg["flatten_et"],
+                    atr=atr, vol_k=vol_k)
 
     realized, held = 0.0, 1.0
     applied_reduction_keys: set = set()          # C005 threading, mirrors the runner

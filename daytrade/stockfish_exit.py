@@ -55,7 +55,7 @@ from typing import Optional, List
 # ---------------------------------------------------------------- lifecycle
 
 class Stage(str, Enum):
-    ENTERED   = "ENTERED"      # hard stop + emergency exit only
+    ENTERED   = "ENTERED"      # hard stop, PROTECTIVE TIGHTENING, emergency exit
     PROTECTED = "PROTECTED"    # breakeven armed; first reduction allowed
     SCALED    = "SCALED"       # goal banked; profit ladder + volatility allowed
     RUNNER    = "RUNNER"       # trailing only
@@ -69,7 +69,15 @@ _ORDER = {s: i for i, s in enumerate(
 # What each stage is allowed to emit. A trade in RUNNER cannot take a new
 # partial; a trade in CLOSING cannot adjust anything. Violations raise.
 ALLOWED_ACTIONS = {
-    Stage.ENTERED:   frozenset({"HOLD", "EXIT_ALL"}),
+    # MOVE_SL is permitted here and it can only ever TIGHTEN: C003 ("no stop
+    # loosening") is stage-independent — the sole stage branch in
+    # stockfish_constitution.enforce() is C008 (CLOSED is terminal). Excluding
+    # MOVE_SL did not make ENTERED safer, it made any always-on protective layer
+    # (volatility placement, thesis invalidation) raise StageError the moment it
+    # bound tighter than the catastrophic stop before TP1. That was a defect, not
+    # a guarantee. TAKE_PARTIAL stays excluded: scaling out before TP1 is a real
+    # behaviour change and C003 does not constrain it.
+    Stage.ENTERED:   frozenset({"HOLD", "MOVE_SL", "EXIT_ALL"}),
     Stage.PROTECTED: frozenset({"HOLD", "MOVE_SL", "TAKE_PARTIAL", "EXIT_ALL"}),
     Stage.SCALED:    frozenset({"HOLD", "MOVE_SL", "TAKE_PARTIAL", "EXIT_ALL"}),
     Stage.RUNNER:    frozenset({"HOLD", "MOVE_SL", "EXIT_ALL"}),

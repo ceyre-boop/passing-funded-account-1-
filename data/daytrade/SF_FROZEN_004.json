@@ -1,0 +1,32 @@
+{
+ "checkpoint_id": "SF-FROZEN-004",
+ "pinned_at": "2026-08-30",
+ "engine": "daytrade/stockfish_exit.py",
+ "engine_sha256": "bf013ed7727cfaa02be67b5253dda2b07880635aa6b502c04a7e125775572dd2",
+ "policies": {
+  "SINGLE_NAME": {
+   "trail_mult": null,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  },
+  "CASH_INDEX": {
+   "trail_mult": 1.5,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  },
+  "FUTURES": {
+   "trail_mult": 1.5,
+   "be_arm_frac": 1.0,
+   "partial_frac": 0.5,
+   "flatten_et": null,
+   "hold_past_tp2": true
+  }
+ },
+ "policies_sha256": "474d817dd245fdc2ef0183bbb1ceed5bc6c8681825de23312552b001c6f21521",
+ "prices": "intraday equity/futures positions only \u2014 see SF-3, it has no term for swap accrual, days held, weekend exposure, or rate differential",
+ "why": "stack exam LL-2: improvement must be measured against a frozen opponent, not against a moving self"
+}

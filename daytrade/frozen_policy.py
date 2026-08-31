@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SF-FROZEN-003 — the pinned exit-policy checkpoint.
+"""SF-FROZEN-004 — the pinned exit-policy checkpoint.
 
 Stack exam LL-2 recorded the gap: mechanisms were measured against "the
 shipped policy", which is stable but not PINNED. Nothing stopped the
@@ -36,10 +36,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 ENGINE = HERE / "stockfish_exit.py"
-RECORD = ROOT / "data" / "daytrade" / "SF_FROZEN_003.json"
+RECORD = ROOT / "data" / "daytrade" / "SF_FROZEN_004.json"
 
-CHECKPOINT_ID = "SF-FROZEN-003"
-PINNED_AT = "2026-08-29"
+CHECKPOINT_ID = "SF-FROZEN-004"
+PINNED_AT = "2026-08-30"
 
 # The exact parameters in force per asset class at pin time. Copied here
 # deliberately rather than imported: if the source moves, this record must
