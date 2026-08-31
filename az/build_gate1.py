@@ -7,6 +7,7 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT)); sys.path.insert(0, str(ROOT / "daytrade"))
+from az.report import Tally                                                # noqa: E402
 from az.state import (GRANULARITIES, GRID_HHMM, MIN_DAYS, StateError,      # noqa: E402
                       assert_no_lookahead, audit, truncate_at)
 from bars import ET, MIN_SESSION_BARS_5M, RTH_CLOSE, RTH_OPEN, _internal_gaps  # noqa: E402
@@ -52,10 +53,12 @@ def main() -> int:
                              ("GENERALISATION bars/", ["NVDA", "SPY", "QQQ", "AAPL", "AMD", "TSLA",
                                                        "META", "MSFT", "AMZN", "GOOGL", "DIA", "IWM"], "bars")):
         rows, guarded, skipped = rows_for(syms, sub)
-        days = len({r["day"].split(":")[1] for r in rows})
+        tally = Tally(n_days=len({r["day"].split(":")[1] for r in rows}),
+                      n_candidates=len(rows),
+                      extra={"symbol-days": f"{len({r['day'] for r in rows}):,}",
+                             "lookahead-guarded": guarded, "skipped(StateError)": skipped})
         print(f"\n{label}")
-        print(f"  symbol-days {len({r['day'] for r in rows}):,}   distinct calendar days {days:,}"
-              f"   candidate moments {len(rows):,}   lookahead-guarded {guarded}   skipped(StateError) {skipped}")
+        print("  " + tally.header())
         print(f"  {'granularity':<10} {'cells':>7} {'valued':>7} {'frac_cand_in_valued':>21} {'verdict':>9}")
         for g, edges in GRANULARITIES.items():
             occ = audit(rows, g, edges, min_days=MIN_DAYS)
