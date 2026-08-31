@@ -73,14 +73,28 @@ class Session:
     def __len__(self) -> int:
         return len(self.df)
 
+    def _hhmm(self):
+        """The index rendered as HH:MM, computed once per Session.
+
+        `strftime` over a DatetimeIndex is not free, and `after()` is called once
+        per (entry, config) — 396 identical calls per entry in a wide sweep, which
+        profiled at 47% of total simulate() time. The Session is frozen and its
+        df never mutates, so this is a pure memo: same input, same output, no
+        behaviour change. object.__setattr__ because the dataclass is frozen.
+        """
+        cached = getattr(self, "_hhmm_cache", None)
+        if cached is None:
+            cached = self.df.index.strftime("%H:%M")
+            object.__setattr__(self, "_hhmm_cache", cached)
+        return cached
+
     def between(self, start_hhmm: str, end_hhmm: str):
         """Bars with index time in [start, end] — inclusive both ends."""
-        idx = self.df.index
-        t = idx.strftime("%H:%M")
+        t = self._hhmm()
         return self.df[(t >= start_hhmm) & (t <= end_hhmm)]
 
     def after(self, hhmm: str):
-        t = self.df.index.strftime("%H:%M")
+        t = self._hhmm()
         return self.df[t > hhmm]
 
 

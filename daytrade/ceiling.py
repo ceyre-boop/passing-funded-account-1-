@@ -133,6 +133,12 @@ def _fill(action, st: TradeState, e: Entry, bar_open: float, bar_close: float) -
     return bar_open if gapped else st.sl
 
 
+ALLOWED_CFG_KEYS = frozenset({
+    "partial_frac", "trail_mult", "be_arm_frac", "hold_past_tp2",
+    "flatten_et", "vol_k", "atr",
+})
+
+
 def simulate(session, e: Entry, cfg: dict, observer=None,
              urgency_schedule=None) -> float:
     """Replay the rest of the session under one exit config. Returns R.
@@ -142,6 +148,17 @@ def simulate(session, e: Entry, cfg: dict, observer=None,
     stop and the target, the stop wins. Intrabar path is unknowable at 5m
     resolution; assuming the good outcome is how backtests lie.
     """
+    # STRICT KEYS: cfg is read by explicit key below, not iterated — an
+    # unrecognised key (a typo, or a sweep param the reader forgot to wire up)
+    # would previously be silently dropped rather than refused, producing a
+    # confident WRONG number instead of a crash (a k-sweep over cfg["vol_k"]
+    # once returned identical totals for all nine k because nothing here read
+    # it). Fail loud, before any bar is simulated.
+    unknown = set(cfg) - ALLOWED_CFG_KEYS
+    if unknown:
+        raise ValueError(
+            f"simulate(): unknown cfg key(s) {sorted(unknown)}; accepted keys "
+            f"are {sorted(ALLOWED_CFG_KEYS)}")
     # vol_k / atr are OPT-IN: absent from cfg, the volatility placement layer stays
     # dark and this constructs exactly what it always did. Present, they reach the
     # engine through THIS simulator rather than a parallel one — the volatility
