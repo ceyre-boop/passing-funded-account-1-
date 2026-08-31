@@ -13,3 +13,7 @@ logs/
 data/agent/*.jsonl
 .env
 data/daytrade/operator/.dashboard_published
+
+# python venv (nautilus body)
+.venv/
+.venv-v1/
