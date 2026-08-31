@@ -136,3 +136,91 @@ pre-registration.
 - **I82** the max-statistic correction counts every cell scanned, across every
   granularity used.
 - **I83** the STOP requires both primary and secondary to fail.
+
+---
+
+# GATE 3a RESULT — 2026-08-30. **VERDICT: STOP.**
+
+Table: `artifacts/az_gate3a_table.parquet`, sha256 `bc4a2f9a4436c36a…`, reproduced
+bit-identically on a second run. 628,080 graded rows = 104,680 legal candidates ×
+3 graders × 2 fills. **N_days = 5,234 symbol-days / 2,620 calendar days.**
+Adjudicated on the **pessimistic** arm, locked before the table existed.
+
+## Distribution — absolute R, no deltas
+
+| grader | fill | mean R | sd | p10 | p50 | p90 | frac>0 |
+|---|---|---|---|---|---|---|---|
+| G1 frozen | base | −0.0676 | 1.293 | −1.116 | −1.008 | +1.843 | 25.4% |
+| G1 frozen | **pess** | **−0.3540** | 1.241 | −1.290 | −1.054 | +1.605 | 20.2% |
+| G2 hold-to-close | base | −0.0773 | 4.435 | −4.889 | −0.073 | +4.729 | 49.2% |
+| G2 hold-to-close | **pess** | **−0.3639** | 4.442 | −5.192 | −0.350 | +4.454 | 46.0% |
+| G3 fixed-R | base | −0.0653 | 1.275 | −1.116 | −1.008 | +2.017 | 25.4% |
+| G3 fixed-R | **pess** | **−0.3525** | 1.225 | −1.290 | −1.054 | +1.880 | 20.2% |
+
+## PRIMARY — FAILS
+
+| | N_days | mean R | total R | threshold |
+|---|---|---|---|---|
+| SPY | 2,619 | **−0.37795** | −19,796.9 | 0.01590 |
+| QQQ | 2,615 | **−0.33010** | −17,264.5 | 0.01592 |
+
+Pair rule returns HOLDS — **both arms agree, and they agree the sign is
+negative.** The primary requires a positive mean, so it fails.
+
+## SECONDARY — FAILS
+
+| | cells scanned | valued | best cell mean R | null p95 | p |
+|---|---|---|---|---|---|
+| SPY | 1,542 | 354 | +0.0956 | +0.4310 | 0.9687 |
+| QQQ | 1,666 | 346 | +0.3557 | +0.5028 | 0.2975 |
+
+**The null's 95th percentile is higher than the observed best cell on both
+symbols.** Chance routinely produces a better "best cell" than the data does.
+That is the arithmetic certainty the STOP was locked in advance to defeat, and it
+behaved exactly as predicted.
+
+## Sub-periods — the negative result is stable, not a regime artifact
+
+| | N_days | mean R | threshold | share | |
+|---|---|---|---|---|---|
+| P1 2016-17 | 499 | −0.62908 | 0.03414 | 33.8% | clears |
+| P2 2018-19 | 498 | −0.39678 | 0.03418 | 21.3% | clears |
+| P3 2020-21 | 499 | −0.28707 | 0.03414 | 15.4% | clears |
+| P4 2022-26 | 1,124 | −0.24263 | 0.02275 | 29.4% | clears |
+
+Sign 4/4, magnitude 4/4, max period share 34%. No period carries it.
+
+## Multi-grader stability — no exploitation, and one leg was uninformative
+
+- G1 vs G3 **+0.9957** — near-identical. **That leg of the check is
+  uninformative** and is reported as such rather than counted as a pass.
+- G1 vs G2 **+0.2926**, G2 vs G3 **+0.2853** — G2 is genuinely independent, so the
+  check has real content through it.
+- Top 1% by G1 sit at the **90.0%** percentile of G2 and **92.8%** of G3. The best
+  entries are best under all three. **No grader exploitation detected.**
+
+## What the STOP does and does not establish
+
+**Does:** under the declared geometry, entering SPY/QQQ on a 30-minute grid in
+either direction has no positive-expectancy region — not on average, and not in
+the best of ~1,600 correlated cells after a correction that counts every cell
+scanned. Stable across four regimes and three exit policies.
+
+**Does not:** this is measured at **`k_stop = 1.0`**. A 1×ATR stop is tight — the
+median candidate loses a full R and only 20–25% finish positive under the
+stop-based graders. A different `k_stop` is a different study, as declared in the
+plan before the run, and this result does not speak to it.
+
+**Also worth recording:** G1 base mean **−0.0676** against G2 hold-to-close base
+mean **−0.0773** — nearly identical expectancy from a policy that trails and
+scales versus one that makes no decisions at all, while the distribution shape
+differs completely (sd 1.29 vs 4.44; 25.4% positive vs 49.2%). **The exit policy
+redistributes; it does not create.** Phase 1's finding, reproduced independently
+on 104,680 entries the exit lane never saw.
+
+## Gate 3a closes here
+
+Gate 3b is not built and no policy is fitted. Per the design doc's own build
+order: *"If the graded table shows no positive candidates anywhere, the policy
+layer is moot and you have saved yourself the build."* **This finding is the
+output.** Next step requires Colin's ruling.
