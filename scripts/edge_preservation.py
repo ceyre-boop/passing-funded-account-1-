@@ -38,66 +38,75 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "daytrade"))
 
-from stockfish_exit import (INTENT, Stage, TradeState, apply_actions,  # noqa: E402
-                            decide_exit, policy_params)
+from bars import Session  # noqa: E402
+from ceiling import Entry, simulate  # noqa: E402
+from stockfish_exit import INTENT, policy_params  # noqa: E402
 
 N_PATHS, N_BARS, SIGMA = 4000, 78, 0.0018
-N_EVAL = 3000        # paths actually run through the engine per policy
 DRIFTS = (0.0, 0.0002, 0.0005)          # per bar; 0.0 is the martingale control
 ENTRY, K_STOP_ATR = 100.0, 1.0
+
+N_EVAL = 1500        # paths actually simulated per policy
+
+# The control tolerance is DERIVED, not chosen. |policy - hold| is a paired
+# difference over the same paths, so its standard error is sd(diff)/sqrt(n).
+# A fixed constant (an earlier version used 0.02) either rejects noise or
+# accepts bias depending on how many paths happen to be run -- which makes the
+# control's verdict a function of the sample size rather than of the harness.
+CONTROL_SIGMAS = 3.0
 
 
 def paths(rng, drift):
     """Ito correction is load-bearing. exp(cumsum(N(0, sigma))) is NOT a price
-    martingale -- zero drift in LOG space is +sigma^2/2 in price space, and the
-    first version of this control showed every policy 'beating' hold by ~0.1R
-    under what was supposed to be a no-edge process. Subtracting sigma^2/2
-    makes drift=0 an actual martingale, which is the only way the control can
-    do its job."""
+    martingale -- zero drift in LOG space is +sigma^2/2 in price space, and an
+    earlier version of this control showed every policy 'beating' hold by ~0.16R
+    under what was supposed to be a no-edge process. Subtracting sigma^2/2 makes
+    drift=0 an actual martingale, which is the only way the control can work."""
     steps = rng.normal(drift - 0.5 * SIGMA ** 2, SIGMA, size=(N_PATHS, N_BARS))
     return ENTRY * np.exp(np.cumsum(steps, axis=1))
 
 
-def run_policy(path, params, risk):
-    """One trade through the real engine. Returns realized R.
+def as_session(path, day_idx):
+    """Wrap a synthetic path as a real Session so the decision loop runs through
+    the SANCTIONED simulator.
 
-    FRACTION TRACKING IS LOAD-BEARING. The first version banked the partial and
-    then credited the remainder as a fixed (1 - goal_fraction), which
-    double-counted for policies that exit fully at TP2 and mis-weighted the
-    runner. It showed every policy beating hold by ~0.16R UNDER A MARTINGALE --
-    i.e. it violated optional stopping, which is a theorem. The control caught
-    it, which is the entire reason a martingale arm is run at all.
-    """
-    st = TradeState(direction=1, entry=ENTRY, qty=100, price=ENTRY,
-                    sl=ENTRY - risk, tp1=ENTRY + risk, tp2=ENTRY + 3 * risk,
-                    trail_dist=0.5 * risk, **params)
-    banked, frac_left = 0.0, 1.0
-    for px in path:
-        st.price = float(px)
-        acts = decide_exit(st)
-        for a in acts:
-            if a.kind == "TAKE_PARTIAL":
-                banked += frac_left * a.fraction * (st.price - ENTRY) / risk
-                frac_left *= (1.0 - a.fraction)
-            elif a.kind == "EXIT_ALL":
-                banked += frac_left * (st.price - ENTRY) / risk
-                frac_left = 0.0
-        apply_actions(st, acts)
-        if frac_left <= 0.0:
-            return banked
-    return banked + frac_left * (float(path[-1]) - ENTRY) / risk
+    RULE 1, "one implementation": an earlier version of this script drove
+    decide_exit through its own per-bar loop and was correctly flagged by
+    daytrade/test_one_implementation.py. That guard exists because a second loop
+    produces numbers that are quietly incomparable to every other measurement in
+    the repo -- which is exactly what a preservation column must not be. Routing
+    through ceiling.simulate also means these figures carry the same pessimistic
+    bar ordering and the same cost constant as the ceiling record."""
+    idx = pd.date_range(f"2026-01-{day_idx % 28 + 1:02d} 09:30",
+                        periods=len(path), freq="5min", tz="America/New_York")
+    px = np.asarray(path, dtype=float)
+    df = pd.DataFrame({"Open": px, "High": px * 1.0006, "Low": px * 0.9994,
+                       "Close": px, "Volume": 1000.0}, index=idx)
+    return Session(symbol="SYN", day=idx[0].date(), df=df)
 
 
-# The control tolerance is DERIVED, not chosen. |policy - hold| is a paired
-# difference over the same paths, so its standard error is sd(diff)/sqrt(n).
-# A fixed constant (the first version used 0.02) either rejects noise or
-# accepts bias depending on how many paths happen to be run -- which makes the
-# control's verdict a function of the sample size rather than of the harness.
-CONTROL_SIGMAS = 3.0
+def cfg_for(name):
+    """INTENT -> the simulator's cfg vocabulary. Strict keys: simulate() refuses
+    an unrecognised one rather than dropping it."""
+    prm = policy_params(name)
+    # simulate() reads every key explicitly, so all of them must be present --
+    # a missing one is a KeyError rather than a silent default, which is the
+    # same fail-loud discipline as its unknown-key refusal.
+    return {"partial_frac": 0.5, "trail_mult": prm["trail_mult"],
+            "be_arm_frac": prm["be_arm_frac"],
+            "hold_past_tp2": prm["hold_past_tp2"],
+            "flatten_et": None, "vol_k": None, "atr": None}
+
+
+def entry_for(path, risk):
+    return Entry(day="2026-01-01", ts="09:30", time_block="OPEN", direction=1,
+                 entry=ENTRY, stop=ENTRY - risk, risk=risk,
+                 tp1=ENTRY + risk, tp2=ENTRY + 3 * risk, trail_dist=0.5 * risk)
 
 
 def main() -> int:
@@ -122,8 +131,9 @@ def main() -> int:
         print(f"  {tag}   hold-to-horizon mean R = {hold.mean():+.4f}")
         print(f"    {'policy':<10} {'mean R':>9} {'preserved':>11}  {'vs hold':>9}")
         for name in names:
-            params = {k: v for k, v in policy_params(name).items() if k != "exit_policy"}
-            rs = np.array([run_policy(p, params, risk) for p in P[:N_EVAL]])
+            cfg = cfg_for(name)
+            rs = np.array([simulate(as_session(p, i), entry_for(p, risk), cfg)
+                           for i, p in enumerate(P[:N_EVAL])])
             h = hold[:N_EVAL]
             # A ratio against a near-zero denominator is noise with a decimal
             # point. Under the control the denominator IS near zero by design,

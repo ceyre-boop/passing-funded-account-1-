@@ -177,10 +177,13 @@ had none to keep. `scripts/edge_preservation.py` injects a known drift and measu
 
 | policy | drift +0.0002 | drift +0.0005 |
 |---|---|---|
-| **RIDE** | **0.94×** | **0.94×** |
-| HARVEST | 0.86× | 0.85× |
-| DEFEND | 0.71× | 0.81× |
-| SALVAGE | 0.71× | 0.77× |
+| **RIDE** | **0.92×** | **0.92×** |
+| HARVEST | 0.82× | 0.82× |
+| DEFEND | 0.64× | 0.72× |
+| SALVAGE | 0.64× | 0.68× |
+
+Routed through `daytrade/ceiling.py::simulate`, so these carry the same
+pessimistic bar ordering and the same cost constant as the ceiling record.
 
 **The tension worth naming:** the frozen defaults were fitted from an oracle on an
 *edgeless* sample, where 22 of 24 best picks used **no trailing at all**. Under
@@ -192,6 +195,20 @@ the confounding the review identified.
 without `flatten_at_et`, since it means *"be out before a known catalyst"* and a
 synthetic path has no catalyst. Supplying a default clock would invent the thing
 the policy exists to respect.
+
+### Rule 1 caught a third bug — mine
+
+The first version drove `decide_exit` through **its own per-bar loop** and was
+correctly flagged by `daytrade/test_one_implementation.py`. That guard exists
+because a second loop produces numbers quietly incomparable to every other
+measurement in the repo — which is precisely what a preservation column must not
+be. It is now routed through `ceiling.simulate`, which also means it inherits the
+sanctioned pessimistic bar ordering and cost constant rather than my own.
+
+I pushed that commit with the guard red, because the `pytest` and `git commit`
+calls were separate and the failure did not stop the commit. Fixed in the
+follow-up; recorded because a red push is worth more as a noted habit than as a
+quietly amended history.
 
 ### The control earned its place twice
 
