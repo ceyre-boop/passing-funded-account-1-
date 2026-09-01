@@ -1,0 +1,4 @@
+timestamp=2026-08-29T06:05:19.524273+00:00
+pair=CH
+source=fred_rate
+reason=FRED rate fetch failed, using fallback_static: FRED get_series('IR3TIB01CHM156N') failed: unknown series IR3TIB01CHM156N

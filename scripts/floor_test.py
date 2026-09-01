@@ -80,14 +80,20 @@ def per_day_context(bars: pd.DataFrame, window_open: str) -> pd.DataFrame:
 
 
 def evaluate(name: str, ctx: pd.DataFrame, abs_ret: pd.Series,
-             diff_abs_ret: float, n_events_recorded: int) -> dict:
+             diff_abs_ret: float, n_events_recorded: int,
+             cost_override: float | None = None) -> dict:
     """The declared conversion, per event day. Costs are charged once against
     the differential, exactly as prereg §1 writes the identity."""
     price, atr = ctx["price"].to_numpy(), ctx["atr14"].to_numpy()
     risk = fp.K_STOP * atr
 
     # pessimistic fill: doubled per-share cost + adverse slippage on entry
-    cost_per_share = COST_PER_SHARE * fp.COST_MULT + price * fp.SLIP_BPS / 10_000.0
+    # cost_override exists ONLY for the sensitivity sweep and defaults to None,
+    # so the pre-registered path cannot be altered by accident.
+    if cost_override is not None:
+        cost_per_share = price * 0.0 + float(cost_override)
+    else:
+        cost_per_share = COST_PER_SHARE * fp.COST_MULT + price * fp.SLIP_BPS / 10_000.0
     cost_drag_r = cost_per_share / risk
 
     # E[R] uses the study-level DIFFERENTIAL (prereg §1), not the event mean.
@@ -106,6 +112,7 @@ def evaluate(name: str, ctx: pd.DataFrame, abs_ret: pd.Series,
         "mean_cost_per_share": float(cost_per_share.mean()),
         "mean_cost_drag_r": float(cost_drag_r.mean()),
         "floor": floor, "sigma_r": sigma_r, "mde": mde,
+        "_ctx": ctx, "_abs_ret": abs_ret,
         "falsifiable": floor >= mde,
         "expected_r": float(pd.Series(r_edge).mean()),
     }
@@ -141,7 +148,61 @@ def report(res: dict) -> bool:
     return ok
 
 
-def main() -> int:
+# --------------------------------------------------------------- sensitivity
+
+# The pre-registered cost is $0.1176/share on SPY, of which SLIP_BPS=2.0
+# contributes $0.0776 -- 66% of the total, and 15.5x the ~0.13bp half-spread of
+# a 1-cent-wide SPY quote. Since COSTS, NOT THE EFFECT, set both floors, the
+# closed register carries an error bar it does not currently show.
+#
+# THIS REPORTS NO VERDICTS. k_stop and the fill model were frozen at 3b10e8b
+# BEFORE the computation, precisely so they could not be retuned after seeing
+# FOMC land at 93% of its floor. The 15.5x figure is a defect in the
+# PRE-REGISTRATION, not a licence to rerun it. Reopening any closure requires a
+# NEW pre-registration written before these numbers are looked at again.
+# None = the pre-registered path itself, NOT a flat 0.1176. The real model is
+# COST_PER_SHARE*COST_MULT + price*SLIP_BPS/1e4, which varies per day with the
+# price, and mean-of-ratios != ratio-of-means. Substituting the average as a
+# constant would print a "pre-registered" row that does not reproduce the
+# pre-registered result — a small lie in the one row that has to be exact.
+COST_GRID = (0.015, 0.02, 0.03, 0.05, 0.08, None)
+
+
+def sweep(results: list) -> int:
+    print("\n" + "=" * 72)
+    print("COST SENSITIVITY — NO VERDICTS. Every closure still stands.")
+    print("=" * 72)
+    print("SLIP_BPS=2.0 is 15.5x the SPY half-spread and 66% of the modelled cost.")
+    print("This shows where the floor WOULD sit across a plausible range. It does")
+    print("not reopen anything: the fill model was frozen before the computation so")
+    print("it could not be retuned after the answer was visible.\n")
+    for r in results:
+        print(f"{r['name']}   N={r['n_events']}")
+        print(f"  {'cost/share':>11} {'drag (R)':>10} {'FLOOR':>9} {'E[R]':>10}  vs floor")
+        for c in COST_GRID:
+            alt = evaluate(r["name"], r["_ctx"], r["_abs_ret"], r["diff_abs_ret"],
+                           r["n_events_recorded"], cost_override=c)
+            pct = alt["expected_r"] / alt["floor"] * 100 if alt["floor"] else float("nan")
+            label = f"{c:>11.4f}" if c is not None else f"{'prereg':>11}"
+            mark = "  <- as frozen (price-scaled)" if c is None else ""
+            print(f"  {label} {alt['mean_cost_drag_r']:>10.4f} {alt['floor']:>9.4f} "
+                  f"{alt['expected_r']:>+10.4f}  {pct:>4.0f}%{mark}")
+        # the frozen row must reproduce the headline result exactly
+        assert abs(alt["floor"] - r["floor"]) < 1e-9, (
+            f"sweep's frozen row {alt['floor']} != the pre-registered floor "
+            f"{r['floor']} — the sensitivity is misrepresenting the result it "
+            "is a sensitivity of")
+        print()
+    print("Recorded as a known defect in the pre-registration. Verdicts unchanged.")
+    return 0
+
+
+def main(argv=None) -> int:
+    import argparse
+    ap = argparse.ArgumentParser(description="economic-floor tests")
+    ap.add_argument("--sweep", action="store_true",
+                    help="cost-sensitivity table; reports NO verdicts")
+    a = ap.parse_args(argv)
     print("ECONOMIC-FLOOR TESTS — artifacts/ECONOMIC_FLOOR_PREREG.md")
     print(f"frozen: kappa={fp.KAPPA}  k_stop={fp.K_STOP}  cost_mult={fp.COST_MULT}"
           f"  slip_bps={fp.SLIP_BPS}  (az/floor_params.py, commit 3b10e8b)")
@@ -172,6 +233,9 @@ def main() -> int:
     results.append(evaluate("spy_fomc_double_splash  (14:00-14:05)",
                             fm[["price", "atr14"]], fm["stmt_abs_ret"],
                             fsumm["diff_event_minus_control"], fsumm["event_n"]))
+
+    if a.sweep:
+        return sweep(results)
 
     survivors = [r for r in results if report(r)]
     print(f"\n{'='*72}")

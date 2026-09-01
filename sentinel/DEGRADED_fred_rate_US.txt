@@ -1,0 +1,4 @@
+timestamp=2026-08-29T06:05:19.518681+00:00
+pair=US
+source=fred_rate
+reason=FRED rate fetch failed, using fallback_static: FRED get_series('FEDFUNDS') failed: FRED down for FEDFUNDS

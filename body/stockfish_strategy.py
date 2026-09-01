@@ -28,11 +28,12 @@ TWO EXECUTION WORLDS
 """
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
 from nautilus_trader.model.enums import OrderSide
-from nautilus_trader.model.objects import Quantity
+from nautilus_trader.model.objects import Price, Quantity
 from nautilus_trader.trading.strategy import Strategy
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,6 +56,47 @@ from body.runtime import detect_environment  # noqa: E402
 SIM_QUANTITY = 1
 ATR_LOOKBACK = 14
 MIN_BARS_FOR_ATR = 14
+
+
+def quantize_protective(level: float, *, instrument, direction: int) -> "Price":
+    """Round a STOP to the instrument's tick, always toward TIGHTER.
+
+    THE DEFECT THIS CLOSES
+        `instrument.make_price()` rounds to NEAREST. On SPY (1c tick) a computed
+        stop of 103.925 becomes 103.92 -- half a cent LOOSER for a long. The
+        never-loosen invariant proved by `effective_stop`'s max() is a property
+        of the decision function; the order that reaches the venue is a
+        different object, and the proof has no jurisdiction over rounding.
+
+        This is the whole "invariants of a decision layer are not properties of
+        a live system" critique, in one line of arithmetic.
+
+    THE RULE
+        long  -> round UP   (a higher stop is tighter)
+        short -> round DOWN (a lower stop is tighter)
+
+        Rounding toward tighter can only ever cost a fraction of a tick of
+        room. Rounding toward looser silently widens risk at the exact boundary
+        the max() cannot see.
+
+    Only stops go through here. A take-profit is not a protective level and
+    rounding it toward "tighter" would be a different, unproven behaviour
+    change -- so `execute()` still uses make_price for the target, on purpose.
+    """
+    tick = float(instrument.price_increment)
+    if not (tick > 0):
+        raise OddError(f"instrument {instrument.id} has tick={tick!r} — refusing "
+                       "to quantize a stop against a non-positive tick")
+    ticks = level / tick
+    snapped = (math.ceil(ticks) if direction > 0 else math.floor(ticks)) * tick
+    price = instrument.make_price(snapped)
+    # post-condition: never looser than what the engine computed
+    if (float(price) - level) * direction < -1e-12:
+        raise OddError(
+            f"quantization loosened a stop: computed {level!r} -> {float(price)!r} "
+            f"on direction {direction:+d}. This is the defect this function exists "
+            "to prevent; refusing to submit.")
+    return price
 
 
 class StockfishStrategy(Strategy):
@@ -218,7 +260,8 @@ class StockfishStrategy(Strategy):
             instrument_id=instrument.id,
             order_side=side,
             quantity=Quantity.from_int(SIM_QUANTITY),
-            sl_trigger_price=instrument.make_price(stop),
+            sl_trigger_price=quantize_protective(stop, instrument=instrument,
+                                                 direction=d),
             tp_price=instrument.make_price(target),
         )
         self.submit_order_list(bracket)

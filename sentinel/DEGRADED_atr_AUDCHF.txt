@@ -1,0 +1,4 @@
+timestamp=2026-08-29T06:29:05.081616+00:00
+pair=AUDCHF=X
+source=atr
+reason=ATR unavailable, refusing to emit a sized signal: insufficient price data: got 0 bars, need >= 15

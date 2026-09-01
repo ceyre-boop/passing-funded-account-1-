@@ -6,6 +6,14 @@
 
 ---
 
+> **COST SENSITIVITY ADDED 2026-09-01 — verdicts unchanged.** `SLIP_BPS = 2.0` is
+> 15.5x the SPY half-spread and 66% of the modelled cost, and costs set both floors.
+> Both families clear comfortably at realistic costs (`scripts/floor_test.py --sweep`;
+> full table in `artifacts/COUNCIL_REVIEW_2026-09-01.md`). **This does not reopen
+> anything.** The fill model was frozen at `3b10e8b` before the computation precisely
+> so it could not be retuned after the answer was visible; the 15.5x is a defect in
+> the pre-registration, and reopening needs a new one written beforehand.
+
 ## Verdict
 
 **0 of 2 families clear the floor. The magnitude axis is closed on economics.**

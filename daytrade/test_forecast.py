@@ -14,7 +14,7 @@ import pytest
 
 from forecast import (Forecast, ForecastError, ForecastLedger,
                       PromotionDecision, PromotionThresholds, Resolution,
-                      baseline_brier, brier, promotion_decision)
+                      baseline_brier, brier, promotion_decision, climatology_brier, skill_ci_low)
 
 T0 = datetime(2026, 8, 7, 14, 30, tzinfo=timezone.utc)
 
@@ -248,8 +248,22 @@ def test_false_urgent_and_missed_shock_rates():
 # ------------------------------------------------------------- the gate
 
 def reports(n_challenger: int = 60):
+    """Reports for the gates DOWNSTREAM of discrimination.
+
+    NOTE, and it is a real finding rather than fixture bookkeeping: the 0.8
+    hit-rate challenger below beats UNIFORM comfortably (0.34 vs 0.50) and
+    LOSES to climatology (0.34 vs 0.32), i.e. its skill score is NEGATIVE
+    (-0.0625). It emits the same distribution every time, so unconditional base
+    rates match it for free. That is precisely the hole the discrimination gate
+    was added to close, demonstrated on this repo's own "genuinely better"
+    fixture.
+
+    These two tests are about the OTHER gates, so the skill fields are set
+    explicitly here rather than smuggled in. The discrimination gate has its own
+    dedicated tests below, including one that rejects exactly this fixture."""
     inc = graded_ledger("inc", 60, hit_rate=0.6).grade("inc", oos=True)
     ch = graded_ledger("ch", n_challenger, hit_rate=0.8).grade("ch", oos=True)
+    ch = replace(ch, skill_vs_climatology=0.20, skill_ci_low=0.05)
     return inc, ch
 
 
@@ -351,3 +365,90 @@ def test_promotion_ref_feeds_the_authority_registry():
     reg.grant("ch", 3, by="colin", reason="cleared 017", ts=T0.isoformat(),
               promotion_ref=d.promotion_ref)
     assert reg.granted_level("ch") == 3
+
+
+# ------------------------------------------- the discrimination gate (2026-09-01)
+
+def test_the_repos_own_brilliant_challenger_has_negative_skill():
+    """The finding that motivated this gate, pinned so it cannot be forgotten.
+
+    A 0.8 hit-rate forecaster that beats uniform by a wide margin is WORSE than
+    emitting unconditional base rates. Beating uniform is a test of arithmetic."""
+    ch = graded_ledger("ch", 60, hit_rate=0.8).grade("ch", oos=True)
+    assert ch.brier < ch.baseline_brier          # comfortably beats uniform
+    assert ch.brier > ch.climatology_brier       # and LOSES to climatology
+    assert ch.skill_vs_climatology < 0
+
+
+def test_a_zero_information_forecaster_is_refused():
+    """The gate's whole purpose: climatology must not promote."""
+    inc, ch = reports()
+    zero_info = replace(ch, skill_vs_climatology=0.0, skill_ci_low=0.0)
+    d = promotion_decision(inc, zero_info, PromotionThresholds(),
+                           per_regime_incumbent={"trend": 0.5},
+                           per_regime_challenger={"trend": 0.4}, ref="p")
+    assert not d.promoted and "NO_SKILL_VS_CLIMATOLOGY" in d.failed_gates
+
+
+def test_positive_skill_with_a_ci_touching_zero_is_refused():
+    """A point estimate above zero is not evidence. The interval must exclude it."""
+    inc, ch = reports()
+    noisy = replace(ch, skill_vs_climatology=0.30, skill_ci_low=-0.02)
+    d = promotion_decision(inc, noisy, PromotionThresholds(),
+                           per_regime_incumbent={"trend": 0.5},
+                           per_regime_challenger={"trend": 0.4}, ref="p")
+    assert not d.promoted and "SKILL_CI_INCLUDES_ZERO" in d.failed_gates
+
+
+def test_climatology_falls_back_honestly_with_no_history():
+    """No resolved history means no base rates. Fall back to uniform rather than
+    dividing by zero or inventing a distribution."""
+    led = graded_ledger("ch", 4, hit_rate=1.0)
+    f = next(iter(led._forecasts.values()))
+    r = led._resolutions[f.forecast_id]
+    assert climatology_brier(f, r, {}) == baseline_brier(f, r)
+
+
+def test_skill_ci_is_deterministic():
+    """A gate whose verdict moves between runs is not a gate."""
+    m = [0.2, 0.4, 0.1, 0.5, 0.3] * 6
+    c = [0.4, 0.5, 0.3, 0.6, 0.4] * 6
+    assert skill_ci_low(m, c) == skill_ci_low(m, c)
+
+
+def test_prompt_version_partitions_the_track_record():
+    """The prompt IS part of the artefact under test. A rewritten prompt must
+    not inherit the old prompt's evidence."""
+    led = graded_ledger("m", 20, hit_rate=0.8)
+    everything = led.grade("m", oos=True)
+    only_other = None
+    try:
+        only_other = led.grade("m", oos=True, prompt_version="a-prompt-nobody-used")
+    except ForecastError:
+        pass                                     # nothing to grade — correct
+    assert only_other is None or only_other.n_resolved < everything.n_resolved
+
+
+def test_blanket_zero_regret_is_refused_not_treated_as_a_clean_tail():
+    """FAULT INJECTION on a failure that has not happened yet.
+
+    Defining policy_regret_r = 0.0 for capped directives is technically
+    defensible and would silently turn the tail gate into a tautology. This
+    pins the refusal now, while nobody is under pressure to make it."""
+    inc, ch = reports()
+    imputed = replace(ch, policy_regret_mean=0.0, worst_policy_regret=0.0)
+    d = promotion_decision(inc, imputed, PromotionThresholds(),
+                           per_regime_incumbent={"trend": 0.5},
+                           per_regime_challenger={"trend": 0.4}, ref="p")
+    assert not d.promoted
+    assert "REGRET_ALL_ZERO_SUSPECT_IMPUTATION" in d.failed_gates
+
+
+def test_a_real_negative_regret_still_passes():
+    """The guard must not reject genuine tail evidence."""
+    inc, ch = reports()
+    real = replace(ch, policy_regret_mean=-0.3, worst_policy_regret=-1.2)
+    d = promotion_decision(inc, real, PromotionThresholds(),
+                           per_regime_incumbent={"trend": 0.5},
+                           per_regime_challenger={"trend": 0.4}, ref="p")
+    assert d.promoted, d.failed_gates

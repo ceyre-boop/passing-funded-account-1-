@@ -1,0 +1,4 @@
+timestamp=2026-08-29T06:05:19.521625+00:00
+pair=US
+source=fred_gdp
+reason=FRED GDP fetch failed, using fallback_static: FRED GDP fetch failed: unknown series GDP

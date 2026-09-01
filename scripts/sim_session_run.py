@@ -58,6 +58,7 @@ from odd import Tier, Truth  # noqa: E402
 
 from body.alphazero_actor import AlphaZeroActor  # noqa: E402
 from body.null_policy import NullEntryPolicy  # noqa: E402
+from body.runtime import assert_no_live_execution_client  # noqa: E402
 from body.stockfish_strategy import StockfishStrategy  # noqa: E402
 
 BARS = ROOT / "data" / "daytrade" / "bars_premarket" / "SPY_5m.parquet"
@@ -103,12 +104,29 @@ def attest() -> tuple[dict, list[str]]:
     notes.append(f"policy_declares_no_edge: NullEntryPolicy.CALIBRATION_ARM="
                  f"{declares}")
 
-    # no_live_venue — this runner only ever builds a BacktestEngine. The claim is
-    # independently re-derived from the kernel clock inside authorize_entry, which
-    # FAULTS rather than refuses if this attestation were ever wrong.
-    out["no_live_venue"] = Truth.TRUE
-    notes.append("no_live_venue: BacktestEngine only; independently re-checked "
-                 "from the injected clock at authorize time (hard fault)")
+    # no_live_venue — CORRECTED 2026-09-01. This used to be a hardcoded
+    # Truth.TRUE beside a comment claiming it was "independently re-checked from
+    # the injected clock". It was not re-checked, and the clock is what
+    # authorize_entry already reads — so it was one sensor counted twice, and
+    # two locks with one sensor is one lock. (The claim also went out in an
+    # artifact; both are wrong and both are corrected.)
+    #
+    # The real second sensor is a DIFFERENT object: which ExecutionEngine class
+    # the kernel constructed. A live TradingNode builds LiveExecutionEngine; a
+    # BacktestEngine builds the plain one. Probed here on a throwaway engine
+    # identical to the ones the run will use, and re-asserted per session on the
+    # actual engine before it is allowed to run.
+    try:
+        probe = _probe_engine()
+        assert_no_live_execution_client(probe.kernel.exec_engine)
+        cls = type(probe.kernel.exec_engine).__name__
+        probe.dispose()
+        out["no_live_venue"] = Truth.TRUE
+        notes.append(f"no_live_venue: kernel builds {cls} (not LiveExecutionEngine); "
+                     "re-asserted per session on the real engine")
+    except Exception as e:                                    # noqa: BLE001
+        out["no_live_venue"] = Truth.UNKNOWN
+        notes.append(f"no_live_venue: UNKNOWN — {e}")
     return out, notes
 
 
@@ -124,6 +142,17 @@ def load_sessions(limit: int) -> list[tuple[str, pd.DataFrame]]:
         if len(chunk) >= MIN_BARS:
             out.append((day.isoformat(), chunk))
     return out[-limit:]
+
+
+def _probe_engine() -> BacktestEngine:
+    """An engine identical in kind to the ones the run will build, so the
+    attestation inspects the real thing rather than asserting about it."""
+    e = BacktestEngine(BacktestEngineConfig(
+        trader_id="SIMPROBE-001", logging=LoggingConfig(bypass_logging=True)))
+    e.add_venue(venue=Venue("SIM"), oms_type=OmsType.NETTING,
+                account_type=AccountType.MARGIN, base_currency=USD,
+                starting_balances=[Money(1_000_000, USD)])
+    return e
 
 
 def run_session(day: str, chunk: pd.DataFrame, attestations: dict) -> dict:
@@ -156,6 +185,8 @@ def run_session(day: str, chunk: pd.DataFrame, attestations: dict) -> dict:
                               bar_type=bar_type)
     engine.add_actor(actor)
     engine.add_strategy(strat)
+    # second sensor, on the ACTUAL engine, before a single bar is processed
+    assert_no_live_execution_client(engine.kernel.exec_engine)
     engine.run()
 
     res = {

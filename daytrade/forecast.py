@@ -133,6 +133,70 @@ def baseline_brier(f: Forecast, r: Resolution) -> float:
                for n in names)
 
 
+def climatology_brier(f: Forecast, r: Resolution, base_rates: dict) -> float:
+    """The baseline that actually costs something to beat.
+
+    THE HOLE THIS CLOSES
+        `baseline_brier` is UNIFORM. A forecaster that emits the unconditional
+        empirical frequency of each scenario — using zero information about the
+        day, the tape, or the news — beats uniform essentially forever, is
+        perfectly calibrated BY CONSTRUCTION, has a constant per-regime score,
+        and never says EXIT. So it passes the Brier gate, the calibration gate,
+        the regime-stability gate and the tail-regret gate simultaneously.
+
+        Beating uniform is a test of arithmetic. Beating climatology is a test
+        of information, and that is the thing the gate is supposed to be for.
+    """
+    names = set(f.scenario_probs) | {r.outcome_scenario} | set(base_rates)
+    total = sum(base_rates.get(n, 0.0) for n in names)
+    if total <= 0:
+        return baseline_brier(f, r)          # no history yet: fall back, honestly
+    return sum((base_rates.get(n, 0.0) / total
+                - (1.0 if n == r.outcome_scenario else 0.0)) ** 2
+               for n in names)
+
+
+def base_rates_from(pairs) -> dict:
+    """Unconditional outcome frequencies over the resolved set — the
+    climatology a zero-information forecaster would emit."""
+    counts: dict = {}
+    for _, r in pairs:
+        counts[r.outcome_scenario] = counts.get(r.outcome_scenario, 0) + 1
+    n = sum(counts.values())
+    return {k: v / n for k, v in counts.items()} if n else {}
+
+
+def skill_vs(model: list, reference: list) -> float:
+    """Brier skill score: 1 - mean(model)/mean(reference). >0 means the model
+    carries information the reference does not. 0 means it does not."""
+    ref = sum(reference) / len(reference) if reference else 0.0
+    if ref <= 0:
+        return 0.0
+    return 1.0 - (sum(model) / len(model)) / ref
+
+
+def skill_ci_low(model: list, reference: list, *, n_boot: int = 2000,
+                 alpha: float = 0.05, seed: int = 20260901) -> float:
+    """Lower bound of a percentile bootstrap CI on the skill score.
+
+    Deterministic seed: a gate whose verdict moves between runs is not a gate.
+    Paired resampling — model and reference are scored on the SAME cases, so
+    they must be resampled together or the CI is wrong."""
+    import random
+    if not model or len(model) != len(reference):
+        return float("-inf")
+    rng = random.Random(seed)
+    n = len(model)
+    idx = range(n)
+    scores = []
+    for _ in range(n_boot):
+        pick = [rng.choice(idx) for _ in idx]
+        scores.append(skill_vs([model[i] for i in pick],
+                               [reference[i] for i in pick]))
+    scores.sort()
+    return scores[int(alpha * n_boot)]
+
+
 @dataclass(frozen=True)
 class ScoreReport:
     model_version: str
@@ -144,7 +208,11 @@ class ScoreReport:
                                        # a forecast whose window can never
                                        # produce an outcome (spec 024 review)
     brier: float
-    baseline_brier: float
+    baseline_brier: float                 # uniform — a test of arithmetic
+    climatology_brier: float              # base rates — a test of information
+    skill_vs_climatology: float           # 1 - brier/climatology; >0 = informative
+    skill_ci_low: float                   # bootstrap lower bound; gate needs >0
+    prompt_version: str                   # part of the artefact's identity
     directional_accuracy: float
     calibration_error: float
     false_urgent_rate: float
@@ -218,10 +286,19 @@ class ForecastLedger:
     def is_unresolvable(self, forecast_id: str) -> bool:
         return forecast_id in self._unresolvable
 
-    def grade(self, model_version: str, *, oos: bool) -> ScoreReport:
-        """Score every RESOLVED forecast of one model. Pure over the ledger."""
+    def grade(self, model_version: str, *, oos: bool,
+              prompt_version: Optional[str] = None) -> ScoreReport:
+        """Score every RESOLVED forecast of one model. Pure over the ledger.
+
+        `prompt_version` joins the partition when supplied. Model identity alone
+        was not enough: the prompt IS part of the artefact under test, so a
+        rewritten prompt inheriting the old track record grades one thing on
+        another thing's evidence. Left optional so existing callers keep working
+        and get the old, wider partition explicitly rather than by accident."""
         fs_all = [f for f in self._forecasts.values()
-                  if f.model_version == model_version]
+                  if f.model_version == model_version
+                  and (prompt_version is None
+                       or f.prompt_version == prompt_version)]
         # Unresolvable forecasts are excluded from BOTH the resolved pairs
         # (already true — they were never in self._resolutions) AND n_open —
         # a forecast that can never produce an outcome is not "still open",
@@ -236,6 +313,8 @@ class ForecastLedger:
 
         briers = [brier(f, r) for f, r in pairs]
         base = [baseline_brier(f, r) for f, r in pairs]
+        rates = base_rates_from(pairs)
+        clim = [climatology_brier(f, r, rates) for f, r in pairs]
         dir_hits = [1.0 if f.direction == r.outcome_direction else 0.0
                     for f, r in pairs]
 
@@ -264,6 +343,10 @@ class ForecastLedger:
             n_resolved=len(pairs), n_open=n_open, n_unresolvable=n_unresolvable,
             brier=sum(briers) / len(briers),
             baseline_brier=sum(base) / len(base),
+            climatology_brier=sum(clim) / len(clim),
+            skill_vs_climatology=skill_vs(briers, clim),
+            skill_ci_low=skill_ci_low(briers, clim),
+            prompt_version=(prompt_version or ""),
             directional_accuracy=sum(dir_hits) / len(dir_hits),
             calibration_error=cal,
             false_urgent_rate=false_urgent, missed_shock_rate=missed,
@@ -278,6 +361,7 @@ class ForecastLedger:
 @dataclass(frozen=True)
 class PromotionThresholds:
     min_decisions: int = 50
+    skill_ci_low_min: float = 0.0    # bootstrap CI on skill must EXCLUDE zero
     calibration_max: float = 0.15
     regime_stability_tolerance: float = 0.05
     worst_regret_floor_r: float = -2.0      # tail ceiling on policy regret
@@ -308,6 +392,14 @@ def promotion_decision(incumbent: ScoreReport, challenger: ScoreReport,
         failed.append("MIN_DECISIONS")
     if not (challenger.brier < incumbent.brier):        # strictly better
         failed.append("BRIER_NOT_STRICTLY_BETTER")
+    # DISCRIMINATION. Beating uniform is arithmetic; beating climatology is
+    # information. Without this a zero-information base-rate forecaster passes
+    # every other gate on this list simultaneously — perfectly calibrated by
+    # construction, constant across regimes, and never urgent.
+    if challenger.skill_vs_climatology <= 0.0:
+        failed.append("NO_SKILL_VS_CLIMATOLOGY")
+    elif challenger.skill_ci_low <= thresholds.skill_ci_low_min:
+        failed.append("SKILL_CI_INCLUDES_ZERO")
     if challenger.calibration_error > thresholds.calibration_max:
         failed.append("CALIBRATION")
     # A gate with no data is a FAILED gate, not a passed one — otherwise the
@@ -323,6 +415,22 @@ def promotion_decision(incumbent: ScoreReport, challenger: ScoreReport,
             failed.append(f"REGIME_UNSTABLE:{regime}")
     if challenger.worst_policy_regret is None:
         failed.append("REGRET_DATA_MISSING")
+    # THE TAUTOLOGY TRAP, guarded before it is walked into.
+    #
+    # When 49 of 50 decisions are in and this gate still reads
+    # REGRET_DATA_MISSING, the pressure to define policy_regret_r = 0.0 for
+    # capped/suppressed directives will be enormous and technically defensible:
+    # a directive that was never emitted cannot have caused regret. But a
+    # blanket zero converts a TAIL RISK gate into a gate that can never fail,
+    # and a gate that cannot fail is not a gate.
+    #
+    # An all-zero regret distribution is the signature of that imputation. It is
+    # also the honest description of a model that has never influenced a trade —
+    # and in that case it has no tail evidence either, so refusing is correct on
+    # both readings.
+    elif (challenger.policy_regret_mean == 0.0
+          and challenger.worst_policy_regret == 0.0):
+        failed.append("REGRET_ALL_ZERO_SUSPECT_IMPUTATION")
     elif challenger.worst_policy_regret < thresholds.worst_regret_floor_r:
         failed.append("TAIL_REGRET")
     if challenger.stale_rate > thresholds.stale_rate_max:

@@ -196,3 +196,131 @@ def test_warmup_is_a_counted_refusal_not_a_silent_drop():
     _, strat = _drive()
     assert strat.rejected_warmup > 0
     assert strat.refusal_reasons.get("warmup") == strat.rejected_warmup
+
+
+# ============================================ council review, 2026-09-01
+# Two confirmed defects. Both are cases where an invariant proved in the
+# decision layer is not a property of the system that touches a venue.
+
+from body.runtime import assert_no_live_execution_client, is_live_execution_engine  # noqa: E402
+from body.stockfish_strategy import quantize_protective  # noqa: E402
+
+INST = TestInstrumentProvider.equity(symbol="SPY", venue="SIM")
+
+
+def test_make_price_really_does_loosen_a_stop():
+    """The defect, reproduced. If this ever stops being true the fix below is
+    unnecessary — but it must be shown, not assumed."""
+    assert float(INST.make_price(103.925)) == 103.92        # long stop, moved DOWN
+    assert float(INST.make_price(96.075)) == 96.08          # short stop, moved UP
+
+
+@pytest.mark.parametrize("level,direction", [
+    (103.925, LONG), (103.925, SHORT), (96.075, LONG), (96.075, SHORT),
+    (500.004, LONG), (499.996, SHORT), (100.0, LONG), (100.0, SHORT),
+])
+def test_quantization_never_loosens(level, direction):
+    q = float(quantize_protective(level, instrument=INST, direction=direction))
+    assert (q - level) * direction >= -1e-12, (
+        f"quantized {level} -> {q} on direction {direction:+d}: LOOSER")
+
+
+def test_quantization_lands_on_the_tick_grid():
+    for level in (103.925, 96.075, 500.004):
+        for d in (LONG, SHORT):
+            q = float(quantize_protective(level, instrument=INST, direction=d))
+            assert abs(q * 100 - round(q * 100)) < 1e-9, f"{q} is off the 1c grid"
+
+
+def test_quantization_costs_at_most_one_tick():
+    """Tighter is safe; tighter by a mile is a different bug."""
+    for level in (103.925, 96.075, 500.004, 412.3333):
+        for d in (LONG, SHORT):
+            q = float(quantize_protective(level, instrument=INST, direction=d))
+            assert abs(q - level) <= 0.01 + 1e-9
+
+
+def test_a_long_stop_rounds_up_and_a_short_stop_rounds_down():
+    assert float(quantize_protective(103.925, instrument=INST, direction=LONG)) == 103.93
+    assert float(quantize_protective(96.075, instrument=INST, direction=SHORT)) == 96.07
+
+
+# ---- the second T_SIM sensor -------------------------------------------------
+
+def test_the_live_engine_sensor_is_not_vacuous():
+    """FAULT INJECTION on the sensor itself. The first draft of this check
+    iterated `registered_clients`, which returns ClientIds rather than client
+    objects, so `isinstance(c, LiveExecutionClient)` was False for every element
+    and the check passed while measuring nothing."""
+    from nautilus_trader.execution.engine import ExecutionEngine
+    from nautilus_trader.live.execution_engine import LiveExecutionEngine
+    live = LiveExecutionEngine.__new__(LiveExecutionEngine)
+    sim = ExecutionEngine.__new__(ExecutionEngine)
+    assert is_live_execution_engine(live) is True
+    assert is_live_execution_engine(sim) is False
+    assert issubclass(LiveExecutionEngine, ExecutionEngine)
+
+
+def test_a_live_execution_engine_is_refused():
+    from nautilus_trader.live.execution_engine import LiveExecutionEngine
+    with pytest.raises(OddError):
+        assert_no_live_execution_client(
+            LiveExecutionEngine.__new__(LiveExecutionEngine))
+
+
+def test_an_absent_sensor_fails_closed():
+    """An unverifiable claim is UNKNOWN, and UNKNOWN must not read as safe."""
+    with pytest.raises(OddError):
+        assert_no_live_execution_client(None)
+
+
+def test_the_sensor_is_independent_of_the_clock():
+    """The point of the second lock: it must not be the clock read twice.
+
+    Checked over the CODE, not the source text — the docstring legitimately
+    explains why it is not the clock, and a naive substring search flags its own
+    explanation. That is the same false positive the trade_id guard hit, so it
+    is worth not repeating."""
+    import ast, inspect, textwrap
+    tree = ast.parse(textwrap.dedent(inspect.getsource(is_live_execution_engine)))
+    fn = tree.body[0]
+    body = fn.body[1:] if (fn.body and isinstance(fn.body[0], ast.Expr)
+                           and isinstance(fn.body[0].value, ast.Constant)) else fn.body
+    names = {n.id for b in body for n in ast.walk(b) if isinstance(n, ast.Name)}
+    attrs = {n.attr for b in body for n in ast.walk(b) if isinstance(n, ast.Attribute)}
+    assert not any("clock" in x.lower() for x in names | attrs), (
+        f"the second sensor touches the clock: {names | attrs}")
+    assert any("ExecutionEngine" in x for x in names), \
+        "the sensor should be discriminating on the execution engine type"
+
+
+def test_the_order_site_actually_uses_the_protective_quantizer():
+    """FAULT INJECTION that a first pass missed.
+
+    Testing `quantize_protective` in isolation proves the function is correct
+    and proves NOTHING about the order that reaches the venue. Reverting the
+    call site to `instrument.make_price(stop)` left every other test green —
+    which is the same gap-between-proof-and-path this whole review is about,
+    reproduced inside the fix for it.
+
+    So: assert on the call site itself. `sl_trigger_price` must be bound to a
+    call to `quantize_protective`, whatever else changes around it."""
+    import ast
+    from pathlib import Path
+    src = Path(__file__).resolve().parents[1] / "body" / "stockfish_strategy.py"
+    tree = ast.parse(src.read_text())
+
+    bindings = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        for kw in node.keywords:
+            if kw.arg == "sl_trigger_price":
+                fn = kw.value.func if isinstance(kw.value, ast.Call) else None
+                name = (getattr(fn, "id", None) or getattr(fn, "attr", None)
+                        if fn is not None else None)
+                bindings.append(name)
+
+    assert bindings, "no sl_trigger_price is bound anywhere — did the order site move?"
+    assert all(b == "quantize_protective" for b in bindings), (
+        f"a stop reaches the venue without side-aware quantization: {bindings}")

@@ -1,0 +1,4 @@
+timestamp=2026-08-29T06:05:19.521485+00:00
+pair=US
+source=fred_cpi
+reason=FRED CPI fetch failed, using fallback_static: FRED CPI fetch failed for 'US': FRED down for CPIAUCSL
