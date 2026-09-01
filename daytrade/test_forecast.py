@@ -268,7 +268,11 @@ def reports(n_challenger: int = 60):
 
 
 def test_promotion_all_gates_pass():
-    inc, ch = reports()
+    # 100, not 60: two regimes x five outcomes needs 100 decisions before a
+    # per-regime score is an estimate rather than a rumour. The old fixture ran
+    # two regimes at n=60 and passed, which is what the stratification gate was
+    # added to stop.
+    inc, ch = reports(100)
     d = promotion_decision(inc, ch, PromotionThresholds(),
                            per_regime_incumbent={"trend": 0.5, "chop": 0.6},
                            per_regime_challenger={"trend": 0.4, "chop": 0.55},
@@ -449,6 +453,104 @@ def test_a_real_negative_regret_still_passes():
     inc, ch = reports()
     real = replace(ch, policy_regret_mean=-0.3, worst_policy_regret=-1.2)
     d = promotion_decision(inc, real, PromotionThresholds(),
+                           per_regime_incumbent={"trend": 0.5},
+                           per_regime_challenger={"trend": 0.4}, ref="p")
+    assert d.promoted, d.failed_gates
+
+
+# ------------------------------------- promotion gate v2 (stationary bootstrap)
+
+def test_stationary_bootstrap_blocks_preserve_adjacency():
+    """Politis & Romano: geometric blocks, wrap-around. An index set with no
+    consecutive runs is an iid resample wearing the name."""
+    import random
+    from forecast import stationary_bootstrap_index
+    idx = stationary_bootstrap_index(200, random.Random(1))
+    assert len(idx) == 200
+    runs = sum(1 for a, b in zip(idx, idx[1:]) if b == (a + 1) % 200)
+    assert runs > 30, f"only {runs} consecutive steps — blocks are not forming"
+
+
+def test_stationary_bootstrap_is_deterministic_under_a_seed():
+    import random
+    from forecast import stationary_bootstrap_index
+    a = stationary_bootstrap_index(50, random.Random(4))
+    b = stationary_bootstrap_index(50, random.Random(4))
+    assert a == b
+
+
+def _autocorrelated_pair(rho=0.9, n=150, seed=11):
+    """Autocorrelation in the DIFFERENCE, which is what the paired bootstrap
+    sees. Putting the AR in a component common to both cancels it out — and a
+    fixture that cancels the very dependence under test is how the first version
+    of this test passed while the stationary branch was dead."""
+    import random
+    rng = random.Random(seed)
+    m, c, x = [], [], 0.0
+    for _ in range(n):
+        x = rho * x + rng.gauss(0, 1)
+        m.append(0.30 + 0.06 * x)
+        c.append(0.34)
+    return m, c
+
+
+def test_iid_bootstrap_is_STRICTLY_the_more_permissive_one():
+    """The reason the default is stationary: an iid CI on autocorrelated scores
+    is too narrow, and for a one-sided LOWER bound too narrow means a gate that
+    is too easy to pass.
+
+    STRICT inequality, deliberately. `>=` was satisfied when a mutation made
+    both branches iid — the test passed while the thing it tests was gone."""
+    m, c = _autocorrelated_pair()
+    st = skill_ci_low(m, c, stationary=True)
+    iid = skill_ci_low(m, c, stationary=False)
+    assert iid - st > 1e-3, (
+        f"iid {iid:.5f} vs stationary {st:.5f}: the branches are not separating, "
+        "so the stationary path may not be live")
+
+
+def test_skill_ci_low_actually_takes_the_stationary_branch():
+    """FAULT INJECTION on the call path, not the function. Twice now a guard has
+    tested a helper while the code under test called something else."""
+    import ast, inspect, textwrap
+    from forecast import skill_ci_low as f
+    tree = ast.parse(textwrap.dedent(inspect.getsource(f)))
+    calls = {n.func.id for n in ast.walk(tree)
+             if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+    assert "stationary_bootstrap_index" in calls, (
+        "skill_ci_low no longer calls the stationary bootstrap")
+
+
+def test_the_gate_uses_the_stationary_interval_by_default():
+    import inspect
+    from forecast import skill_ci_low as f
+    assert inspect.signature(f).parameters["stationary"].default is True
+
+
+def test_fifty_is_exactly_right_for_one_regime_and_thin_for_more():
+    """The arithmetic behind the council's point, made checkable."""
+    from forecast import required_decisions
+    assert required_decisions(1) == 50        # the existing floor, vindicated
+    assert required_decisions(2) == 100
+    assert required_decisions(3) == 150
+
+
+def test_a_thin_stratification_is_refused():
+    """50 pooled decisions across two regimes is 10 cells of five outcomes."""
+    inc, ch = reports()                        # n_resolved = 60
+    d = promotion_decision(inc, ch, PromotionThresholds(),
+                           per_regime_incumbent={"trend": 0.5, "chop": 0.6},
+                           per_regime_challenger={"trend": 0.4, "chop": 0.55},
+                           ref="p")
+    assert not d.promoted
+    assert any(g.startswith("REGIME_STRATIFICATION_UNDERPOWERED")
+               for g in d.failed_gates), d.failed_gates
+
+
+def test_a_single_regime_at_sixty_still_passes():
+    """The new gate must not reject an adequately powered stratification."""
+    inc, ch = reports()
+    d = promotion_decision(inc, ch, PromotionThresholds(),
                            per_regime_incumbent={"trend": 0.5},
                            per_regime_challenger={"trend": 0.4}, ref="p")
     assert d.promoted, d.failed_gates

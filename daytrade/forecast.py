@@ -175,26 +175,84 @@ def skill_vs(model: list, reference: list) -> float:
     return 1.0 - (sum(model) / len(model)) / ref
 
 
+def stationary_bootstrap_index(n: int, rng, *, mean_block: float | None = None) -> list:
+    """One resample index set under the Politis & Romano (1994) stationary
+    bootstrap: geometric block lengths, wrap-around, so the resample is itself
+    stationary.
+
+    WHY NOT IID RESAMPLING
+        Forecasts arrive as a time series and their scores are autocorrelated —
+        adjacent days share a regime, a volatility state, and often a news
+        cycle. An iid bootstrap destroys that dependence and returns a CI that
+        is too NARROW, which for a one-sided lower bound means a gate that is
+        too EASY to pass. Using it here would understate exactly the uncertainty
+        the gate exists to price.
+
+        This is the same misspecification that makes a naive permutation null on
+        a stationary series too easy to beat.
+
+    `mean_block` defaults to n**(1/3), the standard order for the expected block
+    length; p = 1/mean_block is the geometric restart probability."""
+    if n <= 0:
+        return []
+    if mean_block is None:
+        mean_block = max(1.0, n ** (1.0 / 3.0))
+    p = 1.0 / mean_block
+    out = []
+    i = rng.randrange(n)
+    while len(out) < n:
+        out.append(i)
+        i = rng.randrange(n) if rng.random() < p else (i + 1) % n
+    return out
+
+
 def skill_ci_low(model: list, reference: list, *, n_boot: int = 2000,
-                 alpha: float = 0.05, seed: int = 20260901) -> float:
-    """Lower bound of a percentile bootstrap CI on the skill score.
+                 alpha: float = 0.05, seed: int = 20260901,
+                 stationary: bool = True) -> float:
+    """Lower bound of a one-sided percentile bootstrap CI on the skill score.
 
     Deterministic seed: a gate whose verdict moves between runs is not a gate.
-    Paired resampling — model and reference are scored on the SAME cases, so
-    they must be resampled together or the CI is wrong."""
+
+    PAIRED resampling — model and reference are scored on the SAME cases, so
+    they are resampled together or the CI is meaningless.
+
+    STATIONARY by default (Politis & Romano). Pass `stationary=False` only to
+    demonstrate how much narrower — i.e. how much more permissive — the iid
+    interval is; a test does exactly that and asserts the direction."""
     import random
     if not model or len(model) != len(reference):
         return float("-inf")
     rng = random.Random(seed)
     n = len(model)
-    idx = range(n)
     scores = []
     for _ in range(n_boot):
-        pick = [rng.choice(idx) for _ in idx]
+        pick = (stationary_bootstrap_index(n, rng) if stationary
+                else [rng.randrange(n) for _ in range(n)])
         scores.append(skill_vs([model[i] for i in pick],
                                [reference[i] for i in pick]))
     scores.sort()
     return scores[int(alpha * n_boot)]
+
+
+# --- how thin is 50, really -------------------------------------------------
+
+N_SCENARIOS = 5
+MIN_PER_CELL = 10          # below this a per-cell rate is not an estimate
+
+
+def required_decisions(n_regimes: int, *, n_scenarios: int = N_SCENARIOS,
+                       min_per_cell: int = MIN_PER_CELL) -> int:
+    """Decisions needed before a 5-outcome x regime stratification means anything.
+
+    The gate's 50-decision minimum is a floor on the POOLED count. But the
+    regime-stability gate reads PER-REGIME scores over a five-outcome
+    distribution, so at two regimes it is asking 50 decisions to populate 10
+    cells, and at three regimes 15 cells. At n=50 a per-cell rate is a rumour.
+
+    This function does not change the gate's threshold — raising it unilaterally
+    would be exactly the sort of quiet retune the freeze discipline forbids. It
+    makes the arithmetic visible so the number can be set deliberately."""
+    return n_scenarios * n_regimes * min_per_cell
 
 
 @dataclass(frozen=True)
@@ -390,6 +448,20 @@ def promotion_decision(incumbent: ScoreReport, challenger: ScoreReport,
         failed.append("OOS_REQUIRED")
     if challenger.n_resolved < thresholds.min_decisions:
         failed.append("MIN_DECISIONS")
+    # min_decisions is a floor on the POOLED count, but regime stability reads
+    # PER-REGIME scores over a five-outcome distribution. At two regimes that is
+    # 50 decisions across 10 cells; at three, 15 cells. A per-cell rate at that
+    # density is a rumour, and a gate reading rumours passes for the wrong reason.
+    #
+    # This does NOT retune min_decisions -- raising a frozen threshold after
+    # seeing what it lets through is the move the freeze discipline forbids. It
+    # adds a separate, correctly-derived condition that scales with the
+    # stratification actually being used.
+    n_regimes = len(per_regime_challenger or {})
+    if n_regimes and challenger.n_resolved < required_decisions(n_regimes):
+        failed.append(
+            f"REGIME_STRATIFICATION_UNDERPOWERED:"
+            f"{challenger.n_resolved}<{required_decisions(n_regimes)}")
     if not (challenger.brier < incumbent.brier):        # strictly better
         failed.append("BRIER_NOT_STRICTLY_BETTER")
     # DISCRIMINATION. Beating uniform is arithmetic; beating climatology is
