@@ -124,6 +124,39 @@ def _iso(dt: datetime) -> str:
 MIN_BAR_INTERVAL_MIN = 5            # the "5m" cache everywhere in this module
 
 
+def session_trade_id(symbol: str, now: datetime) -> str:
+    """The join key between an operator judgment and the trade it informed.
+
+    THE DEFECT THIS CLOSES
+        Both record writes below used to hardcode `"trade_id": None`, so a
+        sealed belief could not be joined to the trade it produced. Both ends
+        of that join already existed and neither was plugged in, which is why
+        `policy_regret_r` has a consumer and no supplier and the promotion
+        gate's tail check fails closed on missing data. A gate with no data is
+        a FAILED gate by design — so the operator is not failing that gate, it
+        is not yet being measured by it.
+
+    THE KEY IS NOT A NEW CONVENTION
+        It is byte-identical to what `runner.py` already mints:
+        `f"{symbol}-{session_date}"`, session-level, with the session date
+        being the ET calendar date. The runner's live branch is
+        `datetime.now(ET).date()` and this is the same expression, because the
+        operator only ever runs live -- it forms judgments in real time and
+        seals them before the outcome exists.
+
+        Matching exactly is the entire point. A cleverer key here would be a
+        second identity, and two identities is the same as none.
+
+    REPLAY IS DELIBERATELY NOT HANDLED
+        The runner reads `plan["_session"]` when replaying a tape, so it never
+        mints today's date for yesterday's bars. The operator has no replay
+        mode to mirror: an LLM asked to forecast a historical session may
+        already know how it ended, so a "replayed" operator judgment is not a
+        sealed forecast at all. There is nothing here to keep consistent.
+    """
+    return f"{symbol}-{now.astimezone(ET).date().isoformat()}"
+
+
 def _rth_session_bounds(day_et) -> "Optional[tuple[datetime, datetime]]":
     """RTH open/close as tz-aware ET datetimes for one ET calendar date, or
     None if that date is not a trading day at all (weekend)."""
@@ -856,7 +889,7 @@ def run_once(symbol: str, *, cap: float, model: str,
             "record_id": record_id, "ts": _iso(now), "trigger": trigger,
             "symbol": symbol, "model_version": f"{MODEL_VERSION_BASE}/stale-gate",
             "prompt_version": PROMPT_VERSION, "forecast_id": None,
-            "trade_id": None, "evidence_ids": [],
+            "trade_id": session_trade_id(symbol, now), "evidence_ids": [],
             "both_sides": None, "invalidators": [],
             "verdict": "ABSTAIN", "confidence": 0.0,
             "expires_at": _iso(now), "suppressed_to": None,
@@ -963,7 +996,7 @@ def _seal_and_emit(read: "OperatorRead", cost: float, symbol: str, trigger: str,
         "symbol": symbol, "model_version": f"{MODEL_VERSION_BASE}/{model}",
         "prompt_version": PROMPT_VERSION,
         "forecast_id": fc.forecast_id if fc else None,
-        "trade_id": None, "evidence_ids": list(ev_ids),
+        "trade_id": session_trade_id(symbol, now), "evidence_ids": list(ev_ids),
         "both_sides": {"bull": read.bull, "base": read.base, "bear": read.bear},
         "invalidators": read.invalidators, "verdict": read.verdict,
         "confidence": read.confidence,

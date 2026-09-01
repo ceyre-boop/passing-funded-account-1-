@@ -821,3 +821,95 @@ def test_grade_runs_on_resolved_forecasts(sandbox, monkeypatch, capsys):
     assert ao.grade("claude-sonnet-5") == 0
     outp = capsys.readouterr().out
     assert "brier" in outp and "directional_accuracy" in outp
+
+
+# ---------------------------------------------------- the belief<->trade join
+
+def test_session_trade_id_matches_the_runners_key_exactly():
+    """The whole value of this key is that it is the SAME string the runner
+    mints. A cleverer key here would be a second identity, and two identities
+    is the same as none."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    import runner
+
+    et = ZoneInfo("America/New_York")
+    now = datetime(2026, 8, 21, 10, 30, tzinfo=et)
+    session_date = runner.resolve_session_date(live=True, plan={})  # ET today
+    # the runner's construction, verbatim from runner.py
+    runner_key = f"NVDA-{session_date}"
+    operator_key = ao.session_trade_id("NVDA", datetime.now(et))
+    assert operator_key == runner_key
+
+
+def test_session_trade_id_is_et_dated_not_utc():
+    """20:00 ET on the 21st is 00:00 UTC on the 22nd. Keying off UTC would file
+    an evening judgment against the next session."""
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    evening_et = datetime(2026, 8, 21, 20, 0, tzinfo=ZoneInfo("America/New_York"))
+    assert evening_et.astimezone(timezone.utc).date().isoformat() == "2026-08-22"
+    assert ao.session_trade_id("NVDA", evening_et) == "NVDA-2026-08-21"
+
+
+def test_session_trade_id_is_deterministic():
+    """Same input, same key — a re-run must not mint a second identity."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    t = datetime(2026, 8, 21, 14, 5, tzinfo=ZoneInfo("America/New_York"))
+    assert ao.session_trade_id("NVDA", t) == ao.session_trade_id("NVDA", t)
+
+
+def test_session_trade_id_accepts_any_input_timezone():
+    """The operator may be handed a UTC clock; the key must still be ET-dated."""
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    utc = datetime(2026, 8, 22, 0, 30, tzinfo=timezone.utc)      # 20:30 ET 8/21
+    assert ao.session_trade_id("NVDA", utc) == "NVDA-2026-08-21"
+    assert ao.session_trade_id("NVDA", utc) == ao.session_trade_id(
+        "NVDA", utc.astimezone(ZoneInfo("America/New_York")))
+
+
+def _null_trade_id_literals(path):
+    """Dict literals that map "trade_id" to a bare None, by AST.
+
+    Deliberately not a regex over the source: the first version of this guard
+    matched its own docstring explaining the defect. Parsing targets the SHAPE
+    of the bug -- a key whose value is the None constant -- so prose about it
+    cannot trigger it and a reformatting cannot hide it."""
+    import ast
+    from pathlib import Path
+    tree = ast.parse(Path(path).read_text())
+    hits = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        for k, v in zip(node.keys, node.values):
+            if (isinstance(k, ast.Constant) and k.value == "trade_id"
+                    and isinstance(v, ast.Constant) and v.value is None):
+                hits.append(node.lineno)
+    return hits
+
+
+def test_no_record_write_hardcodes_a_null_trade_id():
+    """FAULT INJECTION: the defect was a literal `"trade_id": None` in the
+    record writes. If one comes back, the belief-to-trade join silently dies
+    again -- and silently is the whole problem, since a gate with no data
+    fails closed and looks like a model that simply has not earned promotion."""
+    hits = _null_trade_id_literals(ao.__file__)
+    assert not hits, f"record write(s) hardcode a null trade_id at line(s) {hits}"
+
+
+def test_the_ast_guard_actually_fires():
+    """FAULT INJECTION on the guard itself: an assertion that has never fired
+    is not a guard."""
+    import ast, tempfile, pathlib
+    src = 'x = {"record_id": 1, "trade_id": None, "symbol": "NVDA"}\n'
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+        fh.write(src); tmp = fh.name
+    assert _null_trade_id_literals(tmp) == [1]
+    # and prose mentioning the defect must NOT trip it
+    with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as fh:
+        fh.write('def f():\n    """we used to write "trade_id": None here."""\n')
+        tmp2 = fh.name
+    assert _null_trade_id_literals(tmp2) == []
