@@ -33,6 +33,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import os
 import sys
@@ -58,6 +59,57 @@ SOURCE_VERSION = "runner-1"                  # producer identity on every emitte
 
 REQUIRED = ("symbol", "direction", "entry", "qty", "sl")
 
+# Every key the blueprint is allowed to carry. A plan key outside this set is a
+# typo, and a typo used to be SILENT: `state_from_plan` picks the exit params out
+# of the plan by whitelist comprehension, so `trail_multiplier` was simply not
+# collected and the engine ran its own default instead of the plan's intent.
+# Same shape for `goal_frac` (silently 0.5) and `flatten_et` (silently never
+# flattens). That is the confident-wrong-answer failure class, on the live path.
+#
+# Underscore-prefixed keys are the annotation convention -- data/daytrade/
+# plan.example.json carries _what/_levels/_flatten/_source as human notes -- and
+# are always allowed.
+KNOWN_PLAN_KEYS = frozenset({
+    # identity and geometry
+    "symbol", "direction", "entry", "qty", "sl",
+    "tp1", "tp1_r", "tp2", "tp2_r", "day_goal_usd",
+    "trail_dist", "trail_r",
+    # exit policy: a preset, or the three params directly
+    "exit_policy", "trail_mult", "be_arm_frac", "hold_past_tp2",
+    # session behaviour
+    "goal_fraction", "flatten_at_et",
+    # context carried for the log, not acted on
+    "thesis", "sim_costs", "invalidators", "key_levels", "schedule",
+})
+
+# Written by load_plan itself, not by the author. Tolerated wherever the
+# validator runs so it is safe to call before AND after derivation.
+DERIVED_PLAN_KEYS = frozenset({"risk_per_share"})
+
+
+def validate_plan_keys(plan: dict, *, where: str = "plan") -> None:
+    """Refuse a plan carrying a key we do not recognise.
+
+    Loud, with a suggestion, because this fires at 09:31 and the whole point is
+    that the operator sees it instead of the engine quietly substituting a
+    default. Never downgrade this to a warning."""
+    unknown = sorted(k for k in plan
+                     if not k.startswith("_")
+                     and k not in KNOWN_PLAN_KEYS
+                     and k not in DERIVED_PLAN_KEYS)
+    if not unknown:
+        return
+    hints = []
+    for k in unknown:
+        near = difflib.get_close_matches(k, sorted(KNOWN_PLAN_KEYS), n=1, cutoff=0.7)
+        hints.append(f"{k!r}" + (f" (did you mean {near[0]!r}?)" if near else ""))
+    raise ValueError(
+        f"{where} has unrecognised field(s): {', '.join(hints)}. "
+        "A key this engine does not read is a typo, and a typo here is silent — "
+        "the plan's intent would be dropped and a default used in its place. "
+        f"Known fields: {', '.join(sorted(KNOWN_PLAN_KEYS))}. "
+        "Prefix a key with '_' to carry it as an annotation.")
+
 
 class QuoteUnavailable(RuntimeError):
     """No price we are willing to act on. Never downgraded to a guess."""
@@ -72,6 +124,9 @@ def load_plan(path: Path) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"no plan at {path} — write the blueprint before the open")
     plan = json.loads(path.read_text())
+    if not isinstance(plan, dict):
+        raise ValueError(f"plan {path} is a {type(plan).__name__}, not an object")
+    validate_plan_keys(plan, where=f"plan {path}")
 
     missing = [k for k in REQUIRED if plan.get(k) is None]
     if missing:
@@ -129,6 +184,7 @@ def state_from_plan(plan: dict) -> TradeState:
     # the engine fall back to its 1.0 default and trail at full width, which is
     # the exact opposite of what the plan asked for, silently. Caught in
     # pre-flight the night before training day 1; it would have run live.
+    validate_plan_keys(plan, where="plan")
     explicit = {k: plan[k] for k in ("trail_mult", "be_arm_frac", "hold_past_tp2")
                 if k in plan}
     preset = plan.get("exit_policy")
