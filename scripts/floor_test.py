@@ -175,18 +175,33 @@ def sweep(results: list) -> int:
     print("SLIP_BPS=2.0 is 15.5x the SPY half-spread and 66% of the modelled cost.")
     print("This shows where the floor WOULD sit across a plausible range. It does")
     print("not reopen anything: the fill model was frozen before the computation so")
-    print("it could not be retuned after the answer was visible.\n")
+    print("it could not be retuned after the answer was visible.")
+    print()
+    print("BOTH prereg conditions are shown. Lowering cost lowers the FLOOR, which")
+    print("can push it BELOW the MDE — and a floor under the detection limit means")
+    print("the study is untestable at that N and closes UNRUN. Cheaper costs do not")
+    print("monotonically help; they can move a family from one closure to another.\n")
     for r in results:
         print(f"{r['name']}   N={r['n_events']}")
-        print(f"  {'cost/share':>11} {'drag (R)':>10} {'FLOOR':>9} {'E[R]':>10}  vs floor")
+        print(f"  {'cost/share':>11} {'FLOOR':>9} {'MDE':>8} {'(b)':>5} "
+              f"{'E[R]':>10} {'(a)':>5}  verdict")
         for c in COST_GRID:
             alt = evaluate(r["name"], r["_ctx"], r["_abs_ret"], r["diff_abs_ret"],
                            r["n_events_recorded"], cost_override=c)
-            pct = alt["expected_r"] / alt["floor"] * 100 if alt["floor"] else float("nan")
+            # BOTH prereg conditions, in the order §5 fixes. Showing only (a)
+            # was a defect in the first version of this sweep: it implied a
+            # family "clears" at low cost when the falsifiability condition had
+            # already failed, which is a DIFFERENT closure, not a pass.
+            b_ok = alt["floor"] >= alt["mde"]
+            a_ok = alt["expected_r"] >= alt["floor"]
+            verdict = ("CLEARS BOTH" if (b_ok and a_ok)
+                       else "UNTESTABLE — closed unrun" if not b_ok
+                       else "fails economics")
             label = f"{c:>11.4f}" if c is not None else f"{'prereg':>11}"
-            mark = "  <- as frozen (price-scaled)" if c is None else ""
-            print(f"  {label} {alt['mean_cost_drag_r']:>10.4f} {alt['floor']:>9.4f} "
-                  f"{alt['expected_r']:>+10.4f}  {pct:>4.0f}%{mark}")
+            mark = "  <- as frozen" if c is None else ""
+            print(f"  {label} {alt['floor']:>9.4f} {alt['mde']:>8.4f} "
+                  f"{('yes' if b_ok else 'NO'):>5} {alt['expected_r']:>+10.4f} "
+                  f"{('yes' if a_ok else 'no'):>5}  {verdict}{mark}")
         # the frozen row must reproduce the headline result exactly
         assert abs(alt["floor"] - r["floor"]) < 1e-9, (
             f"sweep's frozen row {alt['floor']} != the pre-registered floor "

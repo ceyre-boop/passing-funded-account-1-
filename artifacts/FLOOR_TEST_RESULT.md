@@ -8,9 +8,13 @@
 
 > **COST SENSITIVITY ADDED 2026-09-01 — verdicts unchanged.** `SLIP_BPS = 2.0` is
 > 15.5x the SPY half-spread and 66% of the modelled cost, and costs set both floors.
-> Both families clear comfortably at realistic costs (`scripts/floor_test.py --sweep`;
-> full table in `artifacts/COUNCIL_REVIEW_2026-09-01.md`). **This does not reopen
-> anything.** The fill model was frozen at `3b10e8b` before the computation precisely
+>
+> **CORRECTION (same day).** An earlier version of this banner said "both families
+> clear comfortably at realistic costs." That was **wrong**, because the sweep showed
+> only condition (a). Applying condition (b) as well: `spy_fomc_double_splash` does
+> NOT clear at realistic cost — its floor falls *below* its MDE at N=84, so it
+> becomes untestable and closes unrun. Only `spy_macro_decay` clears both. See
+> `artifacts/COST_REOPEN_PREREG.md` §4. **This still does not reopen anything.** The fill model was frozen at `3b10e8b` before the computation precisely
 > so it could not be retuned after the answer was visible; the 15.5x is a defect in
 > the pre-registration, and reopening needs a new one written beforehand.
 
