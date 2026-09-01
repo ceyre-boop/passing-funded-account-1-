@@ -15,9 +15,10 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from odd import (  # noqa: E402
-    FORBIDDEN_TRANSITIONS, MRM_TABLE, PRECONDITIONS, GateResult, Maneuver, Mrm,
-    OddError, Precondition, Recovery, Tier, Truth, UNSET, authorize_entry,
-    degrade, evaluate_gate, recover, resolve_mrm,
+    FORBIDDEN_TRANSITIONS, LIVE_TIERS, MRM_TABLE, PRECONDITIONS,
+    SIM_PRECONDITIONS, GateResult, Maneuver, Mrm, OddError, Precondition,
+    Recovery, RunEnvironment, Tier, Truth, UNSET, authorize_entry, degrade,
+    evaluate_gate, preconditions_for, recover, resolve_mrm,
 )
 
 FULL = Recovery(True, True, True, manual_rearm=True)
@@ -180,7 +181,8 @@ def _open_gate() -> GateResult:
 def test_exit_core_refusal_blocks_entry_even_when_entry_layer_agrees():
     ok, why = authorize_entry(Tier.T1_RESTRICTED, _open_gate(),
                               exit_core_in_domain=Truth.FALSE,
-                              entry_layer_in_domain=Truth.TRUE)
+                              entry_layer_in_domain=Truth.TRUE,
+                              environment=RunEnvironment.LIVE)
     assert not ok and "orphan" in why
 
 
@@ -189,28 +191,32 @@ def test_unknown_exit_domain_blocks_entry():
     orphaned-position failure ODD.md §1b calls a T3 event."""
     ok, _ = authorize_entry(Tier.T1_RESTRICTED, _open_gate(),
                             exit_core_in_domain=Truth.UNKNOWN,
-                            entry_layer_in_domain=Truth.TRUE)
+                            entry_layer_in_domain=Truth.TRUE,
+                            environment=RunEnvironment.LIVE)
     assert not ok
 
 
 def test_entry_layer_cannot_open_risk_at_a_defensive_tier():
     ok, why = authorize_entry(Tier.T2_DEFENSIVE, _open_gate(),
                               exit_core_in_domain=Truth.TRUE,
-                              entry_layer_in_domain=Truth.TRUE)
+                              entry_layer_in_domain=Truth.TRUE,
+                              environment=RunEnvironment.LIVE)
     assert not ok and "may not open risk" in why
 
 
 def test_closed_gate_blocks_entry():
     ok, why = authorize_entry(Tier.T1_RESTRICTED, evaluate_gate(),
                               exit_core_in_domain=Truth.TRUE,
-                              entry_layer_in_domain=Truth.TRUE)
+                              entry_layer_in_domain=Truth.TRUE,
+                              environment=RunEnvironment.LIVE)
     assert not ok and "preconditions" in why
 
 
 def test_authorization_is_possible_only_with_everything_aligned():
     ok, why = authorize_entry(Tier.T1_RESTRICTED, _open_gate(),
                               exit_core_in_domain=Truth.TRUE,
-                              entry_layer_in_domain=Truth.TRUE)
+                              entry_layer_in_domain=Truth.TRUE,
+                              environment=RunEnvironment.LIVE)
     assert ok and why == "authorized"
 
 
@@ -218,5 +224,132 @@ def test_the_shipped_system_cannot_authorize_anything_today():
     """The end-to-end statement of ODD.md's current resolution: never."""
     ok, _ = authorize_entry(Tier.T2_DEFENSIVE, evaluate_gate(),
                             exit_core_in_domain=Truth.UNKNOWN,
-                            entry_layer_in_domain=Truth.UNKNOWN)
+                            entry_layer_in_domain=Truth.UNKNOWN,
+                            environment=RunEnvironment.LIVE)
     assert not ok
+
+
+# ============================================================== T_SIM
+# The closed track. Every test below exists because T_SIM is a door in a wall
+# built on purpose, and the failure mode worth fearing is that it opens from the
+# wrong side rather than that it fails to open at all.
+
+SIM_OPEN = tuple(replace(p, _forced=Truth.TRUE) for p in SIM_PRECONDITIONS)
+
+
+def _sim_gate():
+    return evaluate_gate(SIM_OPEN)
+
+
+def test_t_sim_never_opens_real_risk():
+    """It permits a simulated loop, not a licence to trade."""
+    assert not Tier.T_SIM.may_open_risk
+    assert Tier.T_SIM.may_open_simulated_risk
+
+
+def test_no_live_tier_may_open_simulated_risk():
+    for t in LIVE_TIERS:
+        assert not t.may_open_simulated_risk
+
+
+def test_t_sim_outside_a_backtest_is_a_FAULT_not_a_refusal():
+    """FAULT INJECTION: the single most important guard here. A refusal would let
+    a mis-wired live system keep running quietly at a simulation tier."""
+    for env in (RunEnvironment.LIVE, RunEnvironment.SANDBOX, RunEnvironment.UNKNOWN):
+        with pytest.raises(OddError):
+            authorize_entry(Tier.T_SIM, _sim_gate(),
+                            exit_core_in_domain=Truth.TRUE,
+                            entry_layer_in_domain=Truth.TRUE,
+                            environment=env)
+
+
+def test_t_sim_defaults_to_faulting_because_environment_defaults_to_unknown():
+    """Omitting `environment` must not quietly authorize."""
+    with pytest.raises(OddError):
+        authorize_entry(Tier.T_SIM, _sim_gate(),
+                        exit_core_in_domain=Truth.TRUE,
+                        entry_layer_in_domain=Truth.TRUE)
+
+
+def test_t_sim_authorizes_only_in_a_proven_backtest():
+    ok, why = authorize_entry(Tier.T_SIM, _sim_gate(),
+                              exit_core_in_domain=Truth.TRUE,
+                              entry_layer_in_domain=Truth.TRUE,
+                              environment=RunEnvironment.BACKTEST)
+    assert ok and "T_SIM" in why and "no edge claimed" in why
+
+
+def test_t_sim_still_obeys_its_own_gate():
+    """A shorter list is not an absent one."""
+    ok, why = authorize_entry(Tier.T_SIM, evaluate_gate(tier=Tier.T_SIM),
+                              exit_core_in_domain=Truth.TRUE,
+                              entry_layer_in_domain=Truth.TRUE,
+                              environment=RunEnvironment.BACKTEST)
+    assert not ok and "sim preconditions" in why
+
+
+def test_the_sim_gate_is_a_list_not_a_bypass():
+    """FAULT INJECTION: if SIM_PRECONDITIONS were ever emptied, the gate would
+    pass vacuously and the door would be wide open."""
+    assert len(SIM_PRECONDITIONS) >= 4
+    assert evaluate_gate(()).passed, "an empty list passes — which is why it must not be empty"
+    keys = {p.key for p in SIM_PRECONDITIONS}
+    assert {"no_live_venue", "holdout_sealed", "checkpoint_hash",
+            "policy_declares_no_edge"} <= keys
+
+
+def test_sealed_holdout_survives_into_simulation():
+    """A backtest is not a licence to unseal."""
+    assert "holdout_sealed" in {p.key for p in SIM_PRECONDITIONS}
+
+
+def test_preconditions_for_selects_the_right_checklist():
+    assert preconditions_for(Tier.T_SIM) is SIM_PRECONDITIONS
+    for t in LIVE_TIERS:
+        assert preconditions_for(t) is PRECONDITIONS
+
+
+def test_the_sim_list_is_shorter_than_the_live_list():
+    assert len(SIM_PRECONDITIONS) < len(PRECONDITIONS)
+
+
+@pytest.mark.parametrize("frm", LIVE_TIERS)
+def test_nothing_can_slide_into_t_sim(frm):
+    """FAULT INJECTION: a live system degrading into simulation would silently
+    lose its execution path while holding a position."""
+    if Tier.T_SIM > frm:
+        pytest.skip("degrade() rejects raises separately")
+    with pytest.raises(OddError):
+        degrade(frm, Tier.T_SIM)
+
+
+def test_t_sim_is_unreachable_by_recovery():
+    """Recovery only ever walks upward, so T_SIM cannot be recovered INTO."""
+    for t in LIVE_TIERS:
+        assert recover(t, FULL) is not Tier.T_SIM
+
+
+def test_leaving_the_closed_track_lands_in_the_safest_live_state():
+    assert recover(Tier.T_SIM, FULL) is Tier.T3_HALT
+
+
+def test_t_sim_does_not_disturb_the_live_tier_ordering():
+    """The min()/max() conservatism logic depends on this and must be unchanged."""
+    assert Tier.T3_HALT < Tier.T2_DEFENSIVE < Tier.T1_RESTRICTED < Tier.T0_NOMINAL
+    assert Tier.T_SIM < Tier.T3_HALT
+
+
+def test_no_mrm_trigger_resolves_to_t_sim():
+    """FAULT INJECTION: tier_floor is a min(), so a T_SIM floor anywhere in the
+    MRM table would make 'go simulate' the answer to a drawdown breach."""
+    for m in MRM_TABLE.values():
+        assert m.tier_floor is not Tier.T_SIM
+    assert resolve_mrm(*MRM_TABLE).tier_floor is not Tier.T_SIM
+
+
+def test_live_authorization_still_requires_a_known_environment():
+    ok, why = authorize_entry(Tier.T1_RESTRICTED, _open_gate(),
+                              exit_core_in_domain=Truth.TRUE,
+                              entry_layer_in_domain=Truth.TRUE,
+                              environment=RunEnvironment.UNKNOWN)
+    assert not ok and "UNKNOWN" in why

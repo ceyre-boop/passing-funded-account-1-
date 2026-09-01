@@ -1,215 +1,170 @@
-# Phase 1 — the deterministic execution core, to a decisive gate
+# Make the car drive — T_SIM, a null policy, and a full-loop session run
 
 ## Context
 
-The architecture splits a rule-bound execution core (Stockfish) from an adaptive
-evaluation layer (AlphaZero). A learning layer cannot be built on an execution
-engine whose behaviour is unmeasured, so Phase 1 finishes the core and puts a
-statistical gate in front of it.
+The success criterion changed, out loud: **completions and disengagements, not R.**
+An autonomous system that reliably loses money is still an engineering achievement,
+and unlike an edge it is testable today. AlphaZero at ~65% and Stockfish in early
+beta are no longer blockers, because none of the three steps below needs the 35%
+that isn't built.
 
-The engine is **software-verified and statistically unexposed** — two claims that
-have been sharing one word. `daytrade/stockfish_exit.py` has mutation logs, a
-constitution funnel, and a clean checkpoint (SF-FROZEN-002, `verify` → 0). Its
-lifetime exercised record is **36 events across 2 NVDA sessions**. Phase 1
-converts the second number.
+The thing standing in the way is not the engines. It is the safety artifact: every
+tier in `ODD.md` §4 is about **live** risk, so there is no way to drive on a closed
+track. `StockfishStrategy` sits at `T2_DEFENSIVE` and refuses everything, which
+means the full loop — perceive, decide, hand off, execute, log, degrade — cannot be
+exercised end to end without an edge. The new goal is blocked by our own gate.
 
-This morning's rollback to 2026-08-24 discarded 89 commits, preserved at tag
-`pre-rollback-2026-08-29`. **161 files exist in the tag but not in the tree**, so
-for two of the four components the first question is recover-vs-rebuild.
+`T_SIM` is a **narrowing**, not a widening, so §6 change control does not gate it.
+But it is a deliberate door in a wall we built on purpose, and the whole risk of
+this session is that the door turns out to be openable from the wrong side.
 
-## The agreement, recorded before the result exists
+## The blocker is two blockers, not one
 
-**Gate 4 returning "incumbent holds" is Phase 1 complete, not Phase 1 failed.**
+Adding a tier unblocks nothing on its own. `evaluate_gate()` refuses independently
+of tier:
 
-With one condition, which is a guard rather than an escape hatch: it counts only
-if the gate *could* have said otherwise. Last night's carry SPRT returned
-`ACCEPT_H0` while 47 of 97 units had ΔR ≡ 0 — thin cells meant the table never
-deviated, and those silent units supplied 96% of the H0 bound. A hollow null and
-a real null print the same word. **Gate 4 is complete when the SPRT reaches a
-bound AND the deviation rate shows the candidate acted.** Near-zero deviation
-means "no test was run", which sends us back to coverage, not to a conclusion.
+```
+gate.passed = False
+FALSE  : ('t0_unseal',)
+UNKNOWN: ('envelope','heartbeat','reconciliation','slippage','exit_domain',
+          'checkpoint_hash','policy_version','prereg_current','holdout_sealed')
+```
 
-## Population — ratified
+So `T_SIM` needs its **own explicit, reduced precondition list** — never a gate
+bypass. A bypass is exactly the dangerous door; a short auditable list is not.
 
-**Build on SPY, apply to the basket.** The occupancy audit already warned the
-basket is too thin: at episode level nothing reached OK, `minimal` was MARGINAL
-at 25.4%, and the threshold is ~117 trading days against the basket's 39.
+## Design
 
-| lane | source | sessions | entries | role |
-|---|---|---|---|---|
-| build | `data/daytrade/bars_premarket/SPY_5m.parquet` | 2,618 pre-`TUNE_END` | 2,115 | fit, coverage, SPRT |
-| apply | `data/daytrade/bars/` (16 symbols) | 39 days | 336 | applied, reported, **never re-fitted** |
+### 1. `T_SIM` in `az/odd.py` — and it must stay stdlib-only
 
-Nothing after `TUNE_END` is read; `sealed_sessions()` is never called. Known risk
-on the record: SPY and NVDA select *opposite* best-fixed policies
-(`artifacts/CEILING_10Y_RECORD.md`), so transfer is measured, not assumed.
+`az/odd.py` imports only `enum` and `dataclasses`, which is why `gate/` + `az/`
+run under 3.14 where nautilus is absent. **That must not change.** All
+nautilus-specific detection lives in `body/`.
 
-## Current state — what exploration established
+- `Tier.T_SIM = -1` (below `T3_HALT`, satisfying "below T2"). The existing order
+  invariant `T3 < T2 < T1 < T0` is untouched, so the `min()`/`max()` conservatism
+  logic and its test still hold.
+- `may_open_risk` stays **False** for `T_SIM` — it never opens real risk. A new
+  `may_open_simulated_risk` is True for `T_SIM` alone.
+- New `RunEnvironment` enum: `UNKNOWN` (default — fails closed), `BACKTEST`,
+  `SANDBOX`, `LIVE`.
 
-**Already on disk, written before plan mode and unverified:** `state_space.py`
-(rename applied), `transitions.py` (199 lines), `test_transitions.py` (163). The
-builder stopped correctly before running anything. Two steps outstanding: the
-pytest run, and the report run. It also correctly refused to loosen a check —
-see the `TUNE_END` item below.
+### 2. `T_SIM` is enterable only at construction
 
-**Recoverable from the tag, with tests, rather than rewritten:**
+`degrade()` currently permits a slide to any lower tier, so a live system could
+slide *into* simulation while holding real risk. Close it:
 
-| what | tag path | lines | tests |
-|---|---|---|---|
-| the enumerable move list | `daytrade/exit_taxonomy.py` | 381 | 224 |
-| the SPRT | `sovereign/forex/sprt.py` | 144 | 127 |
+- `FORBIDDEN_TRANSITIONS` gains `(t, Tier.T_SIM)` for every live tier.
+- `recover(T_SIM)` → `T3_HALT`: the only way off the closed track is into the
+  safest live state, then climb the normal ladder.
 
-`exit_taxonomy.py` holds 21 mechanisms across 5 families (10 ACTIVE, 8 DARK,
-3 OUT_OF_SCOPE), each non-ACTIVE one carrying a required reason, plus 3
-`FalsifiedClaim` records. **It also carries the recorded ladder-vs-no-management
-ruling**, which is otherwise only in the tag.
+### 3. The hard fault — a kernel fact, not a config flag
 
-## Component 1 — state representation
+`authorize_entry()` gains a required `environment`:
 
-- **Convention fix** — already applied by the builder: `State.session` collided
-  with `bars.Session` and carried FX levels; now `time_block` with
-  `ceiling.time_block` levels.
-- **Dead dimensions**: `carry_r` and `weekend_exposure` are constant intraday, so
-  the nominal 5,760-cell grid is an effective 480. Report `reachable/effective`.
-- **`audit()`'s counting unit stays as-is** — it counts snapshots where the gate
-  should count episodes, which is why the full grid reads 4.4% thin by snapshot
-  and 57.5% by trade. That one-line fix is Colin's; an agent silently making it
-  would erase the finding. Comment the line only.
-- **`state_space.py` has no tests anywhere** — not in tree, not in tag. The whole
-  tablebase keys off it. Needs a test file.
+- `tier is T_SIM` and `environment is not BACKTEST` → **raise `OddError`**. A fault,
+  not a `False`, because a sim tier outside a backtest is a corrupted system, not a
+  refused trade.
+- `tier is T_SIM` and `environment is BACKTEST` → evaluate the sim gate.
+- Any live tier with `environment is UNKNOWN` → refuse.
 
-**DoD:** sweep run on real SPY sessions; granularity at MARGINAL or better;
-**the choice written down before anything is fit on it.** On 2,115 episodes a
-finer granularity than `minimal` may clear — that is why it is re-run.
+`body/runtime.py::detect_environment(clock)` derives it structurally:
+`isinstance(clock, TestClock)` → `BACKTEST`, else `LIVE`. Verified: a
+`BacktestEngine` provably injects a `TestClock`, a `TradingNode` a `LiveClock`. The
+kernel injects it — **there is no config path to override it.**
 
-## Component 2 — move generation and pruning
+### 4. `SIM_PRECONDITIONS` — four things that hold even on a closed track
 
-Mechanical and stage legality are real, funnelled and tested: `ALLOWED_ACTIONS`
-per `Stage` makes illegal-for-stage actions unrepresentable (`_gate`,
-`stockfish_exit.py:552`), and C001–C009 are enforced through a single funnel
-(`apply_action` → `enforce`, `:586`). Three gaps, all confirmed by audit:
+`evaluate_gate(tier=...)` selects the list. Not a bypass:
 
-1. **Economic legality is ABSENT.** `grep` for `COST_PER_SHARE|spread|slippage|
-   toll|round_trip` in `stockfish_exit.py` and `stockfish_constitution.py`
-   returns **zero hits**. Cost is accounted in every scoring module and never
-   used to *refuse*. Nothing declines a `TAKE_PARTIAL` whose capture is below its
-   own round-trip toll. This is the mechanical form of "assume the counterparty
-   is optimal" and it is the single largest gap.
-2. **Regime-conditional legality is ABSENT.** No move is ever illegal because of
-   market state. `decide_exit` imports nothing from `regime_vector.py` or
-   `thesis.py`.
-3. **Refusals crash rather than log.** `runner.py:745` calls `enforce()` with no
-   try/except inside the run loop, so a violation raises uncaught. Fail-loud is
-   correct, but there is no "refused" event in `trade_events.py` — auditability
-   today is "crash with a message", not "logged refusal with a reason".
+| key | why it survives into sim |
+|---|---|
+| `no_live_venue` | structural: environment proven `BACKTEST` |
+| `holdout_sealed` | sealed data stays sealed in backtest too |
+| `checkpoint_hash` | the point is exercising the **real** frozen exit core |
+| `policy_declares_no_edge` | the calibration arm must label itself |
 
-Plus a coverage hole: **`specs/011_MUTATION_LOG.md` is ABSENT.** The constitution
-card has no fault-injection log; only C004/C005/C007 *threading* is covered by
-`WIRING_MUTATION_LOG`. C001/C002/C003/C006/C008/C009 have no driver proving a
-deliberate violation fails.
+Dropped as live-only and meaningless on a closed track: `envelope`, `heartbeat`,
+`reconciliation`, `slippage`, `exit_domain`, `policy_version`, `prereg_current`,
+`t0_unseal`.
 
-**All seven stop layers adjudicated — dark-because-undecided becomes
-dark-because-decided:**
+### 5. `NullEntryPolicy` — the calibration arm
 
-| layer | today | disposition |
-|---|---|---|
-| catastrophic · breakeven · profit_lock | ACTIVE | unchanged |
-| trail | ACTIVE | unchanged; MECH-001 doubts it and `tmNone` won on SPY/QQQ — recorded, not acted on |
-| **volatility** | hard-coded off | build as **placement**: `entry − k·ATR`, set once at entry. NOT `hwm − k·ATR`, which is a trailing stop and the instrument the evidence is most negative about. `k` required, no default |
-| **thesis** | dark — `regime.py` raises by design | unblock via **regime-as-magnitude** — a dispersion conditioner, not a direction classifier |
-| **time_decay** | hard-coded off | ruled in or out **in writing**. Current claim: "time pressure is a cliff (`flatten_at_et`), not a schedule." That either stands or falls on the record |
+`body/null_policy.py`, matching `bar -> EntryDirective | None`. Same discipline as
+the degraded-candidate SPRT arm: **a loop that only works with a good policy is not
+a loop we have tested.**
 
-**Note on pruning:** this is *legality* pruning — moves refused with a stated
-reason. No adversarial search is built; nature deals these cards, so the search
-analogue is expectimax, not alpha-beta.
+- Emits on a **fixed schedule** (every Nth bar, declared constant) — deterministic,
+  so a run is reproducible.
+- `confidence` pinned to a constant.
+- Direction alternates deterministically, so no directional edge is even implied.
+- `reason = "CALIBRATION ARM — no edge claimed; fixed-schedule emitter"`.
+- `CALIBRATION_ARM = True`, which is what the `policy_declares_no_edge` precondition
+  reads. No edge claimed, none implied.
 
-## Component 3 — static evaluation (the tablebase)
+### 6. `execute()` at `T_SIM` — real simulated fills
 
-`tablebase.py` (untracked, 207 lines) does backward induction over realized paths
-with leave-one-episode-out and a `min_paths` floor returning `NO_VALUE`. Settled,
-so it is not re-litigated:
+Currently raises `NotImplementedError`. At `T_SIM` it submits a bracket order to the
+SIM venue and lets it fill, because an orphan counter is meaningless without
+positions.
 
-- `ceiling.simulate(session, e, cfg, observer=None, urgency_schedule=None) -> float`
-  returns a bare R and **cannot start mid-path**.
-- `r_if_tightened` comes honestly from `urgency_schedule`, which sets `st.urgent`
-  per bar; `stockfish_exit.py:218` halves the trail under `tighten`. A real
-  re-simulation through the engine's own channel.
-- **Reference config is the shipped policy** (`frozen_policy.POLICIES`, pinned in
-  SF-FROZEN-002), per asset class — not a hand-picked config, because "best fixed"
-  is a max over 396 and explicitly not a result. Consequence to report and not
-  smooth over: `SINGLE_NAME` ships `trail_mult=None`, so Tighten is structurally
-  inert and `r_if_tightened` is `None` there. A third of classes ship a
-  two-action space.
-- **Resolve the `TUNE_END` boundary**: `transitions.py` asserts `day < TUNE_END`
-  while `splits.tune_sessions()` is inclusive (`<=`). Pick one and make both
-  agree; do not loosen the assertion to dodge a legitimate raise.
-- `tablebase.py`'s docstring claims "components 1, 2 and 4 are built" — false in
-  this tree post-rollback. Correct it.
+- Geometry reuses `az/candidates.py::geometry` (already declares
+  `stop = entry − direction·k_stop·ATR14`, tp1/tp2 at 1R/2R, and **refuses** a
+  missing `k_stop`) with `K_STOP` from the frozen `az/floor_params.py`.
+- ATR14 reuses `az/state.py::_atr` — no second implementation.
+- Fixed quantity: sizing is not what is under test.
+- Live tiers keep raising `NotImplementedError`. The order path exists **only**
+  behind the `T_SIM` + `BACKTEST` fault.
 
-**DoD:** built; `coverage()` reported; `frac_obs_valued` above the component-1
-threshold; and **one leak test that deliberately fails** — build the table, call
-`evaluate()` with an episode that helped build the cell, assert `LeakError`
-fires. An assertion that has never fired is not verified.
+### 7. The session runner
 
-## Component 4 — the SPRT gate
+`scripts/sim_session_run.py` — loads real SPY 5m bars from
+`data/daytrade/bars_premarket/SPY_5m.parquet` (491,644 rows, OHLCV, ET-indexed,
+2,678 days, 2016–2026), slices RTH sessions, runs `--sessions N` (default 20)
+through `BacktestEngine` at `T_SIM`.
 
-Recover `sovereign/forex/sprt.py` + tests from the tag and re-home lane-neutral
-(it is not carry-specific). Two defects from last night fixed before the run:
+Reports, and **nothing else**:
 
-- **σ from the paired-difference distribution, not the level.** Last night σ was
-  the SD of per-unit incumbent R, inflating δ to roughly twice the whole edge.
-  δ is a declared plausible-improvement argument.
-- **Deviation rate is a first-class output**, and a block with near-zero
-  deviation contributes nothing to the LLR rather than voting H0 for free.
+```
+sessions completed / attempted
+directives published
+directives refused          (broken out by reason)
+orders submitted / filled
+positions opened / closed
+positions orphaned
+exceptions raised
+```
 
-Opponent is **SF-FROZEN-002**. Component 2's volatility layer changes
-`engine_sha256`, so it requires minting **SF_FROZEN_003** — I49 refuses
-re-pinning — proving behaviour-inertness against the pre-change engine.
+**No R. No P&L.** The scoreboard is completions and disengagements.
 
-**DoD:** run once, end to end, a real candidate against SF-FROZEN-002, to a
-decisive result: `ACCEPT_H1`, `ACCEPT_H0`, or an `INCONCLUSIVE` that reports why.
+## Files
 
-## Order
-
-1. Verify what is already on disk — run `test_transitions.py`, resolve the
-   `TUNE_END` boundary, add `state_space` tests.
-2. Component 1 re-run on SPY; granularity recorded. *(blocks 3)*
-3. Component 3 built; coverage reported.
-4. Component 4 recovered and wired; **gate run with the shipped policy as its own
-   candidate** — proves the harness is not hollow before any engine edit.
-5. Component 2's adjudications; recover `exit_taxonomy.py`; economic-legality
-   prune; volatility layer; mint SF_FROZEN_003.
-6. Gate re-run with the volatility layer as candidate. **This is the real Gate 4.**
-7. Apply to the 336-entry basket; report coverage and transfer; never re-fit.
-
-Steps 1–4 touch no engine code and need no checkpoint. Step 5 is the first byte
-change to `stockfish_exit.py`, where the ceremony applies.
-
-## Housekeeping — blocks nothing, but decide deliberately rather than by drift
-
-- **The trade-evidence freeze is unenforceable**: `.githooks/` does not exist and
-  `core.hooksPath` points at nothing. Both hooks and `check_trade_freeze.py` are
-  tag-only.
-- `com.alta.paper-carry-daily` is loaded but its target script is gone.
-- A subagent flagged my mid-task correction as a possible injection before
-  adopting it, having verified the cited files independently. That was right, and
-  it is confirmed as mine.
+| file | change |
+|---|---|
+| `az/odd.py` | `T_SIM`, `RunEnvironment`, `SIM_PRECONDITIONS`, transition guards, `authorize_entry(environment=...)` |
+| `az/test_odd.py` | extend — hard fault, unreachability, sim gate is a list not a bypass |
+| `body/runtime.py` | new — `detect_environment(clock)` |
+| `body/null_policy.py` | new — `NullEntryPolicy` |
+| `body/stockfish_strategy.py` | `execute()` at `T_SIM`; thread environment through `authorize()` |
+| `body/test_sim_tier.py` | new — the door cannot be opened from the wrong side |
+| `scripts/sim_session_run.py` | new — the runner |
+| `artifacts/SIM_DRIVE_RESULT.md` | the report |
 
 ## Verification
 
 ```bash
-python3 -m pytest test_transitions.py -q                 # incl. the deliberate leak failure
-python3 state_space.py artifacts/exit_snapshots_spy.parquet
-python3 -m pytest daytrade/ scripts/ sovereign/ -q
-python3 -m daytrade.frozen_policy verify                 # 0 until step 5, then SF_FROZEN_003
-python3 scripts/ceiling_10y.py SPY                       # population unchanged: 2,115 entries
+python3 -m pytest gate/ az/ -q            # 3.14, must stay green (92 now)
+.venv-v1/bin/python -m pytest body/ -q    # 3.13, 59 now
+.venv-v1/bin/python scripts/sim_session_run.py --sessions 20
 ```
 
-Every new invariant fault-injected before it is called verified. Coverage,
-deviation rate and the SPRT decision are reported together — never the decision
-alone.
+Mutation pass on the new guards — each must fail the suite when reverted:
+`T_SIM` authorizing outside `BACKTEST`; `detect_environment` returning `BACKTEST`
+unconditionally; `degrade()` permitting a slide into `T_SIM`; the sim gate
+downgraded to a bypass; `execute()` reachable at a live tier.
 
 ## Out of scope
 
-AlphaZero's re-spec (Phase 2); unsealing anything after `TUNE_END`; the entry
-rule; live orders. `C5_gap:high` stays a lead needing its own pre-registration.
+The magnitude-conditioned policy (explicitly deferred). Any live venue or `[ib]`
+extra. Any R or P&L figure. Migrating `daytrade/` onto Nautilus. Widening the ODD
+toward risk — this change only narrows.

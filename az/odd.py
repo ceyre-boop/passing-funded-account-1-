@@ -83,9 +83,22 @@ UNSET = Unset()
 # ------------------------------------------------------------------ the tiers
 
 @enum.unique
+class RunEnvironment(enum.Enum):
+    """Where the system is actually running. UNKNOWN is the default and fails
+    closed: "we could not establish where we are" must never read as "we are
+    safely in a simulator"."""
+    UNKNOWN = "UNKNOWN"
+    BACKTEST = "BACKTEST"
+    SANDBOX = "SANDBOX"
+    LIVE = "LIVE"
+
+
+@enum.unique
 class Tier(enum.IntEnum):
-    """ODD.md §4. Ordered so that a LOWER value is a MORE degraded state, which
-    makes "the more conservative of two" a min() and removes a class of bug."""
+    """ODD.md §4, plus T_SIM. Ordered so that a LOWER value is a MORE degraded
+    state, which makes "the more conservative of two" a min() and removes a class
+    of bug."""
+    T_SIM = -1          # the closed track — see below
     T3_HALT = 0
     T2_DEFENSIVE = 1
     T1_RESTRICTED = 2
@@ -98,11 +111,37 @@ class Tier(enum.IntEnum):
 
     @property
     def may_open_risk(self) -> bool:
+        """REAL risk. T_SIM is deliberately absent: driving on a closed track is
+        not a licence to trade, and conflating the two is the whole hazard."""
         return self in (Tier.T0_NOMINAL, Tier.T1_RESTRICTED)
 
+    @property
+    def may_open_simulated_risk(self) -> bool:
+        return self is Tier.T_SIM
+
+
+# T_SIM exists so the full loop -- perceive, decide, hand off, execute, log,
+# degrade -- can be exercised end to end without an edge. Every other tier is
+# about live risk, which left no way to drive on a closed track and made the
+# engineering goal blocked by the safety artifact.
+#
+# It is a NARROWING (strictly less permissive toward real risk than T3_HALT), so
+# ODD.md §6 does not gate it -- §6 gates widening. But it is a door in a wall
+# built on purpose, so it is locked from three sides:
+#
+#   1. it authorizes nothing outside a proven BACKTEST -- and that is a FAULT,
+#      not a refusal (see authorize_entry)
+#   2. it is unreachable by transition: enterable only at construction
+#   3. it runs its own explicit precondition list, never a gate bypass
+LIVE_TIERS = (Tier.T3_HALT, Tier.T2_DEFENSIVE, Tier.T1_RESTRICTED, Tier.T0_NOMINAL)
 
 # ODD.md §4: "no path from T3 to T0 at all — it routes through T1."
-FORBIDDEN_TRANSITIONS = frozenset({(Tier.T3_HALT, Tier.T0_NOMINAL)})
+# Plus: nothing may slide INTO T_SIM. A live system degrading into simulation
+# while holding real risk would be a silent loss of the execution path.
+FORBIDDEN_TRANSITIONS = frozenset(
+    {(Tier.T3_HALT, Tier.T0_NOMINAL)}
+    | {(t, Tier.T_SIM) for t in LIVE_TIERS}
+)
 
 
 # ---------------------------------------------------------- preconditions §2
@@ -147,6 +186,28 @@ PRECONDITIONS: tuple[Precondition, ...] = (
 )
 
 
+# The T_SIM checklist. This is a SHORTER LIST, NOT A BYPASS, and the distinction
+# is the whole safety argument: a bypass is unauditable and grows silently, while
+# four named lines can be read and argued with.
+#
+# Dropped as live-only and meaningless on a closed track: envelope, heartbeat,
+# reconciliation, slippage, exit_domain, policy_version, prereg_current,
+# t0_unseal. Each is a claim about live venue conditions or about an edge having
+# cleared pre-registration; neither exists in a backtest, and pretending to
+# evaluate them would be the "silently invent unavailable context" failure.
+SIM_PRECONDITIONS: tuple[Precondition, ...] = (
+    Precondition("no_live_venue",
+                 "environment structurally proven BACKTEST (kernel clock, not config)"),
+    Precondition("holdout_sealed",
+                 "sealed holdout remains sealed — a backtest is not a licence to unseal"),
+    Precondition("checkpoint_hash",
+                 "frozen exit-core checkpoint hash matches — the point is exercising "
+                 "the REAL core, not a stand-in"),
+    Precondition("policy_declares_no_edge",
+                 "the entry policy declares itself a calibration arm claiming no edge"),
+)
+
+
 @dataclass(frozen=True)
 class GateResult:
     passed: bool
@@ -165,8 +226,19 @@ class GateResult:
         return " | ".join(parts)
 
 
-def evaluate_gate(preconditions=PRECONDITIONS) -> GateResult:
-    """ODD.md §2: ALL must be TRUE to open. ANY false → no new risk."""
+def preconditions_for(tier: Tier) -> tuple[Precondition, ...]:
+    """Which checklist applies. T_SIM gets its own SHORTER LIST -- selecting a
+    different list is auditable; skipping the gate would not be."""
+    return SIM_PRECONDITIONS if tier is Tier.T_SIM else PRECONDITIONS
+
+
+def evaluate_gate(preconditions=PRECONDITIONS, *, tier: Tier | None = None) -> GateResult:
+    """ODD.md §2: ALL must be TRUE to open. ANY false → no new risk.
+
+    Passing `tier` selects the right checklist; passing `preconditions` directly
+    stays supported so a caller can hand-build one for a test."""
+    if tier is not None:
+        preconditions = preconditions_for(tier)
     t, f, u = [], [], []
     for p in preconditions:
         {Truth.TRUE: t, Truth.FALSE: f, Truth.UNKNOWN: u}[p.evaluate()].append(p.key)
@@ -254,9 +326,16 @@ class Recovery:
 
 def degrade(current: Tier, to: Tier) -> Tier:
     """Instant and automatic. ODD.md §4: "tiers degrade automatically and
-    instantly." Degrading is never gated."""
+    instantly." Degrading is never gated -- except into T_SIM, which is not a
+    degradation at all but a different mode, and must never be slid into while
+    real risk is open."""
     if to > current:
         raise OddError(f"degrade() cannot raise a tier ({current.name} -> {to.name})")
+    if (current, to) in FORBIDDEN_TRANSITIONS:
+        raise OddError(
+            f"{current.name} -> {to.name} is forbidden. T_SIM is enterable only at "
+            "construction: a live system sliding into simulation would silently "
+            "lose its execution path while holding a position.")
     return to
 
 
@@ -278,9 +357,35 @@ def recover(current: Tier, recovery: Recovery) -> Tier:
 
 def authorize_entry(tier: Tier, gate: GateResult, *,
                     exit_core_in_domain: Truth,
-                    entry_layer_in_domain: Truth) -> tuple[bool, str]:
+                    entry_layer_in_domain: Truth,
+                    environment: RunEnvironment = RunEnvironment.UNKNOWN,
+                    ) -> tuple[bool, str]:
     """ODD.md §1b: no entry without exit authorization, and when the engines
-    disagree the exit core wins. Returns (authorized, reason)."""
+    disagree the exit core wins. Returns (authorized, reason).
+
+    `environment` defaults to UNKNOWN and therefore fails closed. It is a FAULT,
+    not a refusal, for T_SIM to appear anywhere but a proven backtest."""
+    if tier is Tier.T_SIM:
+        if environment is not RunEnvironment.BACKTEST:
+            # Deliberately a raise. A refusal would let a mis-wired live system
+            # keep running quietly at a simulation tier; this is a corrupted
+            # system, not a declined trade.
+            raise OddError(
+                f"T_SIM in environment {environment.value} — refusing to continue. "
+                "The simulation tier exists only for a proven BACKTEST kernel, and "
+                "the environment is derived from the injected clock, never from "
+                "configuration. Reaching here means the door was opened from the "
+                "wrong side.")
+        if not gate.passed:
+            return False, f"sim preconditions: {gate.why_not()}"
+        # Deliberately does NOT consult exit_core_in_domain: on a closed track
+        # nothing measures it, and inventing a value is the failure this whole
+        # module exists to prevent. Orphans are DETECTED at runtime instead.
+        return True, "authorized (T_SIM — simulated risk only, no edge claimed)"
+
+    if environment is RunEnvironment.UNKNOWN:
+        return False, ("environment UNKNOWN — cannot authorize live risk without "
+                       "establishing where the system is running")
     if not tier.may_open_risk:
         return False, f"tier {tier.name} may not open risk"
     if not gate.passed:
