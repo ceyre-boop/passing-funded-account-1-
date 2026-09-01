@@ -1,27 +1,110 @@
-# NEXT.md — carried into the next Cowork session
-Written 2026-08-03 ~06:45 ET, end of tonight's session. Read this first next time — don't re-derive what's already below.
+# NEXT.md — carried into the next session
 
-## Tonight, in one paragraph
-Built the honest pass-probability case for a funded eval (EVAL_LAB.md: ~40% real edge OOS, 25-55% CI, technicals ruled out as luck), then pivoted to Colin's actual ask — a one-day/ladder campaign — and locked a mechanical entry rule (THE_SHOT.md, v2 amended for Tradeify $25K Select / MES after the MT5/cTrader US-residency block). Friction-modeled the ladder (friction_ladder.py: attempt count beats edge quality, ~93-98% funded by attempt 5-7 across p=31-45%, but only if the cooloff rule is honored). Built the day-by-day pass plan against Tradeify's real consistency/drawdown rules (select_pass_planner.py, MONDAY_OPEN.md). Everything committed and pushed — repo is clean, nothing local-only.
+**Rewritten 2026-08-31.** The 2026-08-03 head this replaced pointed at a Tradeify
+eval purchase as the live plan. That is no longer the plan of record and had become
+actively misleading to any session that read it first. Everything below the
+`## OPEN — loose ends` heading is older but still true; the dated sections further
+down (08-15, 08-22, 08-23) are unchanged and still apply.
 
-## The two things Colin should NOT let blur together (said plainly, worth restating)
-1. **The ladder math proves structure, not skill.** p=31% (coin flip after costs) passes almost as often as p=45% by attempt 5-7. A green "PASSED" checkbox is ~weak evidence about which p is real — only ~50 logged shots in the ledger will tell.
-2. **Passing the eval ≠ having a live edge.** Eval-passing is a Stockfish problem (fixed rule, bounded risk, solvable). Making money live is the AlphaZero problem (unbounded time, real capital, no free restarts) — and that's the entire business, still fully unsolved, deliberately deferred tonight in favor of getting the eval bought.
+## Plan of record
 
-## OPEN — Colin's action items (not mine, but track them)
-- [ ] Buy Tradeify $25K Select, confirm cart = Select (not Instant/Lightning), confirm BOGO status at checkout (52-70% vs 77-91% campaign odds — this is the single highest-leverage checkbox tonight).
-- [ ] Connect + test the platform/data feed tonight, before sleep — first live look at the execution screen should not be 9:30am tomorrow.
-- [ ] Dry-run THE_SHOT v2 rule against tomorrow's actual chart: what does a 5-min close outside the OR look like on the real platform, where do OCO stop/target get placed, confirm alerts replace screen-watching.
-- [ ] Put the 2-consecutive-bust cooloff on the calendar as a literal event NOW, not as an in-the-moment decision. Rule: "if Colin reports 2 busts to Claude, the cooloff starts that day" — make it enforceable by a party other than 2am-adrenaline-Colin.
-- [ ] Screenshot the BOGO/checkout confirmation into the repo once purchased.
+**Venue: Interactive Brokers, own capital, paper first. Nautilus Trader stays as the
+execution body.**
 
-## OPEN — technical/architecture (Sovereign repo, quant.git — NOT this repo's scope, but the ask landed here)
-Colin's brief for Molly (paraphrased, not yet built anywhere):
-1. **Stockfish — exit engine.** One `decide_exit(state) -> action`, imported by both backtest and paper/live runners, zero second implementation. DoD: same tick stream through both harnesses, trade logs byte-identical. **Not started.**
-2. **AlphaZero — edge layer, rescoped as walk-forward** (not literal self-play — markets aren't a closed simulator; named this explicitly to avoid chasing the wrong architecture). Rolling-window train, strict OOS eval, expanding/rolling retrain, log Sharpe/edge per iteration for an improvement curve. PowerShell as outer orchestrator, Python for the heavy lifting. **Not started.**
-3. **Cursus Honorum — Elo arena.** 100 pre-generated question set, score Stockfish vs AlphaZero (or vs ground truth), Elo trajectory, eventual regime-timeline-style widget. **Not started, and blocked on 1+2 existing first.**
-Safety framing to carry over (already in APEX principles, just apply here): paper/live isolation with explicit flag + manual confirm, fail loud, backend before frontend, discrete versioned commits not one big rewrite.
-**This is real work but it is NOT tonight's or tomorrow's priority** — the eval account and the mechanical rule are. Don't let Stockfish/AlphaZero architecture eat into pre-market hours again.
+Reached by elimination, not preference. The funded-account path is contingent on an
+edge that does not exist, so choosing prop-firm infrastructure today would be
+building for a hypothetical — and an expensive one, since eval fees are real money
+spent against a system with no demonstrated positive expectancy.
+
+Nautilus ships live execution adapters for IB (needs the optional `[ib]` extra, a
+one-line install) plus eight crypto venues. It ships **no** Rithmic, CQG, Tradovate,
+NinjaTrader, ProjectX or Ironbeam adapter, which is what a futures prop firm routes
+through. That gap is not a blocker: it is a wall in front of a door there is no key
+for. If an edge ever clears SPRT and a funded account becomes live again, that is the
+moment to decide whether the exit core runs outside Nautilus for that one venue — a
+much easier decision with an edge in hand.
+
+**Tradeify $25K Select / MES: DEFERRED pending a validated edge. Not the plan of
+record.** Do not buy an eval, do not size for one, do not treat `THE_SHOT.md`,
+`MONDAY_OPEN.md` or `select_pass_planner.py` as current operating documents. They
+describe a plan whose precondition is unmet.
+
+## What is actually true right now
+
+**Zero validated edges.** Stated plainly because every roadmap below assumes it.
+
+| line of enquiry | state |
+|---|---|
+| Entry family (AlphaZero) | CLOSED — best cell +0.0956 vs null p95 +0.4310 |
+| Exit configuration search | CLOSED — 0 of 396 profitable, 2,115 trades |
+| Seven earlier leads | CLOSED — 7 of 7 below detection floor |
+| Four detection-floor survivors | CLOSED on economics, 2026-08-31 |
+| Carry exit tablebase | CLOSED — SPRT ACCEPT_H0 both arms |
+| Carry lane G5 | 0/80, NOT READY (see the 08-15 section) |
+
+The floor tests are in `artifacts/FLOOR_TEST_RESULT.md`; the detection-floor table is
+`artifacts/EVENT_STUDY_MDE.md`. Costs, not the effect, set both floors — a 1×ATR14
+stop puts a third to a half of the risk unit into costs before the trade does
+anything.
+
+## Do NOT do next session
+
+- **No work in `body/`.** It is at a clean stopping point: WIRED and EXERCISED in a
+  real `BacktestEngine`, boundary enforced by the type system, 59 tests. It is
+  tractable work that produces green tests and feels like progress while the edge
+  column still reads zero. Stop means stop.
+- **No new hypotheses in this repo** (standing rule, `CLAUDE.md` non-negotiable 1).
+- **No re-run of the floor tests at a different `k_stop`.** Cost drag scales as
+  `1/k_stop`, so a wider stop mechanically lowers the floor and FOMC would cross it.
+  `k_stop = 1.0` was frozen at `3b10e8b` before the computation precisely so that
+  move was unavailable afterwards. Taking it needs a fresh pre-registration.
+
+## Where the two engines actually stand
+
+Colin's own estimate, 2026-08-31: **AlphaZero ~65% built, Stockfish early beta.**
+Both now have a home to plug into, and the interface is two functions:
+
+- AlphaZero → the `policy` passed to `AlphaZeroActor`, signature `bar -> EntryDirective | None`
+- Stockfish → the body of `StockfishStrategy.execute()`, which currently raises
+
+Not done: no data adapter (the parquet caches are not in `ParquetDataCatalog`
+format), no venue configured, no order-placement code, and `daytrade/`/`az/` still
+assume they own the loop.
+
+Note the gate in front of "live": `StockfishStrategy` refuses everything because the
+ODD gate cannot open in v0.1 — T0 unseal is absent and nine preconditions are
+UNKNOWN. Opening it requires a pre-registered edge that clears SPRT. **Finishing the
+engines does not by itself produce a live system.** That is the design working.
+
+## Open defects and hygiene
+
+- `data/propfirm/jj_sim_account.json` — `"projection"` still shows the RETRACTED
+  75%/94% JJ-style figures (killed by `SANITY_AUDIT.md` 2026-08-01). A stale
+  falsehood sitting in the repo.
+- `config/parameters.yml` — still shipped untrimmed.
+- `NEXT.md` staleness itself — this file was ~4 weeks out of date and misdirected.
+  Rewrite the head whenever the plan of record changes, not at session end.
+- `sentinel/` — 8 runtime `DEGRADED_*` markers, untracked and un-ignored.
+- 12 stale `.claude/worktrees/agent-*`; `com.alta.paper-carry-daily` LaunchAgent is
+  loaded but its target script no longer exists.
+- Rulings owed by Colin: MECH-001 status; whether `trail` stays ACTIVE (three
+  evidence lines against); `Tablebase` cell-key design (state alone vs (state, phase)).
+- `az/odd.py` should become a translation layer onto Nautilus `TradingState`
+  (ACTIVE/REDUCING/HALTED — `REDUCING` *is* ODD §4's T2) rather than a second ladder.
+- Only `spy_macro_decay` has a committed event/control split; no other study's split
+  is reproducible from committed artifacts.
+
+**Fixed 2026-08-31:** `runner.py` silently ignored a typo'd plan key on the live path
+— `trail_multiplier` was dropped by a whitelist comprehension and the engine used its
+own default instead of the plan's intent. Now `KNOWN_PLAN_KEYS` +
+`validate_plan_keys()` refuse it loudly and name the field you meant. 19 tests,
+3 of 3 mutations caught.
+
+## First thing to do next session
+
+Read `artifacts/FLOOR_TEST_RESULT.md` and this head before touching anything. Then
+pick from the open defects above, or from the dated sections below — **not** from
+`body/`, and not from a Tradeify plan.
 
 ## OPEN — loose ends from earlier in the week, still not closed
 - `data/propfirm/jj_sim_account.json` — `"projection"` field still shows the RETRACTED 75%/94% JJ-style figures (SANITY_AUDIT.md killed these 2026-08-01). Never corrected in a follow-up commit. Low priority since JJ-style is parked, but it's a stale falsehood sitting in the repo — clean it up next session.
@@ -80,7 +163,7 @@ unbrick the gate, register `expected_mae`/`bars_to_tp1` as full spec-029 mechani
 (expect the MDE gate to refuse them at n=39 days — a true answer), then build spec
 030's step 3, the bounded exploration budget, which has never been started.
 
-## ANSWERED — "AlphaZero rescoped as walk-forward" (see the architecture section above)
+## ANSWERED — "AlphaZero rescoped as walk-forward" (item raised 2026-08-03, resolved 2026-08-22)
 That item, open since 2026-08-03, was examined properly on 2026-08-22 and the answer
 is **do not build it yet**. Full evidence in `Plans/lucky-forging-hoare.md`; the short
 version: AlphaZero has no fitted parameters to walk forward (keyword table + prompt +
@@ -98,21 +181,8 @@ is written and ratified. Then start from `backtester/walk_forward.py` and add th
 purge gap — the one genuinely missing idea (zero purge/embargo implementations exist
 repo-wide).
 
-## Market rumors mentioned tonight — flagged, not modeled, not actioned
+## Market rumors (raised 2026-08-03) — flagged, not modeled, not actioned. Standing rule.
 Colin referenced (housing crash 80-90%, "Oct 5 Bitcoin move via elite manipulation," reseller game inventory as a spending tell, Gen Z drinking stats). Explicitly kept OUT of THE_SHOT.md and MONDAY_OPEN.md — unconfirmed/unfalsifiable claims are exactly what "trade what you see, not what you believe" rules out. If Colin brings these up again, they stay in the "watch for confirmation" bucket, never become model inputs.
-
-## Session artifacts index (all on GitHub, main branch)
-`EVAL_LAB.md` + `eval_lab.py`/`eval_lab_carry_fix.py` — honest 60-combo search, ~40% true OOS pass rate.
-`ONE_DAY_PASS.md` + `dashboard/one_shot_ladder.png` — ladder math, ruled-out list.
-`friction_ladder.py` — real-world friction (tilt, cooloff, setup frequency) applied to the ladder.
-`THE_SHOT.md` (+ v2 amendment) — locked mechanical ORB entry rule, now MES-sized for Tradeify.
-`select_pass_planner.py` + `MONDAY_OPEN.md` — day-by-day $300/day pass table against real Tradeify rules, MC realism check (median 2.5-4 weeks, not 1 week).
-`data/shot_ledger.csv` — empty, waiting for row 1.
-
-## First thing to do next session
-Ask Colin: did you buy it, was BOGO available, did the dry-run go clean, is the cooloff calendar block set — before touching any new analysis. If a shot already happened, log it in `data/shot_ledger.csv` first thing.
-
----
 
 # 2026-08-15 — spec 021 remediation, signal source, data integrity
 
