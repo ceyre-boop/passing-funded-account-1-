@@ -132,3 +132,82 @@ python3 scripts/floor_test.py --sweep
 
 **7 of 7 mutations caught** — including the one that survived the first attempt
 (quantization reverted at the call site), which is why the call-site guard exists.
+
+---
+
+# Follow-up: templates 1a and 1b
+
+## 1a · The null diagnostic — the misspecification runs the other way
+
+The review's premise is right (a permutation test is exactly level-α only under
+exchangeability) but the entry study did **not** use a naive permutation.
+`az/prereg.py::max_stat_null` is a **circular day-shift**, which preserves
+within-day structure *and* cross-cell correlation. What it does not preserve is
+day-to-day dependence.
+
+`scripts/null_diagnostic.py`, on synthetic data with a day-level AR(0.85):
+
+| null | p95 of best-cell |
+|---|---|
+| naive permutation | −0.0324 |
+| **circular day-shift** (what the study used) | −0.0406 |
+| stationary block over days (preserves runs) | **+0.0855** |
+
+Both the naive shuffle and the day-shift are **anti-conservative** — their nulls
+sit ~0.13 *below* a dependence-preserving one. So a correctly-specified null
+would be **higher** than the +0.4310 on record, and the observed best cell of
++0.0956 sits **even further below it**.
+
+**Pre-specified threshold-crossing rule, declared before the numbers:** reconsider
+the entry closure only if a correctly-specified null's p95 falls *below* +0.0956.
+**Not crossed. The closure is strengthened, not weakened.**
+
+> **Load-bearing caveat.** This is synthetic. The entry study's 104,680 candidate
+> arrays were **never persisted**, so its null cannot be re-derived from committed
+> data — the same reproducibility gap closed for `spy_macro_decay` and still open
+> here. The direction is established; the magnitude on the real study is not.
+
+## 1b · Edge preservation — the column that was missing
+
+0/396 answered *"can exits create an edge"* (no — that is optional stopping, a
+theorem). It was never evidence about *which exit keeps one*, because the sample
+had none to keep. `scripts/edge_preservation.py` injects a known drift and measures
+`mean R under policy ÷ mean R holding to horizon`, running the **real**
+`decide_exit` over synthetic paths.
+
+| policy | drift +0.0002 | drift +0.0005 |
+|---|---|---|
+| **RIDE** | **0.94×** | **0.94×** |
+| HARVEST | 0.86× | 0.85× |
+| DEFEND | 0.71× | 0.81× |
+| SALVAGE | 0.71× | 0.77× |
+
+**The tension worth naming:** the frozen defaults were fitted from an oracle on an
+*edgeless* sample, where 22 of 24 best picks used **no trailing at all**. Under
+injected drift the **trailing** policy preserves most. Those are answers to two
+different questions, and the second one had never been asked — which is precisely
+the confounding the review identified.
+
+`EVENT` is excluded because the engine refuses it: `policy_params("EVENT")` raises
+without `flatten_at_et`, since it means *"be out before a known catalyst"* and a
+synthetic path has no catalyst. Supplying a default clock would invent the thing
+the policy exists to respect.
+
+### The control earned its place twice
+
+Under drift = 0 no policy may beat hold. Two bugs were caught by that arm alone:
+
+1. **`exp(cumsum(N(0,σ)))` is not a price martingale** — zero drift in *log* space
+   is +σ²/2 in price space. The control showed every policy "beating" hold by
+   ~0.16R on what was supposed to be a no-edge process.
+2. **The R accounting double-counted partials** — crediting a fixed
+   `1 − goal_fraction` remainder instead of tracking the surviving fraction, which
+   mis-weighted the runner and broke policies that exit fully at TP2.
+
+The control tolerance is now **derived** (3 × the paired standard error) rather
+than a chosen constant — a fixed threshold makes the control's verdict a function
+of how many paths happen to be run. The run **refuses to report** the drifted rows
+if the control fails.
+
+**Neither script reopens anything.** 1a confirms a closure by a pre-specified rule;
+1b adds a forward-looking column and explicitly is not evidence that an edge exists.
