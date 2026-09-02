@@ -5,9 +5,32 @@ described. Every entry is scored by `scripts/strategy_scorecard.py`, which
 produces the same numbers in the same order for anything that emits
 `(entry, stop, direction)` signals.
 
-| id | name | status | gap | mean R | n |
-|---|---|---|---|---|---|
-| [S1](S1_impulse_fade.md) | impulse fade — RSI exhaustion at a lower high | **TESTED — NEGATIVE** | −0.76 | −0.392 | 634 |
+All scored on **identical risk** (1 ATR stop, 1R target, same costs), so the
+comparison measures the entry condition rather than the sizing.
+
+| id | name | status | gap | mean R | medMFE | n |
+|---|---|---|---|---|---|---|
+| S5 | relative strength vs benchmark | tested — negative, thin | −0.45 | −0.328 | **1.08** | 72 |
+| [S1](S1_impulse_fade.md) | impulse fade — RSI exhaustion at a lower high | tested — negative | −0.76 | −0.392 | 0.76 | 634 |
+| S2 | gap-and-go | **untestable here** | — | — | — | 0 |
+| S3 | earnings / news breakout | **untestable here** | — | — | — | 0 |
+| S4 | 52-week / ATH breakout | **untestable here** | — | — | — | 0 |
+| S6 | short squeeze | **not tested — data absent** | — | — | — | — |
+| S7 | HFT / micro momentum | **not tested — data absent** | — | — | — | — |
+
+### Why three are "untestable" rather than "failed"
+
+Their defining thresholds describe small-cap single-name behaviour that index
+ETFs essentially never exhibit, measured across 2,677 sessions:
+
+| filter | frequency on SPY/QQQ |
+|---|---|
+| gap ≥ +5% | 1 session (0.04%) |
+| daily volume > 3× ADV20 | 4 sessions (0.15%) |
+| consolidation ≥ 30 days | 11 SPY (0.4%), **0 QQQ** |
+
+That is the same external-validity wall S1 hit. These scanners are built for
+$50 single names with 20M floats; this repo holds two index ETFs.
 
 ## The metric set
 

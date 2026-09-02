@@ -1,0 +1,14 @@
+{
+ "id": "S6",
+ "name": "short squeeze momentum",
+ "status": "NOT TESTED \u2014 DATA ABSENT",
+ "reason": "requires short interest %, days-to-cover, float, cost-to-borrow. None exist in this repo. A price/volume proxy would be a different hypothesis wearing the name.",
+ "n_signals": null,
+ "instruments": [
+  "SPY",
+  "QQQ"
+ ],
+ "window": "2016-2026",
+ "code": "alta/momentum.py",
+ "scored_by": "scripts/momentum_compare.py"
+}

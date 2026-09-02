@@ -1,0 +1,14 @@
+{
+ "id": "S2",
+ "name": "gap-and-go / morning momentum",
+ "status": "UNTESTABLE ON THIS DATA",
+ "reason": "gap >= +5% occurs on 1 of 2,677 SPY sessions (0.04%) and 1 of 2,675 QQQ. Index ETFs do not gap like small caps. Float (<20M shares) is also absent and was not approximated.",
+ "n_signals": 0,
+ "instruments": [
+  "SPY",
+  "QQQ"
+ ],
+ "window": "2016-2026",
+ "code": "alta/momentum.py",
+ "scored_by": "scripts/momentum_compare.py"
+}

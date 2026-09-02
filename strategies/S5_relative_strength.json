@@ -1,0 +1,14 @@
+{
+ "id": "S5",
+ "name": "relative strength vs benchmark",
+ "status": "TESTED \u2014 NEGATIVE, thin",
+ "reason": "72 signals. Win 51.4% (the ONLY arm above 50%), payoff 0.49 against 0.95 needed, gap -0.45, mean R -0.328. Median MFE 1.08R -- the highest of any strategy tested, and the one number worth revisiting at larger n.",
+ "n_signals": 72,
+ "instruments": [
+  "SPY",
+  "QQQ"
+ ],
+ "window": "2016-2026",
+ "code": "alta/momentum.py",
+ "scored_by": "scripts/momentum_compare.py"
+}

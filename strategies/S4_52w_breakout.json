@@ -1,0 +1,14 @@
+{
+ "id": "S4",
+ "name": "52-week / all-time-high breakout",
+ "status": "UNTESTABLE ON THIS DATA",
+ "reason": "consolidation >= 30 days occurs 11 times on SPY (0.4%) and NEVER on QQQ. Index ETFs trend rather than form the multi-week boxes this scanner requires.",
+ "n_signals": 0,
+ "instruments": [
+  "SPY",
+  "QQQ"
+ ],
+ "window": "2016-2026",
+ "code": "alta/momentum.py",
+ "scored_by": "scripts/momentum_compare.py"
+}

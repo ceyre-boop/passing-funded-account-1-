@@ -1,0 +1,14 @@
+{
+ "id": "S3",
+ "name": "earnings / news breakout",
+ "status": "UNTESTABLE ON THIS DATA",
+ "reason": "daily volume > 3x ADV20 occurs 4 times in 2,677 sessions (0.15%). Index ETFs have no earnings and their volume does not spike 3x. Earnings dates are also absent.",
+ "n_signals": 0,
+ "instruments": [
+  "SPY",
+  "QQQ"
+ ],
+ "window": "2016-2026",
+ "code": "alta/momentum.py",
+ "scored_by": "scripts/momentum_compare.py"
+}

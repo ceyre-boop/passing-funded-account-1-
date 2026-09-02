@@ -1,0 +1,14 @@
+{
+ "id": "S7",
+ "name": "high-frequency / micro momentum",
+ "status": "NOT TESTED \u2014 DATA ABSENT",
+ "reason": "requires tape speed, bid-ask, Level 2, book imbalance. The repo holds OHLCV only. Same refusal.",
+ "n_signals": null,
+ "instruments": [
+  "SPY",
+  "QQQ"
+ ],
+ "window": "2016-2026",
+ "code": "alta/momentum.py",
+ "scored_by": "scripts/momentum_compare.py"
+}
