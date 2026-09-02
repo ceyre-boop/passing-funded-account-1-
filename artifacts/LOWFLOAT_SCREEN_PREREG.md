@@ -89,3 +89,31 @@ over the prior close). Binary.
   tickers — SIVB minute bars on 2023-03-09 and ATVI 2023 both returned.
 - Polygon aggregates are free-tier limited to ~2 years and are used only for the
   60-session whole-market cross-check, never for the decade.
+
+---
+
+## Amendment 1 — 2026-09-02, before any result was computed
+
+**Prices are RAW (unadjusted), not split-adjusted.** Split-adjusted series are
+unusable for a price-banded screen on low-priced names, and the failure is not
+subtle:
+
+| ticker | date | raw close (what traded) | split-adjusted close |
+|---|---|---|---|
+| SNDL | 2021-02-10 | **$2.95** | $29.50 |
+| MULN | 2022-04-04 | **$2.86** | $3,861,000,000,000 |
+
+Reverse splits are endemic in this universe, and retroactive adjustment pushes
+every genuine historical low-priced runner *out* of a $1-$10 band — deleting
+exactly the candidates the screen exists to count. Serial reverse splitters
+(MULN) compound to nonsense. A screen run on adjusted prices would have measured
+a fictional universe and returned a confident, wrong number.
+
+**Consequence:** `close(D-1)` and the D-day OHLC are raw. A split executing on D
+would inject a fake gap into the one-day return, so **candidate-days whose ticker
+has a split execution date on D or D-1 are dropped**, using Polygon
+`/v3/reference/splits` as the record. Drop count is reported.
+
+No threshold in the original screen changed. This is a data-representation fix
+made before any result was seen; it is recorded here rather than applied
+silently.
