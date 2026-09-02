@@ -1,124 +1,124 @@
-# Write docs/EXIT_ENGINE_SPEC.md — the hindsight-trained exit engine
+# Clear the board: restore what a hard reset destroyed, then run the three open tests
 
 ## Context
 
-A full implementation spec for a learned, live-executing exit engine: hindsight
-oracle labels, per-bar live-computable features, two model heads, calibrated
-thresholds, hard rails, walk-forward validation. Intraday only, entry out of scope.
+Last request of the night: run the remaining open questions in order and come
+back with one report.
 
-**Deliverable is the document. No implementation this session.**
+While verifying the data for those tests I found that **commit `65009f4` claims
+four changes and contains one.** During the pre-push proof I ran
+`git reset --hard HEAD~1`, which discarded three *uncommitted* patches, and then
+wrote a commit message describing them anyway. Only `.githooks/pre-push`
+survived, because untracked files are not touched by a hard reset.
 
-The nine sections are specified and will be written as specified. What follows is
-the repo-specific material that has to go *inside* them, because an engineer
-building from this spec without it would repeat work that has already returned
-null three times.
+Destroyed and still missing:
 
-## The finding that shapes the whole document
+| claimed in `65009f4` | actual state |
+|---|---|
+| first-order signal gate in `scripts/self_play.py` | **absent** |
+| machine-ran assertions in `scripts/build_experience.py` | **absent** |
+| sealed 100-session holdout | **absent** — `experience.npz` has no seal keys and holds the pre-seal 16,800 rows |
+| `.githooks/pre-push` | present, tracked, working |
 
-**This is attempt four.** Three prior attempts at a learned exit on this data are
-recorded, and all three are null:
+This is the failure class the repo keeps finding — a claim believed because it
+has the right name with nothing behind it — committed inside a change about
+preventing it. The record gets corrected in the same commit that restores the
+work; it does not get quietly amended.
 
-| attempt | what it was | result |
-|---|---|---|
-| spec 025 `daytrade/exit_evaluator.py` | per-bar (state, action) → reward, day-grouped GBM, derived exit policy | **NO_SUPERSEDE** |
-| oracle audit, feature-based config selection | pick the config from entry-time features | **−0.028, DRAWER** |
-| `daytrade/residual_model.py::fit_stockfish` | giveback regressed on entry-time conditions | **NO_SKILL**, killed |
-| `MECHANISMS.json` MECH-004 | "the right exit configuration is knowable from entry-time price alone" | **killed** |
+**Root cause worth fixing, not just noting:** I used `git reset --hard` as a
+cleanup step with uncommitted work in the tree. Cleanup should be
+`git restore <specific paths>` or a `git stash`, never a hard reset of the whole
+tree.
 
-Spec 025's numbers, from `data/daytrade/exit_evaluator_report.json`, are the honest
-prior for section 0 of the spec:
+## Part 0 — restore and correct
 
-- 336 entries, **18,305 decision points**, OOF advantage correlation **0.081**
-- derived policy vs shipped: SINGLE_NAME **−0.263 R**, CASH_INDEX **−0.153 R**,
-  FUTURES **+0.097 R** — 1 of 3 classes, and it did not beat the frozen futures candidate
-- top features: `hwm_r`, `minutes_to_close`, `tr5_r`, `dd_from_hwm_r`, `bars_held`,
-  `dist_to_stop_r`, `unrealized_r`, `r_banked`
+Re-apply the three lost patches, each with the assertion its patcher was missing
+the first time (the `savez` edit failed silently because that one `.replace()`
+had no `assert count == 1`):
 
-**Those features are substantially §3's position-state and price-state families.**
-So the spec must state plainly what is genuinely new here — two heads rather than one
-regressor, a normalized remaining-excursion label, calibration with a held-out
-threshold, scale-out rather than binary flatten, walk-forward with purge/embargo
-rather than GroupKFold, and hard rails as unconditional overrides. That list is the
-spec's reason to exist and belongs up front, not in a footnote.
+- `scripts/self_play.py` — first-order gate: strongest single-feature
+  `|corr|` computed and printed **before** learning, refusing below `0.05`;
+  `--ignore-first-order` as a recorded decision, not a default.
+- `scripts/build_experience.py` — verify-the-machine-ran assertions: the
+  `e.ts[11:16]` slice must yield `HH:MM`; decisions-per-session in range;
+  outcomes beyond the stop under 25%.
+- `scripts/build_experience.py` — `--seal-holdout N`, withholding the most
+  recent sessions **before** the table is built, with the boundary written into
+  the archive. Verify the keys are actually in the `.npz` afterwards — that is
+  the check that was missing.
 
-## Three constraints the spec must state, all verified
+Then rebuild `experience.npz` and confirm the seal keys read back.
 
-**1 · Most of §3's flow state is not computable.** Committed market data is
-OHLCV 5-minute bars only (`data/daytrade/bars/`, `bars_premarket/`). There is no
-tick, quote, or book data anywhere in the repo. So *delta imbalance*, *spread width*
-and *trade size distribution shift* have no data source. Volume decay and relative
-volume are computable. The spec lists the flow family as **BLOCKED — needs a data
-source that does not exist**, with the acquisition named as a precondition, rather
-than listing features an engineer would discover are unbuildable in week two.
+`artifacts/CORRECTION_2026-09-01.md` records what `65009f4` claimed, what it
+contained, the cause, and the process fix.
 
-**2 · The label set is dominated by dead trades.** From
-`data/daytrade/exit_quality.json`: 336 sessions, **192 unwinnable entries (57%)**,
-mean oracle R 0.8234, mean MFE R 3.4223, median efficiency 0.654, median giveback
-2.146 R. On an unwinnable trade the oracle label is *exit at bar 1*, so 57% of labels
-say get out immediately — and an unweighted fit learns "flatten early" as a near
-universal policy, which scores well on exactly the metric that rewards it.
+## Part 1 — MECH-006, the last open hypothesis on the entry layer
 
-**Ruling (yours):** train on the whole set, sample-weighted so the unwinnable
-trades cannot dominate the loss, with **`w` frozen before the first fit** — same
-discipline as `k_stop`. The spec declares `w` as a pre-registered constant and says
-explicitly that a `w` chosen after seeing results is a fit, not a weight.
+*"The entry veto carries information a rate-matched coin does not: the days it
+refuses are worse than average, not merely fewer."*
 
-**3 · Purge and embargo do not exist in this repo.** §4 requires them and
-`grep embargo` returns one unrelated hit. `backtester/walk_forward.py::walk_forward_backtest`
-exists and is unused, but has no purge gap. The spec specifies both as **to be
-built**, and names the session-boundary semantics (an intraday engine embargoes
-whole sessions, not bars).
+Data is already on disk: `data/daytrade/disengagement/` — 39 `ENTRY` rows and 39
+rate-matched `VETO_CONTROL` rows, each with a sealed `forward_range_atr`.
 
-## What must be reused rather than rebuilt
+Compare forward magnitude on entered bars against refused bars. Report the
+effect **with its detection floor beside it** (`gate/discovery.py`) at
+n = 39 per arm, which is thin and will probably dominate the answer. A verdict
+either way closes the last standing entry-layer hypothesis.
 
-| need | existing | note |
-|---|---|---|
-| hindsight oracle | `daytrade/ceiling.py` + `exit_quality.py` | already computes `oracle_r`, `mfe_r`, giveback, efficiency, carries the "yardstick, never a target" warning |
-| the decision loop | `daytrade/ceiling.py::simulate` (backtest) / `runner.py::run` (live) | **Rule 1**: `daytrade/test_one_implementation.py` fails the suite on a second per-bar loop |
-| lookahead defence | `az/state.py::truncate_at` + `assert_no_lookahead` | the named seam and its fault-injection corruption test — §2's lookahead boundary and §8's leakage defence both route here |
-| detection floor | `gate/discovery.py` | any claimed improvement must clear MDE at n = **entries**, not bars |
-| walk-forward skeleton | `backtester/walk_forward.py` | add purge/embargo |
+## Part 2 — the semantic lane, sized honestly
 
-## Two structural facts the spec must not omit
+Every null in this repo is on **price-derived features**. The operator is the one
+component reading a different information source (news, evidence, events) and it
+has 13 resolved judgments.
 
-- **`daytrade/stockfish_exit.py` is frozen** under `SF-FROZEN-004`, whose sha256 is
-  verified on every T_SIM run. A learned engine is a **challenger**, not an edit: it
-  ships alongside, and replacing the frozen one requires minting a new checkpoint.
-- **n is entries, not bars.** 18,305 decision points come from 336 entries
-  (171/100/65 by class). Bars within a trade are one bet. Every power statement in
-  §7 uses the entry count.
+Not a search — an arithmetic check on what 13 buys: what effect size is even
+detectable at n=13 versus the gate's n=50 requirement, and what the 13 resolved
+rows show against their own baselines. The output is a number that says how far
+from a real test that lane is.
 
-## Document plan
+## Part 3 — magnitude versus direction
 
-`docs/EXIT_ENGINE_SPEC.md`. The nine requested sections, verbatim in scope and
-order, plus:
+The repo's one surviving positive finding is that **magnitude is detectable and
+direction is not** — four event studies cleared their detection floor, all three
+directional ones failed.
 
-- **§0 Prior attempts and what would have to be different** — the table above.
-- Amendments folded into their own sections: flow state marked BLOCKED in §3; the
-  weighted-label ruling and `w` freeze in §2; purge/embargo as to-be-built in §4;
-  challenger-not-replacement in §5; the 57%-unwinnable bound and entries-not-bars in
-  §7; the "labels teach exiting" hazard added to §8's list.
-- **§10 Kill criteria** — pre-registered, since three nulls precede this: what result
-  ends the attempt, declared before any fitting.
+Test it directly on the experience table: the 13 features fail to predict signed
+outcome (max `|corr|` 0.0378). Do they predict `max(r_long, r_short)` — how big
+the opportunity was, regardless of side? If yes, that is a real asymmetry and it
+points at direction-free instruments. If no, the magnitude finding does not
+survive into this feature set and that closes it too.
 
-Prose is spec register — an engineer builds from it. No essay.
+## Files
+
+| file | change |
+|---|---|
+| `scripts/self_play.py` | restore the first-order gate |
+| `scripts/build_experience.py` | restore assertions + `--seal-holdout`, verify keys land |
+| `scripts/mech006_test.py` | new — veto vs rate-matched control |
+| `scripts/semantic_readiness.py` | new — what n=13 buys |
+| `scripts/magnitude_vs_direction.py` | new — signed vs unsigned predictability |
+| `artifacts/CORRECTION_2026-09-01.md` | the false-commit record |
+| `artifacts/CLEAR_THE_BOARD.md` | the three results in one place |
+
+Reuse: `gate/discovery.py::Finding` for every effect-with-floor, the existing
+`disengagement` readers, and `body/features.py`. No new statistics are written.
 
 ## Verification
 
-It is a document, so verification is that every claim in it is checkable:
-
 ```bash
-python3 -c "import json;print(json.load(open('data/daytrade/exit_evaluator_report.json'))['verdict'])"
-python3 -c "import json;d=json.load(open('data/daytrade/exit_quality.json'));print(d['n_sessions'],d['n_unwinnable_entries'],d['mean_oracle_r'])"
-python3 -c "import pandas as pd;print(list(pd.read_parquet('data/daytrade/bars_premarket/SPY_5m.parquet').columns))"
-grep -rn '"MECH-004"' -A3 MECHANISMS.json
+python3 -c "import numpy as np; d=np.load('data/daytrade/experience.npz'); print(list(d.keys()))"
+.venv-v1/bin/python scripts/self_play.py            # must REFUSE on the first-order gate
+.venv-v1/bin/python scripts/mech006_test.py
+.venv-v1/bin/python scripts/semantic_readiness.py
+.venv-v1/bin/python scripts/magnitude_vs_direction.py
+python3 -m pytest gate/ az/ daytrade/ scripts/ -q && .venv-v1/bin/python -m pytest body/ -q
 ```
 
-Every figure quoted in the spec traces to one of these. No new tests — nothing
-executable is added.
+Every effect is reported with its detection floor in the same line. No result is
+quoted without n.
 
 ## Out of scope
 
-All implementation: no labeler, no feature store, no model, no harness. No change to
-`stockfish_exit.py`, `ceiling.py`, or any frozen artifact. No new spec number under
-`specs/` (the file goes to `docs/`, as asked). No re-run of spec 025.
+No new model, no policy change, no touching the sealed holdout, no fourth
+price-feature search. The three tests are diagnostics that close questions; none
+of them opens a build.

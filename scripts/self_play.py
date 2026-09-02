@@ -38,6 +38,7 @@ from body.learned_policy import N_PARAMS, activity, score, unpack  # noqa: E402
 EXP = ROOT / "data" / "daytrade" / "experience.npz"
 TRAIN_FRAC = 0.6
 POP, ELITE, GENS, SEED = 200, 20, 40, 20260901
+FIRST_ORDER_MIN = 0.05   # below this there is nothing to combine
 
 
 def cem(X, rl, rs, rng, *, gens=GENS):
@@ -58,6 +59,8 @@ def cem(X, rl, rs, rng, *, gens=GENS):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="self-play entry learner")
     ap.add_argument("--gens", type=int, default=GENS)
+    ap.add_argument("--ignore-first-order", action="store_true",
+                    help="learn even though no feature carries standalone signal")
     a = ap.parse_args(argv)
 
     d = np.load(EXP)
@@ -68,6 +71,32 @@ def main(argv=None) -> int:
     print(f"experience: {len(X)} decision points over {n_sess} sessions")
     print(f"  train  sessions 0..{cut-1}   {tr.sum()} points")
     print(f"  HELD OUT sessions {cut}..{n_sess-1}   {te.sum()} points  (never seen)\n")
+
+    # ---- FIRST-ORDER GATE, before any learning happens ---------------------
+    # Orthogonality is SECOND-order and meaningless without first-order signal.
+    # Averaging N independent noise sources converges toward zero FASTER as N
+    # grows, so a composite over worthless components is worse than any one of
+    # them. Correct order: does any single component predict anything, THEN are
+    # they independent. This gate exists because the first version of this
+    # script had that order backwards and spent an entire build finding out.
+    best_abs, best_name = 0.0, ""
+    for i, name in enumerate(FEATURE_NAMES):
+        for r in (rl[tr], rs[tr]):
+            c = abs(np.corrcoef(X[tr][:, i], r)[0, 1])
+            if c > best_abs:
+                best_abs, best_name = c, name
+    print(f"FIRST-ORDER CHECK: strongest single-feature |corr| = {best_abs:.4f} "
+          f"({best_name})")
+    if best_abs < FIRST_ORDER_MIN:
+        print(f"  Below {FIRST_ORDER_MIN}. No component carries standalone signal, so")
+        print("  any composite of them combines noise. Learning will still fit the")
+        print("  training set — that is what learners do — and will not survive")
+        print("  contact with unseen sessions.")
+        if not a.ignore_first_order:
+            print("\n  REFUSING to learn. Re-run with --ignore-first-order to proceed,")
+            print("  which is a decision to record, not a default.")
+            return 3
+        print("  --ignore-first-order given; proceeding under protest.\n")
 
     rng = np.random.default_rng(SEED)
     print("learning on REAL outcomes…")

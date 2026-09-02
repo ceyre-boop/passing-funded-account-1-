@@ -70,10 +70,22 @@ def sessions(limit: int):
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="precompute the environment")
     ap.add_argument("--sessions", type=int, default=400)
+    ap.add_argument("--seal-holdout", type=int, default=100,
+                    help="most-recent sessions withheld entirely, never in the table")
     a = ap.parse_args(argv)
 
     X, RL, RS, DAY, TS = [], [], [], [], []
-    sess = sessions(a.sessions)
+    # THE SEALED HOLDOUT. "The refinement is the overfitting": this table has
+    # been queried already, so anything built from here needs data nobody has
+    # looked at. The most recent N sessions are withheld BEFORE the table is
+    # built, not split out afterwards, and the boundary is written into the
+    # archive so a later run cannot quietly move it.
+    all_sess = sessions(a.sessions + a.seal_holdout)
+    keep = len(all_sess) - a.seal_holdout if a.seal_holdout else len(all_sess)
+    sess, sealed = all_sess[:keep], all_sess[keep:]
+    if sealed:
+        print(f"SEALED HOLDOUT: {len(sealed)} sessions withheld "
+              f"({sealed[0][0]} .. {sealed[-1][0]}) — absent from this table")
     print(f"building experience over {len(sess)} sessions "
           f"({sess[0][0]} .. {sess[-1][0]})")
 
@@ -97,7 +109,15 @@ def main(argv=None) -> int:
             # session open. Half the outcomes came back below -1R on a 1R stop
             # before this was caught. Fail-loud would have been better than a
             # slice that quietly matched everything.
+            # VERIFY THE MACHINE RAN. simulate() slices e.ts[11:16] for its
+            # start time; a value that does not slice to HH:MM silently means
+            # "after nothing" — the whole session. Not hypothetical: it happened,
+            # half the outcomes came back below -1R on a 1R stop, nothing raised.
             iso = chunk.index[i].isoformat()
+            if not (len(iso) > 16 and iso[13] == ":"):
+                raise ValueError(
+                    f"ts {iso!r} does not slice to HH:MM at [11:16] — simulate() "
+                    "would replay the whole session from the open")
             rs = []
             for d in (1, -1):
                 e = Entry(day=str(day), ts=iso, time_block="OPEN", direction=d,
@@ -115,8 +135,26 @@ def main(argv=None) -> int:
                         r_short=np.asarray(RS, dtype=np.float32),
                         day=np.asarray(DAY, dtype=np.int32),
                         ts=np.asarray(TS, dtype=np.int64),
-                        n_sessions=np.int32(len(sess)))
+                        n_sessions=np.int32(len(sess)),
+                        sealed_from=np.str_(str(sealed[0][0]) if sealed else ""),
+                        sealed_to=np.str_(str(sealed[-1][0]) if sealed else ""),
+                        n_sealed=np.int32(len(sealed)))
+    # VERIFY THE MACHINE RAN, part two: ratios implausible if something broke.
+    per_session = X.shape[0] / max(1, len(sess))
+    if not (5 <= per_session <= 80):
+        raise ValueError(f"{per_session:.1f} decision points per session is outside "
+                         "the plausible range — the machine did not run as intended")
+    rl_a, rs_a = np.asarray(RL), np.asarray(RS)
+    for nm, r in (("long", rl_a), ("short", rs_a)):
+        deep = float(np.mean(r < -1.05))
+        if deep > 0.25:
+            raise ValueError(
+                f"{deep:.1%} of {nm} outcomes are below -1.05R on a 1R stop. Gaps "
+                "explain a few percent; a quarter means the stop is not honoured")
+
     print(f"\n  {X.shape[0]} decision points x {X.shape[1]} features")
+    print(f"  sanity: {per_session:.1f} decisions/session, "
+          f"{np.mean(rl_a < -1.05):.1%}/{np.mean(rs_a < -1.05):.1%} beyond the stop")
     print(f"  mean R if you entered long everywhere : {np.mean(RL):+.4f}")
     print(f"  mean R if you entered short everywhere: {np.mean(RS):+.4f}")
     print(f"  -> {OUT.name}")
