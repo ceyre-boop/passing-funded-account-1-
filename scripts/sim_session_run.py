@@ -211,6 +211,13 @@ def run_session(day: str, chunk: pd.DataFrame, attestations: dict,
         "orphans": strat.orphans,
         "vetoes": policy.veto_summary() if hasattr(policy, "veto_summary") else {},
         "bars_seen": getattr(policy, "seen", 0),
+        # Per-bar ledgers carried out for the ODD §5 disengagement backfill.
+        # CAPTURE ONLY — nothing here changes a decision; the policy has
+        # already run by the time this is read.
+        "ledgers": [vars(l) for l in getattr(policy, "ledgers", [])],
+        "strategy_authorized": strat.authorized,
+        "strategy_refused": (strat.rejected_stale + strat.rejected_unauthorized
+                             + strat.rejected_warmup),
     }
     engine.dispose()
     return res
