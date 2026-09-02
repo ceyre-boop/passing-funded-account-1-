@@ -1,0 +1,38 @@
+{
+ "id": "S1",
+ "name": "impulse fade \u2014 RSI exhaustion at a lower high",
+ "status": "TESTED \u2014 NEGATIVE",
+ "origin": "narrated from a live GTLB trade, 2026-09-02",
+ "instruments_tested": [
+  "SPY",
+  "QQQ"
+ ],
+ "window": "2016-01-04 .. 2026-08-26",
+ "code": {
+  "signal": "alta/simple.py::signals",
+  "scorecard": "scripts/strategy_scorecard.py"
+ },
+ "rule": {
+  "impulse": "|close[i] - close[i-8]| >= 2.0 * ATR14[i]",
+  "exhaustion": "RSI(14) >= 75 on an up-impulse, <= 25 on a down-impulse",
+  "structure": "the post-impulse swing must NOT exceed the impulse extreme (a lower high)",
+  "entry": "first bar closing against the impulse; ENTER AT THAT CLOSE, never at the extreme",
+  "stop": "the swing extreme, floored at 1.0 * ATR14",
+  "direction": "fade the impulse"
+ },
+ "thresholds_provenance": "RSI 75/25 are the p90/p10 of RSI at 73,255 impulse moments \u2014 read off the indicator's own distribution, never from returns",
+ "scorecard": {
+  "n": 634,
+  "win_rate": 0.4195583596214511,
+  "payoff": 0.6210770552985789,
+  "breakeven": 1.3834586466165413,
+  "gap": -0.7623815913179623,
+  "mean_r": -0.3916849126505968,
+  "pf": 0.4489306975799511,
+  "median_mfe": 0.7628503836957292,
+  "p_reach_1r": 0.4148264984227129,
+  "p_reach_2r": 0.222397476340694,
+  "p_reach_3r": 0.14037854889589904,
+  "median_cost_r": 0.21181229186632766
+ }
+}
