@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# pre-commit — refuse a commit while the suite is red.
+#
+# WHY THIS EXISTS
+#   On 2026-09-01 a commit was pushed with a guard failing, because the
+#   verification and the commit were separate calls on one shell line:
+#
+#       python3 -m pytest ... ; git add -A && git commit ...
+#
+#   A non-zero test exit did not stop the commit. The lesson was written down
+#   and "use && next time" is exactly the kind of noted habit that gets
+#   repeated, so it is a hook instead of a note.
+#
+# SPEED IS A SAFETY PROPERTY
+#   A slow hook gets bypassed with --no-verify and then protects nothing. This
+#   runs the fast core suites only (~12s). The full cross-interpreter run,
+#   including body/ under .venv-v1, still belongs in the session's own
+#   verification step before pushing.
+set -uo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT" || exit 1
+
+# Skip on merges/rebases where a transient red state is expected.
+if [ -d "$ROOT/.git/rebase-merge" ] || [ -d "$ROOT/.git/rebase-apply" ] \
+   || [ -f "$ROOT/.git/MERGE_HEAD" ]; then
+  exit 0
+fi
+
+echo "pre-commit: running fast suites…"
+FAILED=0
+for suite in "gate/ az/" "daytrade/ scripts/"; do
+  # shellcheck disable=SC2086
+  if ! out=$(python3 -m pytest $suite -q --no-header 2>&1); then
+    echo "─────────────────────────────────────────────────────────"
+    echo "COMMIT REFUSED — $suite is red"
+    echo "$out" | tail -15
+    FAILED=1
+  fi
+done
+
+if [ "$FAILED" -ne 0 ]; then
+  cat <<'MSG'
+─────────────────────────────────────────────────────────
+Fix it, or if this is a deliberate checkpoint of broken work:
+
+    git commit --no-verify
+
+Using --no-verify is a decision. Say so in the commit message,
+so the next reader knows the red state was chosen rather than missed.
+MSG
+  exit 1
+fi
+
+echo "pre-commit: green."
+exit 0
