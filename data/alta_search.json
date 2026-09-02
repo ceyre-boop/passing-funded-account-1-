@@ -1,0 +1,28 @@
+{
+ "n_variants_tried": 192,
+ "n_evaluated": 192,
+ "best_params": {
+  "impulse_atr": 2.0,
+  "rsi_extreme": 70.0,
+  "slow_bars": 2,
+  "no_new_extreme": 2,
+  "stop_atr": 1.0,
+  "target_frac": 2.0,
+  "max_wait": 12
+ },
+ "best_train": {
+  "n": 1289,
+  "mean_r": -0.18675599419931233,
+  "win_rate": 0.4018619084561676,
+  "payoff": 1.0422366724601801,
+  "breakeven": 1.4884169884169882,
+  "pf": 0.7002316424570342,
+  "sharpe": -2.410882169315668
+ },
+ "train_mean_r_distribution": {
+  "max": -0.18675599419931233,
+  "p90": -0.20357091750034476,
+  "median": -0.24294776117299308,
+  "min": -0.32323033145991503
+ }
+}
