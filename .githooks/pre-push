@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# pre-push — the wider net. pre-commit runs the fast suites; this runs
+# everything, including the cross-interpreter body/ suite that pre-commit
+# cannot reach.
+#
+# WHY BOTH
+#   pre-commit catches the ordinary case. It does NOT catch a commit made with
+#   --no-verify, or a red state that arrived via rebase/merge. Push is the last
+#   moment a mistake is still private, so it is the right place for the slow,
+#   complete check. This repo has pushed red twice; discipline was not the fix.
+set -uo pipefail
+ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT" || exit 1
+
+echo "pre-push: full verification…"
+FAILED=0
+if ! out=$(python3 -m pytest gate/ az/ daytrade/ scripts/ -q --no-header 2>&1); then
+  echo "PUSH REFUSED — python3 suites are red"; echo "$out" | tail -12; FAILED=1
+fi
+if [ -x "$ROOT/.venv-v1/bin/python" ]; then
+  if ! out=$("$ROOT/.venv-v1/bin/python" -m pytest body/ -q --no-header 2>&1); then
+    echo "PUSH REFUSED — body/ is red"; echo "$out" | tail -12; FAILED=1
+  fi
+else
+  echo "  note: .venv-v1 absent, body/ not checked"
+fi
+
+if [ "$FAILED" -ne 0 ]; then
+  echo "─────────────────────────────────────────────────────────"
+  echo "Fix it, or push deliberately with:  git push --no-verify"
+  echo "and say in the message that the red state was chosen."
+  exit 1
+fi
+echo "pre-push: green."
