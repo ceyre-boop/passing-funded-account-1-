@@ -57,9 +57,12 @@ from nautilus_trader.test_kit.providers import TestInstrumentProvider  # noqa: E
 from odd import Tier, Truth  # noqa: E402
 
 from body.alphazero_actor import AlphaZeroActor  # noqa: E402
+from body.entry_policy import VetoEntryPolicy  # noqa: E402
 from body.null_policy import NullEntryPolicy  # noqa: E402
 from body.runtime import assert_no_live_execution_client  # noqa: E402
 from body.stockfish_strategy import StockfishStrategy  # noqa: E402
+
+POLICIES = {"null": NullEntryPolicy, "veto": VetoEntryPolicy}
 
 BARS = ROOT / "data" / "daytrade" / "bars_premarket" / "SPY_5m.parquet"
 FROZEN = ROOT / "data" / "daytrade" / "SF_FROZEN_004.json"
@@ -70,7 +73,7 @@ MIN_BARS = 40
 
 # ------------------------------------------------------------- attestations
 
-def attest() -> tuple[dict, list[str]]:
+def attest(policy_cls) -> tuple[dict, list[str]]:
     """Verify each sim precondition. Anything unverifiable stays UNKNOWN."""
     notes, out = [], {}
 
@@ -98,11 +101,15 @@ def attest() -> tuple[dict, list[str]]:
         out["holdout_sealed"] = Truth.UNKNOWN
         notes.append(f"holdout_sealed: UNKNOWN — {e}")
 
-    # policy_declares_no_edge — ask the policy
-    declares = getattr(NullEntryPolicy, "CALIBRATION_ARM", False) is True
+    # policy_declares_no_edge — ask the policy ACTUALLY IN USE.
+    # This used to hardcode NullEntryPolicy, which meant the attestation was
+    # true no matter which policy drove: a real policy could have run while the
+    # gate certified a different class. Same defect shape as a guard that tests
+    # a helper instead of the path.
+    declares = getattr(policy_cls, "DECLARES_NO_EDGE", False) is True
     out["policy_declares_no_edge"] = Truth.TRUE if declares else Truth.UNKNOWN
-    notes.append(f"policy_declares_no_edge: NullEntryPolicy.CALIBRATION_ARM="
-                 f"{declares}")
+    notes.append(f"policy_declares_no_edge: {policy_cls.__name__}."
+                 f"DECLARES_NO_EDGE={declares}")
 
     # no_live_venue — CORRECTED 2026-09-01. This used to be a hardcoded
     # Truth.TRUE beside a comment claiming it was "independently re-checked from
@@ -155,7 +162,8 @@ def _probe_engine() -> BacktestEngine:
     return e
 
 
-def run_session(day: str, chunk: pd.DataFrame, attestations: dict) -> dict:
+def run_session(day: str, chunk: pd.DataFrame, attestations: dict,
+                policy_cls=NullEntryPolicy) -> dict:
     engine = BacktestEngine(BacktestEngineConfig(
         trader_id="SIMDRIVE-001", logging=LoggingConfig(bypass_logging=True)))
     venue = Venue("SIM")
@@ -179,7 +187,7 @@ def run_session(day: str, chunk: pd.DataFrame, attestations: dict) -> dict:
             ts_event=t, ts_init=t))
     engine.add_data(bars)
 
-    policy = NullEntryPolicy()
+    policy = policy_cls()
     actor = AlphaZeroActor(bar_type=bar_type, policy=policy)
     strat = StockfishStrategy(tier=Tier.T_SIM, sim_attestations=attestations,
                               bar_type=bar_type)
@@ -201,6 +209,8 @@ def run_session(day: str, chunk: pd.DataFrame, attestations: dict) -> dict:
         "positions_opened": strat.positions_opened,
         "positions_closed": strat.positions_closed,
         "orphans": strat.orphans,
+        "vetoes": policy.veto_summary() if hasattr(policy, "veto_summary") else {},
+        "bars_seen": getattr(policy, "seen", 0),
     }
     engine.dispose()
     return res
@@ -209,10 +219,13 @@ def run_session(day: str, chunk: pd.DataFrame, attestations: dict) -> dict:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="T_SIM full-loop session run")
     ap.add_argument("--sessions", type=int, default=20)
+    ap.add_argument("--policy", choices=sorted(POLICIES), default="null",
+                    help="which entry policy drives the loop")
     a = ap.parse_args(argv)
 
-    attestations, notes = attest()
+    attestations, notes = attest(POLICIES[a.policy])
     print("T_SIM SESSION RUN — does the car drive?")
+    print(f"policy: {POLICIES[a.policy].__name__}")
     print("scoreboard: completions and disengagements. NO R, NO P&L.\n")
     print("attestations (verified, not declared):")
     for n in notes:
@@ -229,7 +242,8 @@ def main(argv=None) -> int:
     results, exceptions = [], []
     for day, chunk in sessions:
         try:
-            results.append(run_session(day, chunk, attestations))
+            results.append(run_session(day, chunk, attestations,
+                                       POLICIES[a.policy]))
         except Exception as e:                                # noqa: BLE001
             exceptions.append((day, repr(e)))
             results.append({"day": day, "completed": False, "exception": repr(e)})
@@ -261,6 +275,22 @@ def main(argv=None) -> int:
     print(f"{'positions closed':<{w}} {agg['positions_closed']}")
     print(f"{'positions ORPHANED':<{w}} {agg['orphans']}")
     print("=" * 58)
+
+    # The veto ledger. Not a result -- the instrument MECH-006 needs, which is
+    # the one hypothesis about this layer still standing. A veto with no logged
+    # ledger cannot be tested against a rate-matched control, and an untestable
+    # veto is indistinguishable from timidity.
+    vetoes = Counter()
+    bars_seen = 0
+    for r in done:
+        vetoes.update(r.get("vetoes", {}))
+        bars_seen += r.get("bars_seen", 0)
+    if vetoes:
+        print(f"\nVETO LEDGER — {bars_seen} bars evaluated, "
+              f"{agg['published']} entries taken")
+        for k, v in vetoes.most_common():
+            print(f"  {k:<28} {v:>6}  ({v / max(1, bars_seen) * 100:>5.1f}% of bars)")
+        print("  (a ledger, not a result — MECH-006 needs a rate-matched control)")
     for day, err in exceptions:
         print(f"  EXCEPTION {day}: {err}")
     drove = len(done) == len(results) and agg["orders_filled"] > 0
