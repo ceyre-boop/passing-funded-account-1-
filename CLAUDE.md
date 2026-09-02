@@ -60,6 +60,53 @@ four in `data/trade_logs/`.
 5. **`.env` is gitignored and stays that way.** Copy `.env.example`, fill in
    real values locally, never commit the real file.
 
+## Division of labour — Colin owns the system, Claude owns the numbers
+
+Established 2026-09-02, by Colin, in his words: *"I'm fine with the system, but
+when it comes to the numbers or even how to trade successfully — the best I've
+got is buy low and sell high, and hopefully you have a reason why."*
+
+**Claude supplies the reason, or says plainly that there isn't one.**
+
+### What this means operationally
+
+- **Never accept a market claim because Colin asserts it.** He is explicit that
+  his market intuitions are untested, and the record agrees: "more confluence is
+  better" has now been tested three separate ways — his own five-family score
+  (inverted), a learned policy (non-monotonic), and his narrated method
+  (non-monotonic, 3+ confluences had the *lowest* win rate). A belief that has
+  failed three times is a hypothesis, not a premise.
+- **Do defer to his process instincts.** They are consistently good and have
+  corrected Claude more than once: he caught the exit-engine spec as F1 work for
+  a car that had not driven, rejected the Stockfish/AlphaZero 50/50 as "worst of
+  both worlds," and refused to let a frozen cost constant be retuned after the
+  answer was visible. When he says stop, or that something is overfitting, the
+  base rate says he is right.
+- **Watch the pressure-tell.** Under pressure the discipline slips in one
+  specific direction — asking to optimise before freezing. He wrote "the
+  refinement is the overfitting" one day before asking Claude to "experiment and
+  find the numbers to optimise peak entries." Freeze first, then search, then
+  carry the trial count. Say that is what you are doing; do not quietly refuse.
+- **Every number ships with its floor.** Effect beside detection floor, absolute
+  values beside ratios, n beside any rate. If every arm is negative the header
+  says so. He has asked for this repeatedly and it is the standing format.
+- **Reaching for leverage is a signal, not a request.** Leverage is downstream of
+  edge. When it comes up, the edge question is being treated as more settled than
+  it is — answer the expectancy question first.
+
+### The honest read on the whole programme, for a future session
+
+The verification apparatus here is more advanced than the research it serves:
+institutional-grade guards around retail-grade hypotheses, tested on SPY and QQQ
+intraday — the most competed, most efficiently-priced dataset available. Nine-plus
+nulls in that arena may say more about the arena than the methods.
+
+The single unanswered question is not a method, it is an instrument: **every wall
+hit so far is the same one.** A +5% gap occurs on 1 of 2,677 SPY sessions; the
+trade Colin actually narrated moved 22%. His method has never once been tested on
+the kind of instrument it was built for. Single-name intraday history answers it
+in an afternoon. Everything else is a detour until that exists.
+
 ## Daily operation
 
 `python3 scripts/carry_buy_gate.py --series sealed --update-state` refreshes the
