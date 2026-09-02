@@ -180,6 +180,26 @@ PRECONDITIONS: tuple[Precondition, ...] = (
     Precondition("policy_version", "entry policy version matches the version that cleared pre-registration"),
     Precondition("prereg_current", "pre-registration unexpired and unamended since acceptance"),
     Precondition("holdout_sealed", "sealed holdout remains sealed, or its single authorized unseal is logged"),
+    # NON-NEGOTIABLE, added 2026-09-01 by operator ruling. Shadow mode is not a
+    # phase anyone may skip when the backtest looks good: the model runs live,
+    # logging its decisions against CLAUDE's discretionary exits, for weeks,
+    # BEFORE it touches capital. That comparison is also the first real
+    # calibration set — the only one drawn from live conditions rather than
+    # replay, so skipping it costs the calibration too, not just the safety.
+    #
+    # THE COMPARATOR IS CLAUDE, NOT THE OPERATOR, and that is a deliberate
+    # choice with a cost attached. The operator's stated reason is sound: a
+    # beginner's chart read is a weak label, and lookback would beat it. But
+    # promoting Claude to the standard does not make the standard good — it
+    # makes Claude the ceiling. "Is Claude's discretionary exit better than a
+    # rate-matched coin" is exactly as open a question as it was for the
+    # operator, and it must be measured the same way, against the same control,
+    # before this comparison set is treated as ground truth rather than as a
+    # second opinion.
+    Precondition("shadow_mode_served",
+                 "the model has run live in shadow for the declared period, its "
+                 "decisions logged against Claude's discretionary exits, and the "
+                 "comparison retained as the calibration set"),
     # ODD.md §2 final line: absent in v0.1, so this gate cannot pass.
     Precondition("t0_unseal", "T0 unseal authorization present",
                  _forced=Truth.FALSE),

@@ -353,3 +353,22 @@ def test_live_authorization_still_requires_a_known_environment():
                               entry_layer_in_domain=Truth.TRUE,
                               environment=RunEnvironment.UNKNOWN)
     assert not ok and "UNKNOWN" in why
+
+
+def test_shadow_mode_is_a_live_precondition():
+    """NON-NEGOTIABLE by operator ruling: the model runs live in shadow,
+    logged against CLAUDE's discretionary exits, before it touches capital.
+    A ruling that lives only in prose is a ruling that erodes."""
+    keys = {p.key for p in PRECONDITIONS}
+    assert "shadow_mode_served" in keys
+
+
+def test_shadow_mode_is_not_required_on_the_closed_track():
+    """T_SIM is backtest-only and touches no capital, so demanding a live
+    shadow period there would be incoherent."""
+    assert "shadow_mode_served" not in {p.key for p in SIM_PRECONDITIONS}
+
+
+def test_shadow_mode_fails_closed_like_everything_else():
+    g = evaluate_gate()
+    assert "shadow_mode_served" in (g.false + g.unknown)
