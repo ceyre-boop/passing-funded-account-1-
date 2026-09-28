@@ -13,6 +13,10 @@ logs/
 data/agent/*.jsonl
 .env
 data/daytrade/operator/.dashboard_published
+# operator_tick.sh's retry counters — runtime state, not record
+data/daytrade/operator/*_fails
+# raw vendor pulls (~314MB) — rebuilt by scripts/pull_*.py; results live in artifacts/
+data/nasdaq/
 
 # python venv (nautilus body)
 .venv/
