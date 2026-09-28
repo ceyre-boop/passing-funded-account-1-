@@ -58,8 +58,12 @@ def test_get_source_routes_futures_to_yfinance():
     assert datasource.get_source("EURUSD=X").name == "yfinance"
 
 
-def test_forced_source_that_cannot_serve_raises():
+def test_forced_source_that_cannot_serve_raises(monkeypatch):
     """A forced source is never silently swapped for one that works."""
+    # dummy keys get past credential validation so the forced-source branch
+    # is what's under test — without them CI (no .env) raises on missing keys
+    monkeypatch.setenv("ALPACA_API_KEY", "k")
+    monkeypatch.setenv("ALPACA_SECRET_KEY", "s")
     with pytest.raises(datasource.DataSourceError, match="forced"):
         datasource.get_source("ES=F", prefer="alpaca")
 
