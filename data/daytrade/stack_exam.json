@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-08-21T22:54:47.627799+00:00",
+ "generated_at": "2026-09-28T15:03:24.482365+00:00",
  "tally": {
   "PASS": 10,
   "GAP": 3,
@@ -11,7 +11,7 @@
    "id": "SF-1",
    "claim": "one decide_exit implementation, called identically everywhere",
    "status": "PASS",
-   "evidence": "1 definition(s); 39 files reference it; re-implementations: none"
+   "evidence": "1 definition(s); 43 files reference it; re-implementations: none"
   },
   {
    "layer": "stockfish",
@@ -25,7 +25,7 @@
    "id": "SF-3",
    "claim": "an evaluator is complete for each position type the system trades",
    "status": "GAP",
-   "evidence": "intraday: TradeState 23 fields (complete for intraday, carry-blind by design). carry-exit-v1: 22 fields, separate type True, carry terms present all. Reconciliation against 411 sealed trades: 44.8% exit-reason match; cannot yet express ['reversal', 'trailing_stop'] \u2014 missing the entry signal (general repo), the true stop-placement rule, and the trail spec. Named, not tuned away."
+   "evidence": "intraday: TradeState 24 fields (complete for intraday, carry-blind by design). carry-exit-v1: 22 fields, separate type True, carry terms present all. Reconciliation against 411 sealed trades: 44.8% exit-reason match; cannot yet express ['reversal', 'trailing_stop'] \u2014 missing the entry signal (general repo), the true stop-placement rule, and the trail spec. Named, not tuned away."
   },
   {
    "layer": "stockfish",
@@ -109,7 +109,7 @@
    "id": "ST-2",
    "claim": "the layers are pointed at the market the money is in",
    "status": "GAP",
-   "evidence": "exit evaluator + operator: intraday equities/futures (40 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10192 rows) but no exit evaluator prices a carry position yet"
+   "evidence": "exit evaluator + operator: intraday equities/futures (40 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10232 rows) but no exit evaluator prices a carry position yet"
   }
  ]
 }

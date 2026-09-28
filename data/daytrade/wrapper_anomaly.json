@@ -1,8 +1,8 @@
 {
- "generated_at": "2026-08-21T22:54:44.142179+00:00",
+ "generated_at": "2026-09-28T15:03:21.011503+00:00",
  "question": "same underlying, two wrappers \u2014 does exit quality differ?",
  "theory_predicts": "no difference (delta-correlation 0.93)",
- "compared_against": "SF-FROZEN-001",
+ "compared_against": "SF-FROZEN-004",
  "pooled_mean_efficiency_delta": -0.07003432626694996,
  "p_pooled": 0.28285857071464265,
  "verdict": "NO_RESIDUAL",
