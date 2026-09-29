@@ -523,28 +523,28 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-09-28T15:03:24.726080+00:00",
+ "generated_at": "2026-09-29T02:11:05.870026+00:00",
  "latest_judgment": {
   "abstention": {
-   "detail": "newest bar 990 min old (> 15)",
-   "issued_at": "2026-08-21T12:25:11.584628+00:00",
+   "detail": "newest bar 3611 min old (> 15)",
+   "issued_at": "2026-09-28T12:05:54.313893+00:00",
    "model_version": "alpha-operator-v1/stale-gate",
    "reason": "STALE_CONTEXT"
   },
   "available": true,
-  "bar_age_min": 990.2,
+  "bar_age_min": 3610.9,
   "both_sides": null,
   "confidence": 0.0,
   "cost_usd": 0.0,
   "emission_refused": null,
   "invalidators": [],
   "model_version": "alpha-operator-v1/stale-gate",
-  "packet_as_of": "2026-08-21T12:25:11.584628+00:00",
-  "packet_max_data_ts": "2026-08-21T11:05:00+00:00",
+  "packet_as_of": "2026-09-28T12:05:54.313893+00:00",
+  "packet_max_data_ts": "2026-09-28T11:06:01+00:00",
   "pre_registration": null,
-  "record_id": "op-20260821-122511-584628-NVDA",
+  "record_id": "op-20260928-120554-313893-NVDA",
   "trigger": "news",
-  "ts": "2026-08-21T12:25:11.584628+00:00",
+  "ts": "2026-09-28T12:05:54.313893+00:00",
   "verdict": "ABSTAIN"
  },
  "learning_loop": {
@@ -580,16 +580,8 @@
   "available": true,
   "correction_applied": "unconditional mean \u2014 the residual carries no information yet, so the correction is zero",
   "loop_closed": true,
-  "n_science_runs": 10,
+  "n_science_runs": 11,
   "science_runs": [
-   {
-    "moved": {},
-    "n_moved": 0,
-    "started": "2026-08-20T23:58:52.647320+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
-   },
    {
     "moved": {},
     "n_moved": 0,
@@ -697,6 +689,19 @@
     "thresholds": [
      "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
     ]
+   },
+   {
+    "moved": {
+     "fx_rows": {
+      "from": 10232,
+      "to": 10236
+     }
+    },
+    "n_moved": 1,
+    "started": "2026-09-29T02:05:02.671783+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
    }
   ],
   "stale": false,
@@ -713,7 +718,7 @@
  "ontology": {
   "age_hours": 0.0,
   "available": true,
-  "generated_at": "2026-09-28T15:02:23.044306+00:00",
+  "generated_at": "2026-09-29T02:10:04.826641+00:00",
   "k_subsamples": 8,
   "labels_at_boundary": [],
   "labels_unstable": [],
@@ -895,10 +900,10 @@
  },
  "session": {
   "available": true,
-  "last_record_ts": "2026-08-21T12:25:11.584628+00:00",
+  "last_record_ts": "2026-09-28T12:05:54.313893+00:00",
   "last_trigger": "news",
   "mode": "SHADOW SOAK",
-  "records_total": 24,
+  "records_total": 26,
   "shadow": true,
   "symbol": "NVDA"
  },
@@ -957,7 +962,7 @@
    }
   },
   "compared_against": "SF-FROZEN-004",
-  "generated_at": "2026-09-28T15:00:09.818539+00:00",
+  "generated_at": "2026-09-29T02:07:50.671932+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.1843,
   "mean_mfe_r": 3.4223,
@@ -4673,10 +4678,10 @@
   "abstain_reasons": {
    "DATA_INCOMPLETE": 2,
    "NO_OPINION": 3,
-   "STALE_CONTEXT": 9
+   "STALE_CONTEXT": 11
   },
   "counts": {
-   "ABSTAIN": 14,
+   "ABSTAIN": 16,
    "ALLOW_BASELINE": 7,
    "EXIT": 0,
    "TIGHTEN": 3
@@ -4824,6 +4829,18 @@
     "confidence": 0.0,
     "shadow": true,
     "ts": "2026-08-21T12:25:11.584628+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-09-28T12:00:48.050041+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-09-28T12:05:54.313893+00:00",
     "verdict": "ABSTAIN"
    }
   ]
