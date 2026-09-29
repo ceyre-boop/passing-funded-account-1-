@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import urllib.error
+import urllib.parse
 
 import pandas as pd
 import pytest
@@ -230,3 +231,48 @@ def test_refresh_cache_never_writes_extended_bars_into_rth_cache(tmp_path, monke
     cached = pd.read_parquet(tmp_path / "NVDA_5m.parquet")
     cached.index = pd.to_datetime(cached.index, utc=True).tz_convert(datasource.ET)
     assert _hhmm(cached) == ["09:30", "15:55"]
+
+
+# ---------------------------------------------------------- live freshness
+
+def _capture_end(monkeypatch):
+    seen = {}
+    payload = {"bars": [{"t": "2024-03-01T14:30:00Z", "o": 1, "h": 1, "l": 1,
+                         "c": 1, "v": 1}], "next_page_token": None}
+
+    def fake(req, timeout=0):
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(req.full_url).query)
+        seen["end"] = q.get("end", [None])[0]
+        return _Resp(json.dumps(payload).encode())
+
+    monkeypatch.setattr(datasource.urllib.request, "urlopen", fake)
+    return seen
+
+
+def test_live_period_pull_reaches_today_not_midnight(monkeypatch):
+    """The 2026-09-28 staleness: period mode ended at midnight UTC, so the
+    operator never saw the current session. It must end at the newest
+    complete bar past the SIP delay — close to now, never in the future."""
+    seen = _capture_end(monkeypatch)
+    datasource.AlpacaSource(key="k", secret="s").bars("NVDA", "5m", period="5d")
+    end = pd.Timestamp(seen["end"])
+    lag = pd.Timestamp.now(tz="UTC") - end
+    delay = pd.Timedelta(minutes=datasource.SIP_DELAY_MIN)
+    assert delay < lag <= delay + pd.Timedelta(minutes=5, seconds=30), lag
+
+
+def test_live_period_pull_never_asks_for_a_forming_bar(monkeypatch):
+    """end sits one second before a bar boundary, so the last bar returned
+    covers a closed interval — refresh_cache freezes the first copy it sees."""
+    seen = _capture_end(monkeypatch)
+    datasource.AlpacaSource(key="k", secret="s").bars("NVDA", "5m", period="5d")
+    end = pd.Timestamp(seen["end"])
+    assert end.second == 59 and (end.minute + 1) % 5 == 0, end
+
+
+def test_explicit_date_range_is_untouched(monkeypatch):
+    """The studies pass start/end dates; their query must not move."""
+    seen = _capture_end(monkeypatch)
+    datasource.AlpacaSource(key="k", secret="s").bars(
+        "NVDA", "5m", start="2024-03-01", end="2024-03-02")
+    assert seen["end"] == "2024-03-02T00:00:00Z"

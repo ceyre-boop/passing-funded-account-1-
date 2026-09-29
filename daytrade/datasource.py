@@ -125,6 +125,9 @@ class YFinanceSource(DataSource):
 
 _ALPACA_TF = {"1m": "1Min", "5m": "5Min", "15m": "15Min",
               "1h": "1Hour", "1d": "1Day"}
+# The plan's SIP entitlement stops 15 minutes short of now ("subscription does
+# not permit querying recent SIP data", HTTP 403 — probed live 2026-09-29).
+SIP_DELAY_MIN = 15
 
 
 class AlpacaSource(DataSource):
@@ -178,11 +181,19 @@ class AlpacaSource(DataSource):
             raise DataSourceError(
                 f"timeframe {tf!r} not mapped for Alpaca; known: {sorted(_ALPACA_TF)}")
 
+        end_param = f"{end}T00:00:00Z" if end else None
         if period and not start:
+            # The live path. A date-only end is midnight UTC, which left the
+            # operator a full session stale: 2026-09-28's bars first reached
+            # the cache on 09-29 14:13 UTC. Instead, end on the newest bar
+            # that is both complete and past the SIP delay — never a forming
+            # bar, because refresh_cache freezes whatever it is first given.
             days = int(str(period).rstrip("dD"))
-            end_dt = datetime.now(timezone.utc)
-            start = (end_dt - pd.Timedelta(days=days)).strftime("%Y-%m-%d")
-            end = end_dt.strftime("%Y-%m-%d")
+            now = pd.Timestamp.now(tz="UTC")
+            start = (now - pd.Timedelta(days=days)).strftime("%Y-%m-%d")
+            delay = pd.Timedelta(minutes=SIP_DELAY_MIN if self.feed == "sip" else 0)
+            edge = (now - delay).floor(pd.Timedelta(tf.replace("m", "min")))
+            end_param = (edge - pd.Timedelta(seconds=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
         if not start:
             raise DataSourceError("AlpacaSource needs start= or period=")
 
@@ -190,8 +201,8 @@ class AlpacaSource(DataSource):
         while True:
             q = {"timeframe": _ALPACA_TF[tf], "start": f"{start}T00:00:00Z",
                  "limit": "10000", "feed": self.feed, "adjustment": "split"}
-            if end:
-                q["end"] = f"{end}T00:00:00Z"
+            if end_param:
+                q["end"] = end_param
             if token:
                 q["page_token"] = token
             url = f"{self.BASE}/{symbol}/bars?{urllib.parse.urlencode(q)}"
