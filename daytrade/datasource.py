@@ -29,6 +29,13 @@ FAIL LOUD (APEX #2)
   downgraded to `iex` when entitlement is missing — IEX carries roughly 2% of
   consolidated volume, so a silent fallback would leave every volume-derived
   feature quietly wrong while still producing a full-looking DataFrame.
+- A source swap does not change the SESSION. yfinance serves US equities
+  regular-hours only (09:30-16:00 ET); Alpaca serves 04:00-20:00. When
+  `get_source()` auto-picked Alpaca for NVDA on 2026-09-28 the RTH cache took
+  4,788 pre/post-market bars, and every reader keyed on "the day's first bar"
+  (day_open, gap_pct, prior_close) silently read 04:00 and 19:55 prices.
+  `get_source()` therefore hands out Alpaca clipped to regular hours; the
+  premarket studies construct `AlpacaSource()` directly and keep the raw tape.
 """
 from __future__ import annotations
 
@@ -47,6 +54,14 @@ ET = ZoneInfo("America/New_York")
 ROOT = Path(__file__).resolve().parents[1]
 
 OHLCV = ["Open", "High", "Low", "Close", "Volume"]
+REGULAR_OPEN, REGULAR_CLOSE = "09:30", "16:00"   # bar START in [open, close)
+
+
+def is_us_equity(symbol: str) -> bool:
+    """yfinance suffixes: =F futures, =X FX, ^ index, - crypto. Anything else
+    is treated as a US-listed equity."""
+    return not (symbol.endswith("=F") or symbol.endswith("=X")
+                or "-" in symbol or "^" in symbol)
 
 
 class DataSourceError(RuntimeError):
@@ -125,7 +140,7 @@ class AlpacaSource(DataSource):
     BASE = "https://data.alpaca.markets/v2/stocks"
 
     def __init__(self, key: str | None = None, secret: str | None = None,
-                 feed: str = "sip"):
+                 feed: str = "sip", regular_hours_only: bool = False):
         if key is None or secret is None:
             env = _dotenv(ROOT / ".env")
             key = key or env.get("ALPACA_API_KEY") or os.environ.get("ALPACA_API_KEY")
@@ -136,16 +151,19 @@ class AlpacaSource(DataSource):
                 "ALPACA_API_KEY / ALPACA_SECRET_KEY not found in .env or environment")
         self._hdr = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret}
         self.feed = feed
+        # False = the raw 04:00-20:00 tape (the premarket studies want it);
+        # True = yfinance's equity session, for caches that assume RTH.
+        self.regular_hours_only = regular_hours_only
 
     # Alpaca's equity API serves US-listed tickers. yfinance suffixes mean
     # futures (=F) and FX (=X); returning equity data for those would be wrong
     # rather than merely empty, so refuse them by name.
     def supports(self, symbol: str) -> bool:
-        return not (symbol.endswith("=F") or symbol.endswith("=X")
-                    or "-" in symbol or "^" in symbol)
+        return is_us_equity(symbol)
 
     def describe(self) -> dict:
-        return {"vendor": self.name, "feed": self.feed}
+        return {"vendor": self.name, "feed": self.feed,
+                "session": "regular" if self.regular_hours_only else "extended"}
 
     def bars(self, symbol, tf="5m", start=None, end=None, period=None):
         import pandas as pd
@@ -200,6 +218,9 @@ class AlpacaSource(DataSource):
         df.index = df.index.tz_convert(ET)
         df = df.rename(columns={"o": "Open", "h": "High", "l": "Low",
                                 "c": "Close", "v": "Volume"})
+        if self.regular_hours_only and tf != "1d":
+            t = df.index.strftime("%H:%M")
+            df = df[(t >= REGULAR_OPEN) & (t < REGULAR_CLOSE)]
         return df[OHLCV]
 
     def _get(self, url: str) -> dict:
@@ -240,17 +261,23 @@ def get_source(symbol: str, prefer: str | None = None) -> DataSource:
     `prefer` (or DAYTRADE_SOURCE) forces one and is NOT silently overridden — a
     forced source that cannot serve the symbol raises rather than quietly
     handing back a different vendor's bars.
+
+    Alpaca is handed out clipped to regular hours, so whichever vendor is
+    picked, an equity series has yfinance's session shape.
     """
+    def alpaca():
+        return AlpacaSource(regular_hours_only=True)
+
     prefer = prefer or os.environ.get("DAYTRADE_SOURCE")
     if prefer:
-        src = {"yfinance": YFinanceSource, "alpaca": AlpacaSource}[prefer.lower()]()
+        src = {"yfinance": YFinanceSource, "alpaca": alpaca}[prefer.lower()]()
         if not src.supports(symbol):
             raise DataSourceError(
                 f"source {prefer!r} was forced but cannot serve {symbol!r}")
         return src
     alp = None
     try:
-        alp = AlpacaSource()
+        alp = alpaca()
     except DataSourceError:
         return YFinanceSource()
     return alp if alp.supports(symbol) else YFinanceSource()

@@ -161,3 +161,72 @@ def test_refresh_cache_keeps_frozen_history(tmp_path, monkeypatch, capsys):
     assert "KEEPING the cached values" in capsys.readouterr().out
     stored = pd.read_parquet(tmp_path / "NVDA_5m.parquet")
     assert stored["Close"].iloc[0] == 0.0, "frozen history was overwritten"
+
+
+# ---------------------------------------------------------- session shape
+
+# 2024-03-01 is EST (UTC-5): 04:00, 09:25, 09:30, 15:55, 16:00, 19:55 ET
+_EXT_DAY = ["2024-03-01T09:00:00Z", "2024-03-01T14:25:00Z",
+            "2024-03-01T14:30:00Z", "2024-03-01T20:55:00Z",
+            "2024-03-01T21:00:00Z", "2024-03-02T00:55:00Z"]
+
+
+class _Resp(_Body):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def _serve_extended_day(monkeypatch):
+    """Alpaca's real behaviour: the 04:00-20:00 tape, not the RTH session."""
+    payload = {"bars": [{"t": t, "o": 1, "h": 1, "l": 1, "c": 1, "v": 1}
+                        for t in _EXT_DAY], "next_page_token": None}
+    monkeypatch.setattr(datasource.urllib.request, "urlopen",
+                        lambda req, timeout=0: _Resp(json.dumps(payload).encode()))
+    monkeypatch.setenv("ALPACA_API_KEY", "k")
+    monkeypatch.setenv("ALPACA_SECRET_KEY", "s")
+
+
+def _hhmm(df):
+    return list(df.index.strftime("%H:%M"))
+
+
+def test_get_source_equity_bars_are_regular_hours_only(monkeypatch):
+    """The 2026-09-28 failure: get_source swapped yfinance (RTH) for Alpaca
+    (04:00-20:00) and the RTH cache took the pre/post-market tape."""
+    _serve_extended_day(monkeypatch)
+    src = datasource.get_source("NVDA")
+    assert src.name == "alpaca"
+    df = src.bars("NVDA", "5m", start="2024-03-01", end="2024-03-02")
+    assert _hhmm(df) == ["09:30", "15:55"]
+    assert src.describe()["session"] == "regular"
+
+
+def test_forced_alpaca_is_regular_hours_only_too(monkeypatch):
+    _serve_extended_day(monkeypatch)
+    df = datasource.get_source("NVDA", prefer="alpaca").bars(
+        "NVDA", "5m", start="2024-03-01", end="2024-03-02")
+    assert _hhmm(df) == ["09:30", "15:55"]
+
+
+def test_explicit_alpaca_keeps_the_extended_tape(monkeypatch):
+    """The premarket studies construct AlpacaSource directly for the raw tape;
+    clipping it there would silently empty their pre-open windows."""
+    _serve_extended_day(monkeypatch)
+    src = datasource.AlpacaSource(key="k", secret="s")
+    df = src.bars("NVDA", "5m", start="2024-03-01", end="2024-03-02")
+    assert _hhmm(df) == ["04:00", "09:25", "09:30", "15:55", "16:00", "19:55"]
+    assert src.describe()["session"] == "extended"
+
+
+def test_refresh_cache_never_writes_extended_bars_into_rth_cache(tmp_path, monkeypatch):
+    """End to end through the operator's own call: refresh_cache with no
+    explicit source, as alpha_operator.py and operator_tick.sh invoke it."""
+    _serve_extended_day(monkeypatch)
+    monkeypatch.setattr(bars, "CACHE", tmp_path)
+    bars.refresh_cache("NVDA", "5m", start="2024-03-01", end="2024-03-02")
+    cached = pd.read_parquet(tmp_path / "NVDA_5m.parquet")
+    cached.index = pd.to_datetime(cached.index, utc=True).tz_convert(datasource.ET)
+    assert _hhmm(cached) == ["09:30", "15:55"]
