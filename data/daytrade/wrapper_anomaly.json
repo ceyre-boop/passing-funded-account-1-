@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-09-29T02:11:02.084053+00:00",
+ "generated_at": "2026-09-30T01:27:33.772037+00:00",
  "question": "same underlying, two wrappers \u2014 does exit quality differ?",
  "theory_predicts": "no difference (delta-correlation 0.93)",
  "compared_against": "SF-FROZEN-004",

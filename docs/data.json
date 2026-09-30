@@ -523,28 +523,28 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-09-29T02:11:05.870026+00:00",
+ "generated_at": "2026-09-30T01:27:37.474862+00:00",
  "latest_judgment": {
   "abstention": {
-   "detail": "newest bar 3611 min old (> 15)",
-   "issued_at": "2026-09-28T12:05:54.313893+00:00",
+   "detail": "newest bar 1321 min old (> 15)",
+   "issued_at": "2026-09-29T17:56:05.619013+00:00",
    "model_version": "alpha-operator-v1/stale-gate",
    "reason": "STALE_CONTEXT"
   },
   "available": true,
-  "bar_age_min": 3610.9,
+  "bar_age_min": 1321.1,
   "both_sides": null,
   "confidence": 0.0,
   "cost_usd": 0.0,
   "emission_refused": null,
   "invalidators": [],
   "model_version": "alpha-operator-v1/stale-gate",
-  "packet_as_of": "2026-09-28T12:05:54.313893+00:00",
-  "packet_max_data_ts": "2026-09-28T11:06:01+00:00",
+  "packet_as_of": "2026-09-29T17:56:05.619013+00:00",
+  "packet_max_data_ts": "2026-09-29T15:56:00+00:00",
   "pre_registration": null,
-  "record_id": "op-20260928-120554-313893-NVDA",
-  "trigger": "news",
-  "ts": "2026-09-28T12:05:54.313893+00:00",
+  "record_id": "op-20260929-175605-619013-NVDA",
+  "trigger": "bar",
+  "ts": "2026-09-29T17:56:05.619013+00:00",
   "verdict": "ABSTAIN"
  },
  "learning_loop": {
@@ -580,16 +580,8 @@
   "available": true,
   "correction_applied": "unconditional mean \u2014 the residual carries no information yet, so the correction is zero",
   "loop_closed": true,
-  "n_science_runs": 11,
+  "n_science_runs": 12,
   "science_runs": [
-   {
-    "moved": {},
-    "n_moved": 0,
-    "started": "2026-08-21T00:11:22.455808+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
-   },
    {
     "moved": {},
     "n_moved": 0,
@@ -702,6 +694,19 @@
     "thresholds": [
      "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
     ]
+   },
+   {
+    "moved": {
+     "fx_rows": {
+      "from": 10236,
+      "to": 10240
+     }
+    },
+    "n_moved": 1,
+    "started": "2026-09-30T01:21:41.558267+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
    }
   ],
   "stale": false,
@@ -718,7 +723,7 @@
  "ontology": {
   "age_hours": 0.0,
   "available": true,
-  "generated_at": "2026-09-29T02:10:04.826641+00:00",
+  "generated_at": "2026-09-30T01:26:36.327527+00:00",
   "k_subsamples": 8,
   "labels_at_boundary": [],
   "labels_unstable": [],
@@ -900,10 +905,10 @@
  },
  "session": {
   "available": true,
-  "last_record_ts": "2026-09-28T12:05:54.313893+00:00",
-  "last_trigger": "news",
+  "last_record_ts": "2026-09-29T17:56:05.619013+00:00",
+  "last_trigger": "bar",
   "mode": "SHADOW SOAK",
-  "records_total": 26,
+  "records_total": 31,
   "shadow": true,
   "symbol": "NVDA"
  },
@@ -962,7 +967,7 @@
    }
   },
   "compared_against": "SF-FROZEN-004",
-  "generated_at": "2026-09-29T02:07:50.671932+00:00",
+  "generated_at": "2026-09-30T01:24:23.151826+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.1843,
   "mean_mfe_r": 3.4223,
@@ -4678,10 +4683,10 @@
   "abstain_reasons": {
    "DATA_INCOMPLETE": 2,
    "NO_OPINION": 3,
-   "STALE_CONTEXT": 11
+   "STALE_CONTEXT": 16
   },
   "counts": {
-   "ABSTAIN": 16,
+   "ABSTAIN": 21,
    "ALLOW_BASELINE": 7,
    "EXIT": 0,
    "TIGHTEN": 3
@@ -4841,6 +4846,36 @@
     "confidence": 0.0,
     "shadow": true,
     "ts": "2026-09-28T12:05:54.313893+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-09-28T17:05:32.875452+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-09-28T18:03:58.252647+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-09-29T14:14:25.011101+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-09-29T17:07:39.955848+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-09-29T17:56:05.619013+00:00",
     "verdict": "ABSTAIN"
    }
   ]
