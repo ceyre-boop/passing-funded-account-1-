@@ -1,5 +1,51 @@
 # CLAUDE.md — passing-funded-account-1
-**One repo, one job: pass the first funded evaluation. Nothing else lives here.**
+**One repo, one job: measure the spread on a small real account. Funded comes after.**
+
+## Direction (set 2026-09-30, by Colin — supersedes the "pass the eval" framing)
+
+Passing a funded evaluation is not the goal. `artifacts/SHOTGUN_EV.md` showed
+a zero-edge coin flip passes 1 in 3–4 evaluations against the real firm rules;
+passing measures variance, not skill. The goal is what comes after: income that
+is formulaic like a bank — borrow at 3%, lend at 5%, keep 2% on size — not
+sporadic like a struggling small business. Colin's words: "building without a
+goal and a direction is useless." This section is the goal.
+
+**The bank arithmetic.** The spread is edge per trade minus cost per trade, in
+R. A funded account is the borrowing: eval fee plus the firm's profit split is
+the borrow rate. At a realistic 0.10R cost, break-even edge is about +0.05R per
+trade; around +0.10R the income looks bank-like (same artifact). No spread has
+been measured on anything in this repo yet. The carry "411 sealed trades" claim
+below is superseded — see the general repo's CB-layer decomposition (2026-08-27):
+two-thirds of that file was fabricated, the real lead is n=20.
+
+**The account.** A real account, small money, chosen over sim, big money, and
+funded:
+- Sim cannot measure cost per trade or Colin under pressure, and cost decides
+  everything. Sim stays as the research bench for finding edges on history.
+- Funded before the spread is known is a lottery ticket. It becomes the right
+  move only once the measured spread clears the borrow rate — that is the
+  graduation criterion, and this repo's gate is what computes it.
+- Big money before the edge exists is sizing before edge. Kelly with an
+  unknown edge says zero.
+- Small real money measures what sim can't, at a bounded price: cost per trade
+  in R pins down in 30–50 real trades (it barely varies); edge needs hundreds
+  (0.1R needs ~400, 0.2R ~100) and keeps coming from history with the measured
+  cost plugged in.
+- Size so a 20-trade losing streak costs about 10%: 0.5% risk per trade, on a
+  balance that stings without ending the experiment ($1–2k). Zero-commission
+  broker so small size does not carry a higher cost in R. Cash account, not
+  margin, so the pattern-day-trader rule (3 day trades per 5 days under $25k)
+  does not stretch 50 trades over four months.
+
+**What this makes the repo: the spread meter.** One instrument, Colin's own
+method, every trade in the shot ledger with its realized cost in R, and a gate
+that turns measured cost and edge into the bank arithmetic and says when funded
+makes sense. Everything already built keeps its place: the operator and exit
+engine are the car, the ledger is the meter, the studies are the lab. Stockfish
+and AlphaZero are the innovation layer — Microsoft, not the bank — and they
+earn their keep only once there is a spread to run.
+
+**Fixed rule:** Claude never places an order. Colin clicks; the repo records.
 
 > **READ FIRST: `ARCHITECTURE.md`** — the definitive spec as of 2026-08-03
 > (day-trading cockpit: ALPHAZERO bias layer + STOCKFISH exit engine + Colin's
