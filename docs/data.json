@@ -523,7 +523,7 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-10-01T01:26:18.579240+00:00",
+ "generated_at": "2026-10-02T01:50:16.209406+00:00",
  "latest_judgment": {
   "abstention": {
    "detail": "newest bar 1321 min old (> 15)",
@@ -580,41 +580,8 @@
   "available": true,
   "correction_applied": "unconditional mean \u2014 the residual carries no information yet, so the correction is zero",
   "loop_closed": true,
-  "n_science_runs": 13,
+  "n_science_runs": 14,
   "science_runs": [
-   {
-    "moved": {
-     "az_resolved": {
-      "from": null,
-      "to": 13
-     },
-     "ontology_bonferroni": {
-      "from": 0,
-      "to": 1
-     },
-     "ontology_carves": {
-      "from": 3,
-      "to": 2
-     },
-     "residual_corr": {
-      "from": null,
-      "to": -0.0477
-     },
-     "residual_skill": {
-      "from": null,
-      "to": -0.2235
-     },
-     "residual_usable": {
-      "from": null,
-      "to": false
-     }
-    },
-    "n_moved": 6,
-    "started": "2026-08-21T18:14:46.001828+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
-   },
    {
     "moved": {
      "ontology_carves": {
@@ -712,6 +679,19 @@
     "thresholds": [
      "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
     ]
+   },
+   {
+    "moved": {
+     "fx_rows": {
+      "from": 10244,
+      "to": 10248
+     }
+    },
+    "n_moved": 1,
+    "started": "2026-10-02T01:44:11.145358+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
    }
   ],
   "stale": false,
@@ -728,7 +708,7 @@
  "ontology": {
   "age_hours": 0.0,
   "available": true,
-  "generated_at": "2026-10-01T01:25:28.442713+00:00",
+  "generated_at": "2026-10-02T01:49:18.246241+00:00",
   "k_subsamples": 8,
   "labels_at_boundary": [],
   "labels_unstable": [],
@@ -972,7 +952,7 @@
    }
   },
   "compared_against": "SF-FROZEN-004",
-  "generated_at": "2026-10-01T01:23:16.156438+00:00",
+  "generated_at": "2026-10-02T01:46:46.119785+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.1843,
   "mean_mfe_r": 3.4223,
