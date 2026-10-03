@@ -523,7 +523,7 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-10-02T01:50:16.209406+00:00",
+ "generated_at": "2026-10-03T01:21:21.111928+00:00",
  "latest_judgment": {
   "abstention": {
    "detail": "newest bar 1321 min old (> 15)",
@@ -580,29 +580,8 @@
   "available": true,
   "correction_applied": "unconditional mean \u2014 the residual carries no information yet, so the correction is zero",
   "loop_closed": true,
-  "n_science_runs": 14,
+  "n_science_runs": 15,
   "science_runs": [
-   {
-    "moved": {
-     "ontology_carves": {
-      "from": 2,
-      "to": 1
-     },
-     "ontology_n_sessions": {
-      "from": null,
-      "to": 336
-     },
-     "ontology_unstable": {
-      "from": null,
-      "to": 0
-     }
-    },
-    "n_moved": 3,
-    "started": "2026-08-21T18:31:37.874530+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
-   },
    {
     "moved": {},
     "n_moved": 0,
@@ -692,6 +671,19 @@
     "thresholds": [
      "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
     ]
+   },
+   {
+    "moved": {
+     "fx_rows": {
+      "from": 10248,
+      "to": 10249
+     }
+    },
+    "n_moved": 1,
+    "started": "2026-10-03T01:15:18.974905+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
    }
   ],
   "stale": false,
@@ -708,7 +700,7 @@
  "ontology": {
   "age_hours": 0.0,
   "available": true,
-  "generated_at": "2026-10-02T01:49:18.246241+00:00",
+  "generated_at": "2026-10-03T01:20:19.079845+00:00",
   "k_subsamples": 8,
   "labels_at_boundary": [],
   "labels_unstable": [],
@@ -952,7 +944,7 @@
    }
   },
   "compared_against": "SF-FROZEN-004",
-  "generated_at": "2026-10-02T01:46:46.119785+00:00",
+  "generated_at": "2026-10-03T01:18:01.507169+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.1843,
   "mean_mfe_r": 3.4223,

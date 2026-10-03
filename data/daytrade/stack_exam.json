@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-02T01:50:15.898859+00:00",
+ "generated_at": "2026-10-03T01:21:20.870624+00:00",
  "tally": {
   "PASS": 10,
   "GAP": 3,
@@ -109,7 +109,7 @@
    "id": "ST-2",
    "claim": "the layers are pointed at the market the money is in",
    "status": "GAP",
-   "evidence": "exit evaluator + operator: intraday equities/futures (40 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10248 rows) but no exit evaluator prices a carry position yet"
+   "evidence": "exit evaluator + operator: intraday equities/futures (40 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10249 rows) but no exit evaluator prices a carry position yet"
   }
  ]
 }
