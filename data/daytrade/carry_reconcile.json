@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-03T01:15:27.413341+00:00",
+ "generated_at": "2026-10-06T02:21:38.871958+00:00",
  "evaluator": "carry-exit-v1",
  "trail_outranks_time": false,
  "note": "COMPLETENESS test, not a fit. A low match means a missing term, never a reason to tune the evaluator.",
