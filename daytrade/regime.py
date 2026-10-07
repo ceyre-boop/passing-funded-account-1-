@@ -213,6 +213,13 @@ def build_evidence(bars_5m, bars_1m, ctx: Context) -> dict:
                           "never forward-filled (bars.py doctrine)")
 
     idx = bars_5m.index
+    # STRUCTURAL integrity first. This check used to sit AFTER the now_et match
+    # below, which made it unreachable for the case it exists to catch: a
+    # reversed frame's last bar is its EARLIEST, so the now_et comparison fired
+    # with a misleading message and the ordering bug was never named. Order
+    # matters — validate the shape of the data before interpreting it.
+    if not idx.is_monotonic_increasing:
+        raise RegimeError("5m frame is not time-ordered")
     last_ts = idx[-1]
     # NO LOOKAHEAD, asserted: the frame must not reach past the bar being read.
     if last_ts.strftime("%H:%M") != ctx.now_et:
@@ -220,8 +227,6 @@ def build_evidence(bars_5m, bars_1m, ctx: Context) -> dict:
             f"frame ends at {last_ts.strftime('%H:%M')} but ctx.now_et is "
             f"{ctx.now_et} — classify() must be handed the tape as it stood at "
             f"now_et, not a frame containing later bars")
-    if not idx.is_monotonic_increasing:
-        raise RegimeError("5m frame is not time-ordered")
 
     today = bars_5m[idx.date == ctx.session_day]
     if len(today) == 0:
