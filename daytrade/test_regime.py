@@ -201,16 +201,23 @@ def test_sweep_and_reclaim_is_the_strongest_single_signal():
     assert read.evidence["score_raw"]["MANIPULATION"] >= 4
 
 
-def test_confidence_below_floor_falls_back_to_the_safe_regime():
-    """APEX #2 — never act on a guess. The fallback must be the safe regime and
-    it must announce itself in evidence rather than looking like a real call."""
+def test_confidence_below_floor_falls_back_to_the_safe_regime(monkeypatch):
+    """APEX #2 — never act on a guess.
+
+    The first version of this test wrapped its assertions in
+    `if read.confidence < CONF_FLOOR:` and the fixture scored 0.7429, so the body
+    never ran and the test asserted NOTHING. Fault injection caught it: deleting
+    the floor entirely left the test green. The floor is a MECHANISM, so raise it
+    above any achievable confidence and assert the mechanism fires.
+    """
+    monkeypatch.setattr(R, "CONF_FLOOR", 0.99)
     f = _frame({PRIOR: _flat_day(PRIOR), DAY: _flat_day(DAY)})
     upto = f[f.index <= pd.Timestamp(f"{DAY} 11:00", tz=ET)]
     read = R.classify(upto, None, _ctx("11:00"))
-    if read.confidence < R.CONF_FLOOR:
-        assert read.regime == R.SAFE_REGIME
-        assert read.evidence["conf_floored"] is True
-        assert read.exit_policy == R.POLICY[R.SAFE_REGIME]
+    assert read.confidence < 0.99
+    assert read.regime == R.SAFE_REGIME
+    assert read.evidence["conf_floored"] is True
+    assert read.exit_policy == R.POLICY[R.SAFE_REGIME] == "HARVEST"
 
 
 def test_nothing_firing_yields_zero_confidence_not_a_consolidation_claim():
@@ -239,23 +246,40 @@ def test_read_is_frozen_and_carries_the_rule_version():
     assert read.direction_of_flow in (-1, 0, 1)
 
 
-def test_atr_is_exactly_the_pinned_true_range():
-    """Pins the ATR arithmetic itself: 20 bars each of true range exactly 1.0
-    must give atr5 == 1.0, not 0.999 and not a rolling artefact."""
-    f = _frame({DAY: _flat_day(DAY, n=20, px=100.0, rng=1.0)})
-    upto = f[f.index <= pd.Timestamp(f"{DAY} 10:05", tz=ET)]
-    read = R.classify(upto, None, _ctx("10:05"))
-    assert read.evidence["atr5"] == pytest.approx(1.0, abs=1e-9)
+def test_atr_is_the_MEAN_true_range_not_the_max():
+    """Pins the ATR arithmetic, and pins that it is a MEAN.
+
+    The first version used 20 bars of identical true range 1.0 — where mean and
+    max are both 1.0, so swapping `.rolling(n).mean()` for `.rolling(n).max()`
+    changed nothing and the test stayed green under fault injection. The last five
+    true ranges here are 1, 1, 1, 1, 3: mean = 7/5 = 1.4, max = 3.0.
+    """
+    bars_ = _flat_day(DAY, n=20, px=100.0, rng=1.0)
+    bars_[19] = ("11:05", 100.0, 101.5, 98.5, 100.0, 1000)      # true range 3.0
+    f = _frame({DAY: bars_})
+    upto = f[f.index <= pd.Timestamp(f"{DAY} 11:05", tz=ET)]
+    read = R.classify(upto, None, _ctx("11:05"))
+    assert read.evidence["atr5"] == pytest.approx(1.4, abs=1e-9)
 
 
 def test_daily_atr_uses_only_sessions_strictly_before_today():
-    """A daily ATR that included today would be lookahead through the back door."""
-    f = _frame({PRIOR: _flat_day(PRIOR, px=100.0, rng=2.0),
-                DAY: _flat_day(DAY, px=100.0, rng=1.0)})
-    upto = f[f.index <= pd.Timestamp(f"{DAY} 11:00", tz=ET)]
-    read = R.classify(upto, None, _ctx("11:00"))
-    atrd = read.evidence["atr_daily"]
-    assert atrd is None or atrd > 0
+    """A daily ATR that included today would be lookahead through the back door.
+
+    Hand-computed. Three prior sessions, each O=C=100, H=101, L=99, so each
+    session's true range is max(H-L, |H-prevC|, |L-prevC|) = max(2, 1, 1) = 2.
+    _daily_atr averages the ranges of sessions AFTER the first, so the answer is
+    exactly 2.0. Today is deliberately a 10-wide session: if today leaked in, the
+    mean would become (2 + 2 + 10) / 3 = 4.667. 2.0 vs 4.667 discriminates; the
+    previous `atrd is None or atrd > 0` did not.
+    """
+    d1, d2, d3 = date(2026, 6, 5), date(2026, 6, 8), date(2026, 6, 9)
+    f = _frame({d1: _flat_day(d1, n=20, px=100.0, rng=2.0),
+                d2: _flat_day(d2, n=20, px=100.0, rng=2.0),
+                d3: _flat_day(d3, n=20, px=100.0, rng=2.0),
+                DAY: _flat_day(DAY, n=20, px=100.0, rng=10.0)})
+    upto = f[f.index <= pd.Timestamp(f"{DAY} 10:05", tz=ET)]
+    read = R.classify(upto, None, _ctx("10:05"))
+    assert read.evidence["atr_daily"] == pytest.approx(2.0, abs=1e-9)
 
 
 def test_volume_average_excludes_today():

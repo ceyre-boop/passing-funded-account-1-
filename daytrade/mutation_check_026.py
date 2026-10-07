@@ -72,7 +72,7 @@ MUTATIONS = [
      '    "CONTINUATION": "RIDE",      # let it run; participation is the point',
      '    "CONTINUATION": "TRAIL_WIDE",',
      "emit a renamed-away legacy policy name nothing downstream reads"),
-    ("test_regime.py::test_atr_is_exactly_the_pinned_true_range", RG,
+    ("test_regime.py::test_atr_is_the_MEAN_true_range_not_the_max", RG,
      "    return _tr_series(bars).rolling(n).mean()",
      "    return _tr_series(bars).rolling(n).max()",
      "swap the ATR mean for a max (the furnace-era min->max class of fault)"),

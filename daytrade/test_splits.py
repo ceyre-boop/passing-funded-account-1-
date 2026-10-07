@@ -80,10 +80,19 @@ def test_sealed_002_requires_an_unseal_reason():
         splits.sealed_002_sessions(ALL, rule_version="regime-v1")
 
 
-def test_sealed_002_requires_a_rule_version():
+def test_sealed_002_requires_a_rule_version(monkeypatch):
     """A holdout number with no record of what produced it cannot be interpreted
-    later, which is the whole lesson of the SEALED-001 futures-exit-v1 read."""
-    with pytest.raises(splits.SealedSplitError, match="rule_version"):
+    later, which is the whole lesson of the SEALED-001 futures-exit-v1 read.
+
+    Two things this test learned from fault injection. First, `match="rule_version"`
+    passed for the WRONG reason: with the check deleted, control fell through to
+    the freeze check, whose message ALSO contains the string "rule_version", so
+    the mutation stayed green. The match is now the specific phrase. Second,
+    _rules_frozen is stubbed True so that the rule_version check is the ONLY thing
+    that can raise — otherwise deleting it still raises, just elsewhere.
+    """
+    monkeypatch.setattr(splits, "_rules_frozen", lambda rv: (True, "frozen at abc"))
+    with pytest.raises(splits.SealedSplitError, match="needs rule_version"):
         splits.sealed_002_sessions(ALL, unseal_reason="spec 026 read")
 
 
