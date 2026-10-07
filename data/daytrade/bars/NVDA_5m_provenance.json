@@ -1670,6 +1670,4868 @@
    "vendor": "alpaca",
    "feed": "sip",
    "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:01:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 51,
+   "span": [
+    "2026-09-29 09:30:00-04:00",
+    "2026-09-29 13:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:01:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:06:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 13:45:00-04:00",
+    "2026-09-29 13:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:06:20+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:11:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 13:50:00-04:00",
+    "2026-09-29 13:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:11:28+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:16:31+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 13:55:00-04:00",
+    "2026-09-29 13:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:16:35+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:21:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 14:00:00-04:00",
+    "2026-09-29 14:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:21:44+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:26:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 14:05:00-04:00",
+    "2026-09-29 14:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:26:52+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:31:55+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 14:10:00-04:00",
+    "2026-09-29 14:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:31:59+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:37:03+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 14:15:00-04:00",
+    "2026-09-29 14:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:37:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:42:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 14:20:00-04:00",
+    "2026-09-29 14:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:42:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:47:19+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 14:25:00-04:00",
+    "2026-09-29 14:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T18:47:24+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:14:26+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 5,
+   "span": [
+    "2026-09-29 14:30:00-04:00",
+    "2026-09-29 14:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:14:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:19:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 14:55:00-04:00",
+    "2026-09-29 14:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:19:38+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:24:43+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:00:00-04:00",
+    "2026-09-29 15:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:24:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:29:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:05:00-04:00",
+    "2026-09-29 15:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:29:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:35:05+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 2,
+   "span": [
+    "2026-09-29 15:10:00-04:00",
+    "2026-09-29 15:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:35:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:40:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:20:00-04:00",
+    "2026-09-29 15:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:40:20+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:45:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:25:00-04:00",
+    "2026-09-29 15:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:45:28+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:50:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:30:00-04:00",
+    "2026-09-29 15:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:50:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:55:40+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:35:00-04:00",
+    "2026-09-29 15:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T19:55:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:00:52+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:40:00-04:00",
+    "2026-09-29 15:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:00:58+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:07:15+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:45:00-04:00",
+    "2026-09-29 15:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:07:45+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:12:48+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:50:00-04:00",
+    "2026-09-29 15:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:12:52+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:17:55+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-29 15:55:00-04:00",
+    "2026-09-29 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:17:59+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:23:02+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:23:06+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:28:09+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-29T20:28:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T12:47:52+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T12:56:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T13:18:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T13:18:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T13:39:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T13:39:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:34:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 9,
+   "span": [
+    "2026-09-30 09:30:00-04:00",
+    "2026-09-30 10:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:34:51+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:39:55+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 10:15:00-04:00",
+    "2026-09-30 10:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:40:00+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:45:03+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 2,
+   "span": [
+    "2026-09-30 10:20:00-04:00",
+    "2026-09-30 10:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:45:09+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:50:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 10:30:00-04:00",
+    "2026-09-30 10:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:50:17+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:55:20+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 10:35:00-04:00",
+    "2026-09-30 10:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T14:55:25+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:00:28+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 10:40:00-04:00",
+    "2026-09-30 10:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:00:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:05:37+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 10:45:00-04:00",
+    "2026-09-30 10:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:05:43+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:10:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 10:50:00-04:00",
+    "2026-09-30 10:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:10:51+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:15:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 10:55:00-04:00",
+    "2026-09-30 10:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:15:59+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:21:02+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 11:00:00-04:00",
+    "2026-09-30 11:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:37:25+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:42:29+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 4,
+   "span": [
+    "2026-09-30 11:05:00-04:00",
+    "2026-09-30 11:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T15:42:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T16:40:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 12,
+   "span": [
+    "2026-09-30 11:25:00-04:00",
+    "2026-09-30 12:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T16:40:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T16:45:53+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 12:25:00-04:00",
+    "2026-09-30 12:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T16:45:57+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T16:51:00+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 12:30:00-04:00",
+    "2026-09-30 12:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T16:51:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T16:56:07+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 12:35:00-04:00",
+    "2026-09-30 12:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T16:56:11+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:01:15+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 12:40:00-04:00",
+    "2026-09-30 12:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:01:19+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:06:24+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 12:45:00-04:00",
+    "2026-09-30 12:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:06:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:11:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 12:50:00-04:00",
+    "2026-09-30 12:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:11:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:16:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 12:55:00-04:00",
+    "2026-09-30 12:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:16:43+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:21:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:00:00-04:00",
+    "2026-09-30 13:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:21:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:26:53+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:05:00-04:00",
+    "2026-09-30 13:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:26:57+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:32:01+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:10:00-04:00",
+    "2026-09-30 13:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:32:05+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:37:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:15:00-04:00",
+    "2026-09-30 13:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:37:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:42:26+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:20:00-04:00",
+    "2026-09-30 13:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:42:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:47:52+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:25:00-04:00",
+    "2026-09-30 13:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:48:01+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:53:06+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:30:00-04:00",
+    "2026-09-30 13:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:53:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:58:17+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:35:00-04:00",
+    "2026-09-30 13:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T17:58:25+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:03:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:40:00-04:00",
+    "2026-09-30 13:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:04:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:09:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:45:00-04:00",
+    "2026-09-30 13:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:09:40+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:14:58+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:50:00-04:00",
+    "2026-09-30 13:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:15:09+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 13:55:00-04:00",
+    "2026-09-30 13:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:20:29+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:00:00-04:00",
+    "2026-09-30 14:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:21:26+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:26:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:05:00-04:00",
+    "2026-09-30 14:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:27:43+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:33:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:10:00-04:00",
+    "2026-09-30 14:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:34:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:39:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:15:00-04:00",
+    "2026-09-30 14:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:41:11+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:20:00-04:00",
+    "2026-09-30 14:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:53:28+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 2,
+   "span": [
+    "2026-09-30 14:25:00-04:00",
+    "2026-09-30 14:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:53:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:59:02+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:35:00-04:00",
+    "2026-09-30 14:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T18:59:09+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:04:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:40:00-04:00",
+    "2026-09-30 14:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:04:52+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:09:58+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:45:00-04:00",
+    "2026-09-30 14:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:10:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:50:00-04:00",
+    "2026-09-30 14:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:15:25+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 14:55:00-04:00",
+    "2026-09-30 14:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:15:35+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:20:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:00:00-04:00",
+    "2026-09-30 15:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:20:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:25:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:05:00-04:00",
+    "2026-09-30 15:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:26:02+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:31:06+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:10:00-04:00",
+    "2026-09-30 15:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:31:11+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:36:15+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:15:00-04:00",
+    "2026-09-30 15:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:36:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:41:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:20:00-04:00",
+    "2026-09-30 15:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:41:44+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:46:51+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:25:00-04:00",
+    "2026-09-30 15:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:46:55+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:51:58+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:30:00-04:00",
+    "2026-09-30 15:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:52:03+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:57:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:35:00-04:00",
+    "2026-09-30 15:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T19:57:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:02:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:40:00-04:00",
+    "2026-09-30 15:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:02:20+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:07:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:45:00-04:00",
+    "2026-09-30 15:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:07:28+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:12:31+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:50:00-04:00",
+    "2026-09-30 15:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:12:35+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:17:40+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-09-30 15:55:00-04:00",
+    "2026-09-30 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:17:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:22:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:22:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:27:57+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-09-30T20:28:02+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T16:10:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 28,
+   "span": [
+    "2026-10-01 09:30:00-04:00",
+    "2026-10-01 11:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T16:42:51+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 7,
+   "span": [
+    "2026-10-01 11:50:00-04:00",
+    "2026-10-01 12:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T17:37:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 11,
+   "span": [
+    "2026-10-01 12:25:00-04:00",
+    "2026-10-01 13:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T18:46:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 14,
+   "span": [
+    "2026-10-01 13:20:00-04:00",
+    "2026-10-01 14:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T18:46:57+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T19:01:45+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 3,
+   "span": [
+    "2026-10-01 14:30:00-04:00",
+    "2026-10-01 14:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T19:03:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T19:29:10+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 5,
+   "span": [
+    "2026-10-01 14:45:00-04:00",
+    "2026-10-01 15:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T19:29:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T20:07:56+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 8,
+   "span": [
+    "2026-10-01 15:10:00-04:00",
+    "2026-10-01 15:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-01T20:11:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-01 15:50:00-04:00",
+    "2026-10-01 15:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T12:53:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-01 15:55:00-04:00",
+    "2026-10-01 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T16:58:25+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 38,
+   "span": [
+    "2026-10-02 09:30:00-04:00",
+    "2026-10-02 12:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T17:15:18+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 4,
+   "span": [
+    "2026-10-02 12:40:00-04:00",
+    "2026-10-02 12:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T18:16:02+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 12,
+   "span": [
+    "2026-10-02 13:00:00-04:00",
+    "2026-10-02 13:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T18:32:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 3,
+   "span": [
+    "2026-10-02 14:00:00-04:00",
+    "2026-10-02 14:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T19:37:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 13,
+   "span": [
+    "2026-10-02 14:15:00-04:00",
+    "2026-10-02 15:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T19:42:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-02 15:20:00-04:00",
+    "2026-10-02 15:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T20:15:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 7,
+   "span": [
+    "2026-10-02 15:25:00-04:00",
+    "2026-10-02 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-02T20:16:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:36:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 10,
+   "span": [
+    "2026-10-05 09:30:00-04:00",
+    "2026-10-05 10:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:36:53+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:41:57+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 10:20:00-04:00",
+    "2026-10-05 10:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:42:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:47:07+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 10:25:00-04:00",
+    "2026-10-05 10:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:47:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:52:15+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 10:30:00-04:00",
+    "2026-10-05 10:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:52:19+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:57:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 10:35:00-04:00",
+    "2026-10-05 10:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T14:57:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:02:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 10:40:00-04:00",
+    "2026-10-05 10:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:02:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:07:37+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 10:45:00-04:00",
+    "2026-10-05 10:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:07:43+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:14:01+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 10:50:00-04:00",
+    "2026-10-05 10:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:19:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 10:55:00-04:00",
+    "2026-10-05 10:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:19:09+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:24:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 11:00:00-04:00",
+    "2026-10-05 11:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:24:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:29:19+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 11:05:00-04:00",
+    "2026-10-05 11:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:29:24+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:34:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 11:10:00-04:00",
+    "2026-10-05 11:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:34:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:39:35+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 11:15:00-04:00",
+    "2026-10-05 11:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:39:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:44:43+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 11:20:00-04:00",
+    "2026-10-05 11:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T15:44:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T17:22:41+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 20,
+   "span": [
+    "2026-10-05 11:25:00-04:00",
+    "2026-10-05 13:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:31:17+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 14,
+   "span": [
+    "2026-10-05 13:05:00-04:00",
+    "2026-10-05 14:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:31:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:36:25+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:15:00-04:00",
+    "2026-10-05 14:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:36:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:41:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:20:00-04:00",
+    "2026-10-05 14:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:41:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:46:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:25:00-04:00",
+    "2026-10-05 14:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:46:43+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:51:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:30:00-04:00",
+    "2026-10-05 14:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:51:51+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:56:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:35:00-04:00",
+    "2026-10-05 14:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T18:56:59+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:02:02+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:40:00-04:00",
+    "2026-10-05 14:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:02:07+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:07:10+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:45:00-04:00",
+    "2026-10-05 14:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:07:14+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:12:17+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:50:00-04:00",
+    "2026-10-05 14:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:12:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:17:25+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 14:55:00-04:00",
+    "2026-10-05 14:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:17:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:22:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:00:00-04:00",
+    "2026-10-05 15:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:22:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:27:43+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:05:00-04:00",
+    "2026-10-05 15:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:27:48+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:32:53+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:10:00-04:00",
+    "2026-10-05 15:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:33:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:38:58+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:15:00-04:00",
+    "2026-10-05 15:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:39:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:44:11+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:20:00-04:00",
+    "2026-10-05 15:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:44:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:49:19+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:25:00-04:00",
+    "2026-10-05 15:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:49:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:54:26+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:30:00-04:00",
+    "2026-10-05 15:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:54:31+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:59:33+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:35:00-04:00",
+    "2026-10-05 15:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T19:59:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:04:42+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:40:00-04:00",
+    "2026-10-05 15:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:04:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:09:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:45:00-04:00",
+    "2026-10-05 15:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:09:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:14:56+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:50:00-04:00",
+    "2026-10-05 15:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:15:01+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:20:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-05 15:55:00-04:00",
+    "2026-10-05 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:20:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:25:11+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:25:15+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:30:18+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-05T20:30:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:02:00+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:02:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:07:07+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:07:11+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:12:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:12:17+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:17:19+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:17:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:22:26+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:22:29+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:27:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:27:35+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:32:38+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:32:42+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:37:45+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:37:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:42:51+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:42:55+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:47:57+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:48:01+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:53:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:53:07+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:58:10+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T12:58:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:03:16+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:03:20+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:08:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:08:26+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:13:28+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:13:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:18:35+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:18:38+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:23:41+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:23:45+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:28:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:28:51+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:33:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:33:58+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:39:00+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:39:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:44:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:44:11+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:49:15+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:49:19+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:54:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 09:30:00-04:00",
+    "2026-10-06 09:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:54:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:59:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 09:35:00-04:00",
+    "2026-10-06 09:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T13:59:35+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:04:38+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 09:40:00-04:00",
+    "2026-10-06 09:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:04:42+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:09:45+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 09:45:00-04:00",
+    "2026-10-06 09:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:09:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:14:53+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 09:50:00-04:00",
+    "2026-10-06 09:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:14:57+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:20:00+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 09:55:00-04:00",
+    "2026-10-06 09:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:20:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:00:00-04:00",
+    "2026-10-06 10:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:25:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:05:00-04:00",
+    "2026-10-06 10:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:25:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:30:17+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:10:00-04:00",
+    "2026-10-06 10:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:30:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:35:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:15:00-04:00",
+    "2026-10-06 10:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:35:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:40:37+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:20:00-04:00",
+    "2026-10-06 10:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:40:42+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:45:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:25:00-04:00",
+    "2026-10-06 10:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:45:53+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:50:56+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:30:00-04:00",
+    "2026-10-06 10:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:51:01+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:56:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:35:00-04:00",
+    "2026-10-06 10:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T14:56:09+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:01:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:40:00-04:00",
+    "2026-10-06 10:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:01:18+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:06:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:45:00-04:00",
+    "2026-10-06 10:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:06:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:11:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:50:00-04:00",
+    "2026-10-06 10:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:11:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:16:45+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 10:55:00-04:00",
+    "2026-10-06 10:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:16:53+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:21:56+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 11:00:00-04:00",
+    "2026-10-06 11:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:22:00+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:27:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 11:05:00-04:00",
+    "2026-10-06 11:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:27:17+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:32:21+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 11:10:00-04:00",
+    "2026-10-06 11:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:32:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:37:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 11:15:00-04:00",
+    "2026-10-06 11:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:37:35+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:42:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 11:20:00-04:00",
+    "2026-10-06 11:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T15:42:45+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:23:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 8,
+   "span": [
+    "2026-10-06 11:25:00-04:00",
+    "2026-10-06 12:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:23:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:28:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:05:00-04:00",
+    "2026-10-06 12:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:28:40+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:33:44+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:10:00-04:00",
+    "2026-10-06 12:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:33:58+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:39:02+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:15:00-04:00",
+    "2026-10-06 12:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:39:09+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:44:13+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:20:00-04:00",
+    "2026-10-06 12:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:44:21+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:49:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:25:00-04:00",
+    "2026-10-06 12:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:49:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:54:59+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:30:00-04:00",
+    "2026-10-06 12:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T16:55:10+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:35:00-04:00",
+    "2026-10-06 12:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:00:15+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:40:00-04:00",
+    "2026-10-06 12:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:00:25+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:05:29+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:45:00-04:00",
+    "2026-10-06 12:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:05:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:10:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:50:00-04:00",
+    "2026-10-06 12:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:12:04+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:17:32+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 12:55:00-04:00",
+    "2026-10-06 12:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:18:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:23:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 13:00:00-04:00",
+    "2026-10-06 13:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:24:01+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:33:31+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 2,
+   "span": [
+    "2026-10-06 13:05:00-04:00",
+    "2026-10-06 13:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:33:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:39:00+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 13:15:00-04:00",
+    "2026-10-06 13:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:39:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:44:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 13:20:00-04:00",
+    "2026-10-06 13:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:44:38+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:49:42+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 13:25:00-04:00",
+    "2026-10-06 13:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:49:49+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:54:53+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 13:30:00-04:00",
+    "2026-10-06 13:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T17:55:01+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:00:06+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 2,
+   "span": [
+    "2026-10-06 13:35:00-04:00",
+    "2026-10-06 13:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:00:14+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:05:19+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 13:45:00-04:00",
+    "2026-10-06 13:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:05:28+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:10:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 13:50:00-04:00",
+    "2026-10-06 13:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:10:44+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:15:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 13:55:00-04:00",
+    "2026-10-06 13:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:15:58+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:21:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 14:00:00-04:00",
+    "2026-10-06 14:00:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:21:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:26:46+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 14:05:00-04:00",
+    "2026-10-06 14:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:26:56+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:32:07+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 14:10:00-04:00",
+    "2026-10-06 14:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:32:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:37:36+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 14:15:00-04:00",
+    "2026-10-06 14:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:37:47+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:42:57+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 14:20:00-04:00",
+    "2026-10-06 14:20:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:43:10+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:48:21+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 14:25:00-04:00",
+    "2026-10-06 14:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T18:48:38+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:07:44+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 4,
+   "span": [
+    "2026-10-06 14:30:00-04:00",
+    "2026-10-06 14:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:07:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:12:54+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 14:50:00-04:00",
+    "2026-10-06 14:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:12:59+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:25:22+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 3,
+   "span": [
+    "2026-10-06 14:55:00-04:00",
+    "2026-10-06 15:05:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:25:33+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:30:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 15:10:00-04:00",
+    "2026-10-06 15:10:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:31:12+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:36:30+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 15:15:00-04:00",
+    "2026-10-06 15:15:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:48:15+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 2,
+   "span": [
+    "2026-10-06 15:20:00-04:00",
+    "2026-10-06 15:25:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:48:23+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:53:27+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 15:30:00-04:00",
+    "2026-10-06 15:30:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:53:34+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:58:39+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 15:35:00-04:00",
+    "2026-10-06 15:35:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T19:58:50+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:03:56+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 15:40:00-04:00",
+    "2026-10-06 15:40:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:04:05+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:09:10+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 15:45:00-04:00",
+    "2026-10-06 15:45:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:09:17+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:14:21+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 15:50:00-04:00",
+    "2026-10-06 15:50:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:14:28+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:19:33+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 1,
+   "span": [
+    "2026-10-06 15:55:00-04:00",
+    "2026-10-06 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:19:40+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:24:45+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:24:52+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:29:55+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-06T20:30:00+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 0,
+   "span": null,
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  },
+  {
+   "fetched_utc": "2026-10-07T00:45:08+00:00",
+   "symbol": "NVDA",
+   "tf": "5m",
+   "added_bars": 45864,
+   "span": [
+    "2024-01-02 09:30:00-05:00",
+    "2026-05-06 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
   }
  ]
 }

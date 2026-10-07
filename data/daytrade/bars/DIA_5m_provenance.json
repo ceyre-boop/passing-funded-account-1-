@@ -1,0 +1,18 @@
+{
+ "cache": "DIA_5m.parquet",
+ "fetches": [
+  {
+   "fetched_utc": "2026-10-07T00:43:14+00:00",
+   "symbol": "DIA",
+   "tf": "5m",
+   "added_bars": 49245,
+   "span": [
+    "2024-01-02 09:30:00-05:00",
+    "2026-10-06 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  }
+ ]
+}

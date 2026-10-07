@@ -1,0 +1,18 @@
+{
+ "cache": "AMZN_5m.parquet",
+ "fetches": [
+  {
+   "fetched_utc": "2026-10-07T00:42:58+00:00",
+   "symbol": "AMZN",
+   "tf": "5m",
+   "added_bars": 49371,
+   "span": [
+    "2024-01-02 09:30:00-05:00",
+    "2026-10-06 15:55:00-04:00"
+   ],
+   "vendor": "alpaca",
+   "feed": "sip",
+   "session": "regular"
+  }
+ ]
+}
