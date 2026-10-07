@@ -41,6 +41,20 @@ ROOT = Path(__file__).resolve().parents[1]
 # NEVER EDIT THIS LINE. Cutting a new holdout means adding a NEW constant below
 # it with the date it was cut and why the previous one was burned.
 TUNE_END = date(2026, 7, 6)
+
+# SEALED-002, cut 2026-10-06 (spec 026). SEALED-001 (everything > TUNE_END) was
+# BURNED on 2026-08-17 by the futures-exit-v1 read recorded in
+# data/daytrade/sealed_read_futures_v1.json — verdict NOT_VALIDATED, candidate
+# -0.1066R against a tune-split promise of +0.1135R. Per this module's own law a
+# burned holdout is replaced only by sessions that did not exist at tuning time,
+# never reused. The Alpaca/SIP source lifted yfinance's ~60-day 5m cap, so
+# sessions from 2026-08-18 onward are available and were looked at by no tuning
+# run. The band between the two is contaminated and is diagnostics only.
+#   TRAIN  <= TUNE_END                      (fit freely)
+#   DEV     TUNE_END < d < SEALED_002_START (burned; never a headline number)
+#   SEALED >= SEALED_002_START              (ONE read, after freeze)
+# NEVER EDIT EITHER DATE.
+SEALED_002_START = date(2026, 8, 18)
 # ---------------------------------------------------------------------------
 
 SEAL_LOG = ROOT / "data" / "daytrade" / "holdout_unseals.log"
@@ -127,6 +141,40 @@ def _log_unseal(reason: str, rule_version: str, forced: bool) -> None:
     if n > 1:
         print(f"  !! HOLDOUT READ #{n}. It was designed to be read once. Every "
               f"additional read makes the number weaker. See {SEAL_LOG}")
+
+
+def dev_sessions(sessions):
+    """The CONTAMINATED band: after the old boundary, before SEALED-002.
+
+    These sessions were inside SEALED-001 when it was read on 2026-08-17, so a
+    number computed here is not out-of-sample for anything tuned before that
+    date. Useful for debugging a pipeline; never quotable as validation.
+    """
+    return [s for s in sessions if TUNE_END < s.day < SEALED_002_START]
+
+
+def sealed_002_sessions(sessions, *, unseal_reason: str = None,
+                        rule_version: str = None, force: bool = False):
+    """SEALED-002. Same conditions as sealed_sessions, same logging, newer band.
+
+    Deliberately reuses the identical guard so the freeze requirement cannot be
+    sidestepped by reaching for the newer holdout.
+    """
+    if not unseal_reason:
+        raise SealedSplitError(
+            "SEALED-002 needs unseal_reason=. It produces ONE number, ONCE, "
+            "after rule_version is frozen. If you are tuning, use tune_sessions().")
+    if not rule_version:
+        raise SealedSplitError(
+            "SEALED-002 needs rule_version= — a holdout number without the "
+            "rules that produced it cannot be interpreted later")
+    frozen, detail = _rules_frozen(rule_version)
+    if not frozen and not force:
+        raise SealedSplitError(
+            f"rules are not frozen: {detail}. Commit the rule_version and let it "
+            "stand for at least one commit before reading SEALED-002.")
+    _log_unseal(f"[SEALED-002] {unseal_reason}", rule_version, forced=not frozen)
+    return [s for s in sessions if s.day >= SEALED_002_START]
 
 
 def describe(sessions) -> str:

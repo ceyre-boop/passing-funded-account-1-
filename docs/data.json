@@ -1,7 +1,7 @@
 {
  "alphazero": {
   "abstain_rate": 0.615,
-  "age_hours": 0.1,
+  "age_hours": 1079.7,
   "chance_scenario": 0.2,
   "decisive_accuracy_quotable": false,
   "direction_accuracy": 0.308,
@@ -371,7 +371,7 @@
   ],
   "scenario_accuracy": 0.308,
   "scenario_hits": 4,
-  "stale": false
+  "stale": true
  },
  "containment": {
   "clean": true,
@@ -523,32 +523,32 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-10-06T02:24:34.126456+00:00",
+ "generated_at": "2026-10-06T20:41:29.738205+00:00",
  "latest_judgment": {
   "abstention": {
-   "detail": "newest bar 1321 min old (> 15)",
-   "issued_at": "2026-09-29T17:56:05.619013+00:00",
+   "detail": "newest bar 25 min old (> 15)",
+   "issued_at": "2026-10-06T20:19:40.869883+00:00",
    "model_version": "alpha-operator-v1/stale-gate",
    "reason": "STALE_CONTEXT"
   },
   "available": true,
-  "bar_age_min": 1321.1,
+  "bar_age_min": 24.7,
   "both_sides": null,
   "confidence": 0.0,
   "cost_usd": 0.0,
   "emission_refused": null,
   "invalidators": [],
   "model_version": "alpha-operator-v1/stale-gate",
-  "packet_as_of": "2026-09-29T17:56:05.619013+00:00",
-  "packet_max_data_ts": "2026-09-29T15:56:00+00:00",
+  "packet_as_of": "2026-10-06T20:19:40.869883+00:00",
+  "packet_max_data_ts": "2026-10-06T19:55:00+00:00",
   "pre_registration": null,
-  "record_id": "op-20260929-175605-619013-NVDA",
+  "record_id": "op-20261006-201940-869883-NVDA",
   "trigger": "bar",
-  "ts": "2026-09-29T17:56:05.619013+00:00",
+  "ts": "2026-10-06T20:19:40.869883+00:00",
   "verdict": "ABSTAIN"
  },
  "learning_loop": {
-  "age_hours": 0.0,
+  "age_hours": 145.8,
   "alphazero": {
    "by_verdict": {
     "ABSTAIN": {
@@ -580,8 +580,78 @@
   "available": true,
   "correction_applied": "unconditional mean \u2014 the residual carries no information yet, so the correction is zero",
   "loop_closed": true,
-  "n_science_runs": 16,
+  "n_science_runs": 12,
   "science_runs": [
+   {
+    "moved": {},
+    "n_moved": 0,
+    "started": "2026-08-21T02:28:24.225429+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
+   },
+   {
+    "moved": {
+     "az_resolved": {
+      "from": null,
+      "to": 13
+     },
+     "ontology_bonferroni": {
+      "from": 0,
+      "to": 1
+     },
+     "ontology_carves": {
+      "from": 3,
+      "to": 2
+     },
+     "residual_corr": {
+      "from": null,
+      "to": -0.0477
+     },
+     "residual_skill": {
+      "from": null,
+      "to": -0.2235
+     },
+     "residual_usable": {
+      "from": null,
+      "to": false
+     }
+    },
+    "n_moved": 6,
+    "started": "2026-08-21T18:14:46.001828+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
+   },
+   {
+    "moved": {
+     "ontology_carves": {
+      "from": 2,
+      "to": 1
+     },
+     "ontology_n_sessions": {
+      "from": null,
+      "to": 336
+     },
+     "ontology_unstable": {
+      "from": null,
+      "to": 0
+     }
+    },
+    "n_moved": 3,
+    "started": "2026-08-21T18:31:37.874530+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
+   },
+   {
+    "moved": {},
+    "n_moved": 0,
+    "started": "2026-08-21T21:07:43.508610+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
+   },
    {
     "moved": {
      "residual_corr": {
@@ -637,61 +707,9 @@
     "thresholds": [
      "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
     ]
-   },
-   {
-    "moved": {
-     "fx_rows": {
-      "from": 10240,
-      "to": 10244
-     }
-    },
-    "n_moved": 1,
-    "started": "2026-10-01T01:21:00.800254+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
-   },
-   {
-    "moved": {
-     "fx_rows": {
-      "from": 10244,
-      "to": 10248
-     }
-    },
-    "n_moved": 1,
-    "started": "2026-10-02T01:44:11.145358+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
-   },
-   {
-    "moved": {
-     "fx_rows": {
-      "from": 10248,
-      "to": 10249
-     }
-    },
-    "n_moved": 1,
-    "started": "2026-10-03T01:15:18.974905+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
-   },
-   {
-    "moved": {
-     "fx_rows": {
-      "from": 10249,
-      "to": 10257
-     }
-    },
-    "n_moved": 1,
-    "started": "2026-10-06T02:21:30.637666+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
    }
   ],
-  "stale": false,
+  "stale": true,
   "stockfish": {
    "mean_giveback_r": 0.6696,
    "n": 336,
@@ -703,9 +721,9 @@
   }
  },
  "ontology": {
-  "age_hours": 0.0,
+  "age_hours": 145.8,
   "available": true,
-  "generated_at": "2026-10-06T02:24:05.357170+00:00",
+  "generated_at": "2026-09-30T01:26:36.327527+00:00",
   "k_subsamples": 8,
   "labels_at_boundary": [],
   "labels_unstable": [],
@@ -871,7 +889,7 @@
   "split": "tune",
   "stability_alpha": 0.01,
   "stability_note": "half-samples overlap, so the binomial tail is an optimistic bound on the true stability p; alpha is tightened to compensate rather than assuming independent draws",
-  "stale": false,
+  "stale": true,
   "tune_end": "2026-07-06",
   "vocabulary": [
    "TREND_UP",
@@ -887,10 +905,10 @@
  },
  "session": {
   "available": true,
-  "last_record_ts": "2026-09-29T17:56:05.619013+00:00",
+  "last_record_ts": "2026-10-06T20:19:40.869883+00:00",
   "last_trigger": "bar",
   "mode": "SHADOW SOAK",
-  "records_total": 31,
+  "records_total": 220,
   "shadow": true,
   "symbol": "NVDA"
  },
@@ -927,7 +945,7 @@
   "available": true,
   "by_class": {
    "CASH_INDEX": {
-    "mean_realized_r": 0.1259,
+    "mean_realized_r": 0.126,
     "median_efficiency": 0.8427,
     "median_giveback_r": 1.8337,
     "n": 100,
@@ -949,7 +967,7 @@
    }
   },
   "compared_against": "SF-FROZEN-004",
-  "generated_at": "2026-10-06T02:22:48.664746+00:00",
+  "generated_at": "2026-10-06T20:41:29.622767+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.1843,
   "mean_mfe_r": 3.4223,
@@ -4665,199 +4683,253 @@
   "abstain_reasons": {
    "DATA_INCOMPLETE": 2,
    "NO_OPINION": 3,
-   "STALE_CONTEXT": 16
+   "STALE_CONTEXT": 205
   },
   "counts": {
-   "ABSTAIN": 21,
+   "ABSTAIN": 210,
    "ALLOW_BASELINE": 7,
    "EXIT": 0,
    "TIGHTEN": 3
   },
   "series": [
    {
-    "confidence": 0.05,
-    "shadow": false,
-    "ts": "2026-08-16T03:00:41.537973+00:00",
-    "verdict": "ABSTAIN"
-   },
-   {
-    "confidence": 0.25,
-    "shadow": false,
-    "ts": "2026-08-16T04:40:34.709506+00:00",
-    "verdict": "ABSTAIN"
-   },
-   {
-    "confidence": 0.15,
-    "shadow": false,
-    "ts": "2026-08-17T04:46:23.661738+00:00",
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T15:32:27.628793+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-08-17T05:29:16.136063+00:00",
+    "ts": "2026-10-06T15:37:35.889306+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-08-17T05:33:31.827800+00:00",
+    "ts": "2026-10-06T15:42:45.357575+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-08-17T13:19:53.521743+00:00",
-    "verdict": "ABSTAIN"
-   },
-   {
-    "confidence": 0.42,
-    "shadow": true,
-    "ts": "2026-08-17T16:16:20.501380+00:00",
-    "verdict": "ALLOW_BASELINE"
-   },
-   {
-    "confidence": 0.45,
-    "shadow": true,
-    "ts": "2026-08-17T17:07:48.454204+00:00",
-    "verdict": "ALLOW_BASELINE"
-   },
-   {
-    "confidence": 0.35,
-    "shadow": true,
-    "ts": "2026-08-17T17:13:03.658975+00:00",
-    "verdict": "ABSTAIN"
-   },
-   {
-    "confidence": 0.25,
-    "shadow": true,
-    "ts": "2026-08-17T17:18:21.709292+00:00",
-    "verdict": "ABSTAIN"
-   },
-   {
-    "confidence": 0.52,
-    "shadow": true,
-    "ts": "2026-08-17T17:23:44.922502+00:00",
-    "verdict": "TIGHTEN"
-   },
-   {
-    "confidence": 0.42,
-    "shadow": true,
-    "ts": "2026-08-17T17:29:11.003105+00:00",
-    "verdict": "ALLOW_BASELINE"
-   },
-   {
-    "confidence": 0.35,
-    "shadow": true,
-    "ts": "2026-08-17T17:34:34.282453+00:00",
-    "verdict": "ABSTAIN"
-   },
-   {
-    "confidence": 0.42,
-    "shadow": true,
-    "ts": "2026-08-17T17:45:22.424544+00:00",
-    "verdict": "ALLOW_BASELINE"
-   },
-   {
-    "confidence": 0.4,
-    "shadow": true,
-    "ts": "2026-08-17T17:50:43.855441+00:00",
-    "verdict": "TIGHTEN"
-   },
-   {
-    "confidence": 0.5,
-    "shadow": true,
-    "ts": "2026-08-17T17:56:09.745889+00:00",
-    "verdict": "TIGHTEN"
-   },
-   {
-    "confidence": 0.3,
-    "shadow": true,
-    "ts": "2026-08-17T19:53:35.400001+00:00",
-    "verdict": "ABSTAIN"
-   },
-   {
-    "confidence": 0.45,
-    "shadow": true,
-    "ts": "2026-08-18T16:12:22.474326+00:00",
-    "verdict": "ALLOW_BASELINE"
-   },
-   {
-    "confidence": 0.55,
-    "shadow": true,
-    "ts": "2026-08-18T16:17:37.117336+00:00",
-    "verdict": "ALLOW_BASELINE"
-   },
-   {
-    "confidence": 0.55,
-    "shadow": true,
-    "ts": "2026-08-18T17:29:03.940199+00:00",
-    "verdict": "ALLOW_BASELINE"
-   },
-   {
-    "confidence": 0.0,
-    "shadow": true,
-    "ts": "2026-08-18T18:23:50.221052+00:00",
+    "ts": "2026-10-06T16:23:30.187714+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-08-19T12:02:28.633799+00:00",
+    "ts": "2026-10-06T16:28:40.552333+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-08-20T16:18:52.556613+00:00",
+    "ts": "2026-10-06T16:33:58.282469+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-08-21T12:25:11.584628+00:00",
+    "ts": "2026-10-06T16:39:09.268678+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-09-28T12:00:48.050041+00:00",
+    "ts": "2026-10-06T16:44:21.182080+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-09-28T12:05:54.313893+00:00",
+    "ts": "2026-10-06T16:49:49.589680+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-09-28T17:05:32.875452+00:00",
+    "ts": "2026-10-06T16:55:10.723419+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-09-28T18:03:58.252647+00:00",
+    "ts": "2026-10-06T17:00:25.044145+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-09-29T14:14:25.011101+00:00",
+    "ts": "2026-10-06T17:05:36.285163+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-09-29T17:07:39.955848+00:00",
+    "ts": "2026-10-06T17:12:04.920596+00:00",
     "verdict": "ABSTAIN"
    },
    {
     "confidence": 0.0,
     "shadow": true,
-    "ts": "2026-09-29T17:56:05.619013+00:00",
+    "ts": "2026-10-06T17:18:36.479759+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T17:24:01.464489+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T17:33:49.688621+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T17:39:23.649823+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T17:44:38.607710+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T17:49:49.351467+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T17:55:01.350429+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:00:14.711858+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:05:28.089049+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:10:44.336705+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:21:39.231775+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:26:56.390627+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:32:28.033155+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:37:47.571652+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:43:10.988297+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T18:48:38.752750+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T19:07:50.161358+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T19:12:59.658230+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T19:25:33.842133+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T19:31:12.907374+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T19:48:23.028559+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T19:53:34.761292+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T19:58:50.066035+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T20:04:05.366519+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T20:09:17.387018+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T20:14:28.654367+00:00",
+    "verdict": "ABSTAIN"
+   },
+   {
+    "confidence": 0.0,
+    "shadow": true,
+    "ts": "2026-10-06T20:19:40.869883+00:00",
     "verdict": "ABSTAIN"
    }
   ]

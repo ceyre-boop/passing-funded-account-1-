@@ -37,20 +37,33 @@ def _last_complete_session_day():
     sizes = rth.groupby(rth.index.map(lambda x: x.date() if hasattr(x, "date") else x)).size() \
         if not isinstance(rth.index, pd.DatetimeIndex) else rth.groupby(idx[(t >= bars.RTH_OPEN) & (t <= bars.RTH_CLOSE)].date).size()
     full = sorted(d for d, n in sizes.items() if n == 78)
-    if not full:
-        pytest.skip("no complete 78-bar NVDA session in the cache to build fixtures from")
-    return full[-1]
+
+    # ...and it must be a day find_entry ACTUALLY fires on. The entry rule hits
+    # on ~66% of sessions, so "most recent complete day" is a coin flip away
+    # from a no-entry day, and on a no-entry day the partial-vs-full comparison
+    # below degenerates to None == None — it would assert nothing. This broke
+    # for real on 2026-10-06: Sep 30-Oct 6 ran five straight sessions whose
+    # opening range contained ~85% of the day range, so nothing broke out by
+    # 11:00 and the auto-chosen fixture day had no entry. Requiring an entry
+    # keeps the comparison meaningful; the other tests in this file only need a
+    # genuine 78-bar day and are unaffected by the extra condition.
+    df2 = df.copy()
+    df2.index = idx
+    for day in reversed(full):
+        if ceiling.find_entry(bars.Session("NVDA", day, df2[df2.index.date == day])):
+            return day
+    pytest.skip("no complete 78-bar NVDA session WITH an entry to build fixtures from")
 
 
 DAY = _last_complete_session_day()
 
 
 def _real_day_bars() -> pd.DataFrame:
-    """The genuine, unmodified 78-bar 2026-08-21 session from the real cache."""
+    """The genuine, unmodified 78-bar session for DAY from the real cache."""
     df = pd.read_parquet(REAL_CACHE)
     df.index = pd.to_datetime(df.index, utc=True).tz_convert(bars.ET)
     day_bars = df[df.index.date == DAY]
-    assert len(day_bars) == 78, "fixture assumption: 2026-08-21 is a full session"
+    assert len(day_bars) == 78, f"fixture assumption: {DAY} is a full session"
     return day_bars
 
 
