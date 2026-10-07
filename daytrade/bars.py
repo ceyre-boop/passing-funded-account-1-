@@ -169,11 +169,32 @@ def refresh_cache(symbol: str, tf: str = "5m", period: str = "60d",
     return result
 
 
-def load_sessions(symbol: str, tf: str = "5m", *, allow_fetch: bool = True) -> list[Session]:
+def load_sessions(symbol: str, tf: str = "5m", *, allow_fetch: bool = True,
+                  on_gap: str = "raise") -> list[Session]:
     """Every complete RTH session in the cache, oldest first.
 
-    Half days and any session carrying an internal gap are excluded and the
-    reason is printed. They are never repaired.
+    Half days are excluded and the reason is printed. They are never repaired.
+
+    `on_gap` decides what an INTERNAL gap does, and the default is unchanged:
+
+      "raise"   (default) — a hole inside an otherwise-complete session aborts
+                the whole load. This is the original contract and every existing
+                caller keeps it: for a 60-session tune/sealed population, one
+                silently dropped day moves a measured edge, so the load must
+                stop and be looked at by a human.
+
+      "exclude" — drop that session, print the reason, keep the rest, and report
+                what was dropped. Opt-in, for a consumer spanning YEARS of
+                history where isolated vendor holes are expected: the deepened
+                2024-01-01 cache (commit 431fb94) carries ~1 gapped session per
+                symbol (mostly the half-session before a holiday), and under
+                "raise" a single 2024 hole makes 2.5 years of 2026 data
+                unreachable. Still loud — nothing is interpolated, nothing is
+                silent, and the dropped days are returned via `last_excluded`.
+
+    NOTE: this docstring previously promised that gapped sessions were "excluded
+    and the reason is printed" while the code raised. The code was the real
+    contract, so it is kept as the default and the promise is now a mode.
     """
     import pandas as pd
 
@@ -196,16 +217,22 @@ def load_sessions(symbol: str, tf: str = "5m", *, allow_fetch: bool = True) -> l
             continue
         gaps = _internal_gaps(chunk, tf)
         if gaps:
-            raise BarDataError(
-                f"{symbol} {day}: {len(gaps)} missing bar(s) inside the session "
-                f"(first at {gaps[0]}). Bars are never interpolated — fix the "
-                "cache or exclude the day explicitly.")
+            msg = (f"{symbol} {day}: {len(gaps)} missing bar(s) inside the session "
+                   f"(first at {gaps[0]}). Bars are never interpolated — fix the "
+                   "cache or exclude the day explicitly.")
+            if on_gap == "raise":
+                raise BarDataError(msg)
+            if on_gap != "exclude":
+                raise ValueError(f"on_gap must be 'raise' or 'exclude', got {on_gap!r}")
+            skipped.append((day, f"{len(gaps)} internal gap(s) — EXCLUDED, never patched"))
+            continue
         sessions.append(Session(symbol, day, chunk))
 
     if skipped:
         print(f"  excluded {len(skipped)} incomplete session(s): " +
               ", ".join(f"{d} ({why})" for d, why in skipped[:5]) +
               (" ..." if len(skipped) > 5 else ""))
+    load_sessions.last_excluded = list(skipped)
     return sessions
 
 
