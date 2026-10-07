@@ -1,0 +1,21 @@
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:22:55.670840+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:22:55.673361+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:23:50.675793+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:23:50.679713+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:25:15.213687+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:25:15.216016+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:28:24.297838+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:28:24.300067+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:29:22.744497+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:29:22.755940+00:00"}
+{"by": null, "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] spec 026 read", "ts": "2026-10-07T01:30:39.230933+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:31:39.229815+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:31:39.238109+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:34:42.603528+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:34:42.618541+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:35:14.402561+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:35:14.409067+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:36:38.848392+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:36:38.850246+00:00"}
+{"by": "v", "event": "HOLDOUT_READ", "forced": true, "path": "<holdout-boundary>", "reason": "[SEALED-002] bootstrap", "ts": "2026-10-07T01:37:33.533678+00:00"}
+{"by": "regime-v1", "event": "HOLDOUT_READ", "forced": false, "path": "<holdout-boundary>", "reason": "[SEALED-002] the spec 026 read", "ts": "2026-10-07T01:37:33.535870+00:00"}

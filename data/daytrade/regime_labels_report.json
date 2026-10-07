@@ -1,0 +1,220 @@
+{
+ "generated_at": "2026-10-07T01:41:15.778074+00:00",
+ "symbol": "NVDA",
+ "sessions_labelled": 60,
+ "span": [
+  "2026-04-09",
+  "2026-07-06"
+ ],
+ "rule_version": "regime-v1",
+ "grade_version": "grade-v1",
+ "n_rows": 4500,
+ "n_gradeable": 3100,
+ "gate_G_S6_n_met": true,
+ "gate_G_S6_brier_skill_met": false,
+ "report": {
+  "grade_version": "grade-v1",
+  "since": null,
+  "rows_in": 4500,
+  "ungradeable": 1400,
+  "headline": "per-regime lift is the headline; overall_accuracy is decoration because the three definitions are not equally hard",
+  "overall_accuracy_is_decoration": true,
+  "n": 3100,
+  "overall_accuracy": 0.2,
+  "by_regime": {
+   "CONTINUATION": {
+    "n": 1260,
+    "accuracy": 0.3476190476190476,
+    "baseline_always_consolidation": {
+     "n": 1260,
+     "accuracy": 0.1126984126984127
+    },
+    "baseline_time_prior_only": {
+     "n": 620,
+     "accuracy": 0.19838709677419356
+    },
+    "lift_over_always_consolidation": 0.23492063492063492,
+    "lift_over_time_prior_only": 0.14923195084485405,
+    "mean_confidence": 0.702797380952381
+   },
+   "MANIPULATION": {
+    "n": 0,
+    "accuracy": null,
+    "reason": "NO_GRADEABLE_ROWS"
+   },
+   "CONSOLIDATION": {
+    "n": 1840,
+    "accuracy": 0.09891304347826087,
+    "baseline_always_consolidation": {
+     "n": 1840,
+     "accuracy": 0.09891304347826087
+    },
+    "baseline_time_prior_only": {
+     "n": 1010,
+     "accuracy": 0.09108910891089109
+    },
+    "lift_over_always_consolidation": 0.0,
+    "lift_over_time_prior_only": 0.00782393456736978,
+    "mean_confidence": 0.6281421195652174
+   }
+  },
+  "by_time_block": {
+   "AFTERNOON": {
+    "n": 767,
+    "accuracy": 0.2320730117340287,
+    "baseline_always_consolidation": {
+     "n": 767,
+     "accuracy": 0.06649282920469361
+    },
+    "baseline_time_prior_only": {
+     "n": 0,
+     "accuracy": null,
+     "reason": "NO_PUBLISHED_PRIOR"
+    },
+    "lift_over_always_consolidation": 0.1655801825293351,
+    "time_prior_prediction": null
+   },
+   "CLOSE": {
+    "n": 109,
+    "accuracy": 0.11926605504587157,
+    "baseline_always_consolidation": {
+     "n": 109,
+     "accuracy": 0.009174311926605505
+    },
+    "baseline_time_prior_only": {
+     "n": 0,
+     "accuracy": null,
+     "reason": "NO_GRADEABLE_ROWS"
+    },
+    "lift_over_always_consolidation": 0.11009174311926606,
+    "time_prior_prediction": "MANIPULATION"
+   },
+   "MIDDAY": {
+    "n": 1402,
+    "accuracy": 0.15549215406562053,
+    "baseline_always_consolidation": {
+     "n": 1402,
+     "accuracy": 0.09486447931526391
+    },
+    "baseline_time_prior_only": {
+     "n": 1402,
+     "accuracy": 0.09486447931526391
+    },
+    "lift_over_always_consolidation": 0.06062767475035662,
+    "time_prior_prediction": "CONSOLIDATION"
+   },
+   "MORNING": {
+    "n": 422,
+    "accuracy": 0.23459715639810427,
+    "baseline_always_consolidation": {
+     "n": 422,
+     "accuracy": 0.12796208530805686
+    },
+    "baseline_time_prior_only": {
+     "n": 0,
+     "accuracy": null,
+     "reason": "NO_GRADEABLE_ROWS"
+    },
+    "lift_over_always_consolidation": 0.10663507109004741,
+    "time_prior_prediction": "MANIPULATION"
+   },
+   "OPEN_DRIVE": {
+    "n": 400,
+    "accuracy": 0.28,
+    "baseline_always_consolidation": {
+     "n": 400,
+     "accuracy": 0.2125
+    },
+    "baseline_time_prior_only": {
+     "n": 228,
+     "accuracy": 0.35964912280701755
+    },
+    "lift_over_always_consolidation": 0.06750000000000003,
+    "time_prior_prediction": "CONTINUATION"
+   }
+  },
+  "by_confidence_bucket": {
+   "0.0-0.2": {
+    "n": 7,
+    "accuracy": 0.2857142857142857,
+    "mean_confidence": 0.0,
+    "calibration_gap": -0.2857142857142857,
+    "baseline_always_consolidation": {
+     "n": 7,
+     "accuracy": 0.2857142857142857
+    }
+   },
+   "0.2-0.4": {
+    "n": 215,
+    "accuracy": 0.05581395348837209,
+    "mean_confidence": 0.3815576744186046,
+    "calibration_gap": 0.3257437209302325,
+    "baseline_always_consolidation": {
+     "n": 215,
+     "accuracy": 0.05581395348837209
+    }
+   },
+   "0.4-0.6": {
+    "n": 1238,
+    "accuracy": 0.18174474959612277,
+    "mean_confidence": 0.49610549273021,
+    "calibration_gap": 0.31436074313408724,
+    "baseline_always_consolidation": {
+     "n": 1238,
+     "accuracy": 0.10662358642972536
+    }
+   },
+   "0.6-0.8": {
+    "n": 895,
+    "accuracy": 0.2446927374301676,
+    "mean_confidence": 0.6801159776536313,
+    "calibration_gap": 0.4354232402234637,
+    "baseline_always_consolidation": {
+     "n": 895,
+     "accuracy": 0.09832402234636871
+    }
+   },
+   "0.8-1.0": {
+    "n": 745,
+    "accuracy": 0.2174496644295302,
+    "mean_confidence": 0.9884414765100672,
+    "calibration_gap": 0.770991812080537,
+    "baseline_always_consolidation": {
+     "n": 745,
+     "accuracy": 0.12080536912751678
+    }
+   }
+  },
+  "baseline_always_consolidation": {
+   "n": 3100,
+   "accuracy": 0.10451612903225807
+  },
+  "baseline_time_prior_only": {
+   "n": 1630,
+   "accuracy": 0.13190184049079753,
+   "excluded_unknown_block": 767,
+   "excluded_prediction_ungradeable": 703,
+   "prediction_by_block": {
+    "PREOPEN": null,
+    "OPEN_DRIVE": "CONTINUATION",
+    "MORNING": "MANIPULATION",
+    "MIDDAY": "CONSOLIDATION",
+    "AFTERNOON": null,
+    "CLOSE": "MANIPULATION"
+   }
+  },
+  "lift_over_baseline": {
+   "value": 0.06809815950920248,
+   "versus": "time_prior_only",
+   "baseline": 0.13190184049079753,
+   "n": 3100,
+   "headline": "per-regime lift is the headline; overall_accuracy is decoration because the three definitions are not equally hard"
+  },
+  "brier": 0.40334445463870966,
+  "brier_skill_score": -1.5209028414919348,
+  "brier_base_rate": 0.2,
+  "brier_baseline": 0.16000000000000003,
+  "brier_skill_score_reason": null
+ },
+ "problems": []
+}

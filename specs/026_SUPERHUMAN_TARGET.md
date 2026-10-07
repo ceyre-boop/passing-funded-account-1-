@@ -124,3 +124,89 @@ network, and no opponent. `specs/000` rescoped that to walk-forward learning
 and this file keeps that rescoping. "Better than a human" here means and only
 means: beats the best hand-executable baseline, out of sample, after costs,
 with the luck explanations ruled out by G-S3 through G-S5.
+
+---
+
+# RESULT — 2026-10-06. TRAIN-side verdict: **NO-GO. SEALED-002 NOT SPENT.**
+
+The loop ran to a verdict. The verdict is a null, and the null is the result.
+
+## What was measured
+
+`entry_selection.py`, TRAIN split, **n = 5,126 entries, 19 symbols, ~650
+session-days** (the pre-deepening population was 336, and before that 24):
+
+| policy | gross R | **net R** | date-clustered CI95 (net) | win |
+|---|---|---|---|---|
+| r_STATIC — best hand-executable | +0.0287 | **−0.0713** | [−0.1307, −0.0075] | 25% |
+| r_TRAIL_WIDE | +0.0151 | −0.0849 | [−0.1362, −0.0306] | 25% |
+| r_TRAIL_TIGHT | −0.0118 | −0.1118 | [−0.1519, −0.0696] | 18% |
+| **r_regime** (spec 001 conditioned) | **+0.0384** | **−0.0616** | [−0.1108, −0.0099] | 23% |
+
+Measured embedded cost: **median 0.0267R** per trade (mean 0.0339R). So the 0.10R
+all-in assumption is not already covered by `simulate`'s $0.02/share; the two are
+different quantities and both are carried.
+
+## The finding that matters most
+
+**The +0.1538R gross in `exit_quality.json` was a small-sample artefact.** On the
+same entry rule and the same engine, with 15x more data, gross collapses from
+**+0.1538R (n=336) to +0.0287R (n=5,126)** — a 5.4x shrinkage. Every policy is
+net-NEGATIVE after costs, and every confidence interval lies entirely below zero.
+
+So the honest statement about this system, measured on 5,126 trades rather than
+336 or 24: **the OR-breakout entry rule has no edge that survives costs.** That is
+a far stronger claim than anything previously in this repo, and it points at the
+entry, exactly where `exit_quality`'s 57% unwinnable rate said to look.
+
+## Gate status
+
+- **G-S1 — FAIL on TRAIN.** Net −0.0616R against a +0.10R target, CI entirely
+  below zero. Not evaluated out of sample, deliberately: see below.
+- **G-S2 — FAIL.** Margin over the best hand-executable policy is **+0.0097R**
+  against the pre-registered **+0.05R**. The regime read does help — it produces
+  the highest gross of any policy — but by a fifth of what is required.
+- **G-S3/G-S4/G-S5 — NOT EVALUATED.** They are holdout gates and the holdout was
+  not spent.
+- **G-S6 — SPLIT, and the detail is the useful part.** 3,100 scored calls (needs
+  300: **MET**). Brier skill **−1.52** (needs > 0: **FAIL**) — the classifier is
+  badly overconfident, mean confidence 0.70 against 0.20 accuracy, so the
+  confidence field is actively misleading and must not be read by anything.
+  But the per-regime breakdown is not a null:
+  - `CONTINUATION` n=1,260, accuracy **0.348** vs time-prior baseline 0.198 →
+    **lift +0.149**; vs always-consolidation 0.113 → lift +0.235. Real
+    discrimination.
+  - `CONSOLIDATION` n=1,840, lift over always-consolidation **exactly 0.000**. It
+    *is* the baseline. No skill.
+  - `MANIPULATION` n=0 gradeable — the sweep-and-reclaim condition never fired
+    gradeably, partly because ONH/ONL are unavailable (RTH-clipped source), so
+    only PDH/PDL/ORH/ORL pools exist.
+
+## Why SEALED-002 was NOT read
+
+`gate_check_026.py` returns NO-GO, and this is the spec's fourth stop condition
+made explicit. On TRAIN the regime policy has every advantage available to it: it
+was built here, its thresholds were chosen here, and it has been looked at
+freely. A margin it cannot produce under those conditions cannot appear out of
+sample. Reading SEALED-002 now would burn a 461-entry holdout to confirm a
+failure that is already visible for free — which is precisely how SEALED-001 was
+spent on 2026-08-17 (tune promised +0.1135R, holdout returned −0.1066R,
+NOT_VALIDATED).
+
+**SEALED-002 remains sealed: 461 entries, >= 2026-08-18, never read.** That is an
+asset, and preserving it is the correct outcome of this run, not a shortfall.
+
+## What the next cycle should attack, in order
+
+1. **The entry rule, not the exit.** Three independent measurements now agree:
+   57% of entries unwinnable, gross +0.029R on n=5,126, and the exit-side prize
+   needs perfect foresight. The OR-breakout trigger is the binding constraint.
+2. **Delete or recalibrate `confidence`.** A Brier skill of −1.52 means the number
+   is worse than useless. Either calibrate it against the 3,100 scored calls now
+   on disk, or stop emitting it. Nothing downstream should read it meanwhile.
+3. **Keep the CONTINUATION arm.** +0.149 lift over the time prior on n=1,260 is
+   the one piece of genuine signal the classifier produced. The CONSOLIDATION arm
+   adds nothing and MANIPULATION never fires — a v2 should be the CONTINUATION
+   detector alone, which is a smaller and more honest object.
+4. **Re-fit TIME_PRIORS from the scorecard**, which spec 001 said would be the
+   first thing to do once ~200 scored blocks existed. There are now 3,100.

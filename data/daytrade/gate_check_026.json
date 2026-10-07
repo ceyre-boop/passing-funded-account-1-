@@ -1,0 +1,32 @@
+{
+ "spec": "026_SUPERHUMAN_TARGET",
+ "stage": "TRAIN_GATE_CHECK",
+ "best_fixed": "r_STATIC",
+ "train_margin_r": 0.0097,
+ "regime_net_r": -0.0616,
+ "best_fixed_net_r": -0.0713,
+ "counts": {
+  "rows": 5989,
+  "train": 5126,
+  "dev": 402,
+  "sealed_not_read": 461,
+  "classifier_skipped": 0
+ },
+ "cost_model": {
+  "embedded_median_r": 0.0267,
+  "cost_target_r": 0.1,
+  "breakeven_net_r": 0.05,
+  "banklike_net_r": 0.1
+ },
+ "n_scored_calls": 3100,
+ "brier_skill_score": -1.5209028414919348,
+ "checks": {
+  "train_margin_clears_G_S2": false,
+  "train_regime_net_is_positive": false,
+  "sealed_is_powered": true,
+  "reward_signal_scored_G_S6": false
+ },
+ "go": false,
+ "verdict": "NO-GO \u2014 do NOT spend SEALED-002",
+ "detail": "Failing: train_margin_clears_G_S2, train_regime_net_is_positive, reward_signal_scored_G_S6. On TRAIN the regime policy has every advantage \u2014 it was built here and tuned here \u2014 so a margin it cannot show here cannot appear out of sample. Reading the holdout now would only burn it to confirm a failure already visible for free, which is precisely how SEALED-001 was spent on 2026-08-17 (tune +0.1135R -> sealed -0.1066R, NOT_VALIDATED)."
+}
