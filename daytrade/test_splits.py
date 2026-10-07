@@ -15,6 +15,27 @@ import pytest
 import splits
 
 
+@pytest.fixture(autouse=True)
+def _never_touch_the_real_audit_trail(monkeypatch, tmp_path):
+    """Redirect BOTH unseal sinks for every test in this file.
+
+    splits._log_unseal writes to SEAL_LOG *and* mirrors into
+    seals._append_intent, which has its own path. Patching only SEAL_LOG left the
+    mirror live, and three spurious HOLDOUT_READ rows were appended to the real
+    data/daytrade/unseal_intents.jsonl by test runs on 2026-10-07 before this was
+    noticed. Those two files are append-only audit trails whose entire purpose is
+    to prove the holdout was read once and by whom; a test suite must not be able
+    to write to them, and a test that EXPECTS a raise must still be safe when
+    fault injection deletes that raise.
+    """
+    monkeypatch.setattr(splits, "SEAL_LOG", tmp_path / "unseals.log")
+    try:
+        import seals
+        monkeypatch.setattr(seals, "_append_intent", lambda rec: None)
+    except ImportError:
+        pass
+
+
 @dataclass(frozen=True)
 class FakeSession:
     day: date
@@ -72,15 +93,21 @@ def test_sealed_002_start_day_is_sealed_not_dev():
 
 # ------------------------------------------------- the SEALED-002 unseal guards
 
-def test_sealed_002_requires_an_unseal_reason():
-    """No accidental reads. A holdout looked at by accident is spent."""
+def test_sealed_002_requires_an_unseal_reason(monkeypatch, tmp_path):
+    """No accidental reads. A holdout looked at by accident is spent.
+
+    SEAL_LOG redirected for the same reason as the rule_version test below: the
+    thing fault injection deletes here is the raise, and without the redirect the
+    fallthrough would append to the real audit log.
+    """
+    monkeypatch.setattr(splits, "SEAL_LOG", tmp_path / "unseals.log")
     with pytest.raises(splits.SealedSplitError, match="unseal_reason"):
         splits.sealed_002_sessions(ALL)
     with pytest.raises(splits.SealedSplitError, match="unseal_reason"):
         splits.sealed_002_sessions(ALL, rule_version="regime-v1")
 
 
-def test_sealed_002_requires_a_rule_version(monkeypatch):
+def test_sealed_002_requires_a_rule_version(monkeypatch, tmp_path):
     """A holdout number with no record of what produced it cannot be interpreted
     later, which is the whole lesson of the SEALED-001 futures-exit-v1 read.
 
@@ -92,6 +119,14 @@ def test_sealed_002_requires_a_rule_version(monkeypatch):
     that can raise — otherwise deleting it still raises, just elsewhere.
     """
     monkeypatch.setattr(splits, "_rules_frozen", lambda rv: (True, "frozen at abc"))
+    # SEAL_LOG is redirected even though this test expects a RAISE. Under fault
+    # injection the raise is exactly what gets deleted, and the call then falls
+    # through to _log_unseal and appends to the REAL holdout audit log — which is
+    # the one file in this repo whose whole purpose is to prove the holdout was
+    # read once. Two spurious "[SEALED-002] rule_version None" rows were written
+    # that way by mutation_check_026 runs on 2026-10-07 before this was noticed.
+    # A test must not be able to damage the audit trail when it fails.
+    monkeypatch.setattr(splits, "SEAL_LOG", tmp_path / "unseals.log")
     with pytest.raises(splits.SealedSplitError, match="needs rule_version"):
         splits.sealed_002_sessions(ALL, unseal_reason="spec 026 read")
 
