@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-06T02:24:33.916546+00:00",
+ "generated_at": "2026-10-08T02:15:53.476694+00:00",
  "tally": {
   "PASS": 10,
   "GAP": 3,
@@ -46,7 +46,7 @@
    "id": "AZ-2",
    "claim": "it knows when it doesn't know \u2014 abstention is first-class",
    "status": "PASS",
-   "evidence": "21/31 records abstained (68%), typed reasons ['CONFLICTING_EVIDENCE', 'DATA_INCOMPLETE', 'LOW_CONFIDENCE', 'NO_OPINION', 'STALE_CONTEXT']; an ABSTAIN with no reason raises OperatorError"
+   "evidence": "210/220 records abstained (95%), typed reasons ['CONFLICTING_EVIDENCE', 'DATA_INCOMPLETE', 'LOW_CONFIDENCE', 'NO_OPINION', 'STALE_CONTEXT']; an ABSTAIN with no reason raises OperatorError"
   },
   {
    "layer": "alphazero",
@@ -109,7 +109,7 @@
    "id": "ST-2",
    "claim": "the layers are pointed at the market the money is in",
    "status": "GAP",
-   "evidence": "exit evaluator + operator: intraday equities/futures (40 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10257 rows) but no exit evaluator prices a carry position yet"
+   "evidence": "exit evaluator + operator: intraday equities/futures (628 NVDA tune sessions, 5-minute bars). Verified edge: 6-day FX carry. FX state vector now exists (10265 rows) but no exit evaluator prices a carry position yet"
   }
  ]
 }
