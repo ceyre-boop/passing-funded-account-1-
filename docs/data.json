@@ -523,7 +523,7 @@
   "symbol": "NVDA",
   "yield_delta_r": 0.0
  },
- "generated_at": "2026-10-08T02:15:53.730335+00:00",
+ "generated_at": "2026-10-09T02:27:33.994627+00:00",
  "latest_judgment": {
   "abstention": {
    "detail": "newest bar 25 min old (> 15)",
@@ -580,21 +580,8 @@
   "available": true,
   "correction_applied": "unconditional mean \u2014 the residual carries no information yet, so the correction is zero",
   "loop_closed": true,
-  "n_science_runs": 17,
+  "n_science_runs": 18,
   "science_runs": [
-   {
-    "moved": {
-     "fx_rows": {
-      "from": 10192,
-      "to": 10232
-     }
-    },
-    "n_moved": 1,
-    "started": "2026-09-28T14:57:18.278696+00:00",
-    "thresholds": [
-     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
-    ]
-   },
    {
     "moved": {
      "fx_rows": {
@@ -713,6 +700,19 @@
     "thresholds": [
      "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
     ]
+   },
+   {
+    "moved": {
+     "fx_rows": {
+      "from": 10265,
+      "to": 10269
+     }
+    },
+    "n_moved": 1,
+    "started": "2026-10-09T02:18:41.537153+00:00",
+    "thresholds": [
+     "MECH-001: predicted effect 0.15 now clears the MDE 0.0817 \u2014 testable"
+    ]
    }
   ],
   "stale": false,
@@ -729,7 +729,7 @@
  "ontology": {
   "age_hours": 0.0,
   "available": true,
-  "generated_at": "2026-10-08T02:15:38.167803+00:00",
+  "generated_at": "2026-10-09T02:27:20.253882+00:00",
   "k_subsamples": 8,
   "labels_at_boundary": [],
   "labels_unstable": [],
@@ -960,7 +960,7 @@
    }
   },
   "compared_against": "SF-FROZEN-004",
-  "generated_at": "2026-10-08T02:14:41.816428+00:00",
+  "generated_at": "2026-10-09T02:26:26.282198+00:00",
   "hindsight_warning": "oracle_r and mfe_r use perfect hindsight and are NOT achievable; they are the yardstick, never a target",
   "mean_efficiency": -0.289,
   "mean_mfe_r": 3.3857,
